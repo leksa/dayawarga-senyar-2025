@@ -1,0 +1,19 @@
+{{!< default}}
+
+{{#post}}
+<article class="page {{post_class}}" style="padding-top: 3rem;">
+    <header class="page-header">
+        <h1 class="page-title">{{title}}</h1>
+    </header>
+
+    {{#if feature_image}}
+        <figure class="page-feature-image">
+            <img src="{{img_url feature_image size="xl"}}" alt="{{title}}" loading="lazy">
+        </figure>
+    {{/if}}
+
+    <div class="page-content post-content">
+        {{{content}}}
+    </div>
+</article>
+{{/post}}

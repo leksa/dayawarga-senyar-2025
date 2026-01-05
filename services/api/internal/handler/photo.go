@@ -1,0 +1,195 @@
+package handler
+
+import (
+	"io"
+	"net/http"
+	"path/filepath"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/leksa/datamapper-senyar/internal/service"
+)
+
+// PhotoHandler handles photo-related HTTP requests
+type PhotoHandler struct {
+	photoService *service.PhotoService
+}
+
+// NewPhotoHandler creates a new photo handler
+func NewPhotoHandler(photoService *service.PhotoService) *PhotoHandler {
+	return &PhotoHandler{
+		photoService: photoService,
+	}
+}
+
+// GetPhotosByLocation returns all photos for a location
+func (h *PhotoHandler) GetPhotosByLocation(c *gin.Context) {
+	locationIDStr := c.Param("id")
+	locationID, err := uuid.Parse(locationIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "invalid location ID",
+		})
+		return
+	}
+
+	photos, err := h.photoService.GetPhotosByLocation(locationID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	// Build photo URLs
+	type PhotoResponse struct {
+		ID          string  `json:"id"`
+		PhotoType   string  `json:"photo_type"`
+		Filename    string  `json:"filename"`
+		IsCached    bool    `json:"is_cached"`
+		FileSize    *int    `json:"file_size,omitempty"`
+		URL         string  `json:"url,omitempty"`
+		CreatedAt   string  `json:"created_at"`
+	}
+
+	var response []PhotoResponse
+	for _, photo := range photos {
+		pr := PhotoResponse{
+			ID:        photo.ID.String(),
+			PhotoType: photo.PhotoType,
+			Filename:  photo.Filename,
+			IsCached:  photo.IsCached,
+			FileSize:  photo.FileSize,
+			CreatedAt: photo.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		}
+		if photo.IsCached {
+			pr.URL = "/api/v1/photos/" + photo.ID.String() + "/file"
+		}
+		response = append(response, pr)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    response,
+	})
+}
+
+// GetPhoto returns a single photo's metadata
+func (h *PhotoHandler) GetPhoto(c *gin.Context) {
+	photoIDStr := c.Param("id")
+	photoID, err := uuid.Parse(photoIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "invalid photo ID",
+		})
+		return
+	}
+
+	photos, err := h.photoService.GetPhotosByLocation(uuid.Nil) // This needs adjustment
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	for _, photo := range photos {
+		if photo.ID == photoID {
+			c.JSON(http.StatusOK, gin.H{
+				"success": true,
+				"data":    photo,
+			})
+			return
+		}
+	}
+
+	c.JSON(http.StatusNotFound, gin.H{
+		"success": false,
+		"error":   "photo not found",
+	})
+}
+
+// GetPhotoFile serves the actual photo file
+func (h *PhotoHandler) GetPhotoFile(c *gin.Context) {
+	photoIDStr := c.Param("id")
+	photoID, err := uuid.Parse(photoIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "invalid photo ID",
+		})
+		return
+	}
+
+	reader, filename, err := h.photoService.GetPhotoReader(photoID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+	defer reader.Close()
+
+	// Determine content type based on extension
+	ext := filepath.Ext(filename)
+	contentType := "application/octet-stream"
+	switch ext {
+	case ".jpg", ".jpeg":
+		contentType = "image/jpeg"
+	case ".png":
+		contentType = "image/png"
+	case ".gif":
+		contentType = "image/gif"
+	case ".webp":
+		contentType = "image/webp"
+	}
+
+	c.Header("Content-Type", contentType)
+	c.Header("Content-Disposition", "inline; filename="+filename)
+
+	c.Stream(func(w io.Writer) bool {
+		io.Copy(w, reader)
+		return false
+	})
+}
+
+// SyncPhotos triggers photo synchronization
+func (h *PhotoHandler) SyncPhotos(c *gin.Context) {
+	result, err := h.photoService.SyncAllPhotos()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    result,
+	})
+}
+
+// CleanupOrphaned removes orphaned photo files
+func (h *PhotoHandler) CleanupOrphaned(c *gin.Context) {
+	cleaned, err := h.photoService.CleanupOrphanedFiles()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"cleaned_files": cleaned,
+		},
+	})
+}

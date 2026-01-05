@@ -1,0 +1,33 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Node (frontend)
+services/frontend/node_modules/
+services/frontend/dist/
+services/frontend/.vite/
+
+# Go (api)
+services/api/bin/
+services/api/storage/
+
+# Docker volumes (local)
+data/
+
+# Temp files
+*.tmp
+*.temp

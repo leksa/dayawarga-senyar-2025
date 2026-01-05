@@ -1,0 +1,105 @@
+# Traefik Dynamic Configuration
+http:
+  routers:
+    # Frontend Router
+    frontend:
+      rule: "Host(`dayawarga.com`) || Host(`www.dayawarga.com`)"
+      entryPoints:
+        - websecure
+      service: frontend
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - security-headers
+        - compress
+
+    # API Router
+    api:
+      rule: "Host(`api.dayawarga.com`)"
+      entryPoints:
+        - websecure
+      service: api
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - security-headers
+        - cors
+        - rate-limit
+
+    # SSE Events Router (no rate limit for streaming)
+    events:
+      rule: "Host(`api.dayawarga.com`) && PathPrefix(`/api/v1/events`)"
+      entryPoints:
+        - websecure
+      service: api
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - security-headers
+        - cors
+      priority: 100
+
+  services:
+    frontend:
+      loadBalancer:
+        servers:
+          - url: "http://frontend:3000"
+        healthCheck:
+          path: /
+          interval: 30s
+          timeout: 5s
+
+    api:
+      loadBalancer:
+        servers:
+          - url: "http://api:8080"
+        healthCheck:
+          path: /health
+          interval: 30s
+          timeout: 5s
+
+  middlewares:
+    # Security Headers
+    security-headers:
+      headers:
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        customResponseHeaders:
+          X-Content-Type-Options: "nosniff"
+          X-Frame-Options: "DENY"
+          X-XSS-Protection: "1; mode=block"
+
+    # CORS
+    cors:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+          - OPTIONS
+        accessControlAllowHeaders:
+          - Content-Type
+          - Authorization
+          - X-Requested-With
+        accessControlAllowOriginList:
+          - "https://dayawarga.com"
+          - "https://www.dayawarga.com"
+        accessControlMaxAge: 43200
+        addVaryHeader: true
+
+    # Rate Limiting (100 requests per minute)
+    rate-limit:
+      rateLimit:
+        average: 100
+        burst: 50
+        period: 1m
+
+    # Compression
+    compress:
+      compress:
+        excludedContentTypes:
+          - text/event-stream

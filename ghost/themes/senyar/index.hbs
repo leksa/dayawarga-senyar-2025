@@ -1,0 +1,43 @@
+{{!< default}}
+
+<section class="hero" style="padding-top: 3rem;">
+    <h1>{{@site.title}}</h1>
+    {{#if @site.description}}
+        <p class="site-description">{{{@site.description}}}</p>
+    {{/if}}
+</section>
+
+<section class="posts-grid">
+    {{#foreach posts}}
+        <article class="post-card {{post_class}}">
+            {{#if feature_image}}
+                <a href="{{url}}" class="post-card-image">
+                    <img src="{{img_url feature_image size="l"}}" alt="{{title}}" loading="lazy">
+                </a>
+            {{/if}}
+
+            <div class="post-card-content">
+                <h2 class="post-card-title">
+                    <a href="{{url}}">{{title}}</a>
+                </h2>
+
+                {{#if custom_excerpt}}
+                    <p class="post-card-excerpt">{{custom_excerpt}}</p>
+                {{else}}
+                    <p class="post-card-excerpt">{{excerpt words="40"}}</p>
+                {{/if}}
+
+                <div class="post-card-meta">
+                    <time datetime="{{date format="YYYY-MM-DD"}}">
+                        {{date format="DD MMM YYYY"}}
+                    </time>
+                    {{#if primary_tag}}
+                        <span class="post-card-tag">{{primary_tag.name}}</span>
+                    {{/if}}
+                </div>
+            </div>
+        </article>
+    {{/foreach}}
+</section>
+
+{{pagination}}

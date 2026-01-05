@@ -1,0 +1,181 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # TRAEFIK - Reverse Proxy & Load Balancer
+  # ============================================
+  traefik:
+    image: traefik:v3.0
+    container_name: senyar-traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./infrastructure/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./infrastructure/traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+      - traefik_letsencrypt:/letsencrypt
+    environment:
+      - ACME_EMAIL=${ACME_EMAIL:-admin@dayawarga.com}
+    networks:
+      - senyar-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.dayawarga.com`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.dashboard.middlewares=auth"
+      - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH:-admin:$$apr1$$xyz$$hashedpassword}"
+
+  # ============================================
+  # POSTGRESQL + POSTGIS
+  # ============================================
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: senyar-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${DB_USER:-senyar}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-senyar123}
+      - POSTGRES_DB=${DB_NAME:-senyar}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/database/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-senyar} -d ${DB_NAME:-senyar}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - senyar-network
+
+  # ============================================
+  # API - Golang Backend Service
+  # ============================================
+  api:
+    build:
+      context: ./services/api
+      dockerfile: Dockerfile
+    container_name: senyar-api
+    restart: unless-stopped
+    environment:
+      - API_PORT=8080
+      - ENVIRONMENT=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-senyar}
+      - DB_PASSWORD=${DB_PASSWORD:-senyar123}
+      - DB_NAME=${DB_NAME:-senyar}
+      - ODK_BASE_URL=${ODK_BASE_URL:-https://data.dayawarga.com}
+      - ODK_EMAIL=${ODK_EMAIL}
+      - ODK_PASSWORD=${ODK_PASSWORD}
+      - ODK_PROJECT_ID=${ODK_PROJECT_ID:-3}
+      - ODK_FORM_ID=${ODK_FORM_ID:-form_posko_v1}
+      - ODK_FEED_FORM_ID=${ODK_FEED_FORM_ID:-form_feed_v1}
+      - PHOTO_STORAGE_PATH=/app/storage/photos
+      - SCHEDULER_ENABLED=${SCHEDULER_ENABLED:-true}
+    volumes:
+      - api_storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - senyar-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`api.dayawarga.com`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.api.loadbalancer.server.port=8080"
+
+  # ============================================
+  # FRONTEND - Vue.js Application
+  # ============================================
+  frontend:
+    build:
+      context: ./services/frontend
+      dockerfile: Dockerfile
+    container_name: senyar-frontend
+    restart: unless-stopped
+    environment:
+      - VITE_API_URL=https://api.dayawarga.com/api/v1
+    depends_on:
+      - api
+    networks:
+      - senyar-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`dayawarga.com`) || Host(`www.dayawarga.com`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+
+  # ============================================
+  # GHOST CMS - Blog Engine
+  # ============================================
+  ghost:
+    image: ghost:5-alpine
+    container_name: senyar-ghost
+    restart: unless-stopped
+    ports:
+      - "2368:2368"  # Local development access
+    environment:
+      - url=${GHOST_URL:-http://localhost:2368}
+      - database__client=sqlite3
+      - database__connection__filename=/var/lib/ghost/content/data/ghost.db
+      - NODE_ENV=production
+    volumes:
+      - ghost_content:/var/lib/ghost/content
+      - ./ghost/themes/senyar:/var/lib/ghost/content/themes/senyar
+    networks:
+      - senyar-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ghost.rule=Host(`stories.dayawarga.com`)"
+      - "traefik.http.routers.ghost.entrypoints=websecure"
+      - "traefik.http.routers.ghost.tls.certresolver=letsencrypt"
+      - "traefik.http.services.ghost.loadbalancer.server.port=2368"
+
+  # ============================================
+  # PGADMIN - Database Management UI (optional)
+  # ============================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: senyar-pgadmin
+    restart: unless-stopped
+    profiles:
+      - tools
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL:-admin@local.dev}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD:-admin123}
+      - PGADMIN_CONFIG_SERVER_MODE=False
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - senyar-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pgadmin.rule=Host(`pgadmin.dayawarga.com`)"
+      - "traefik.http.routers.pgadmin.entrypoints=websecure"
+      - "traefik.http.routers.pgadmin.tls.certresolver=letsencrypt"
+      - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
+
+networks:
+  senyar-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+  api_storage:
+  traefik_letsencrypt:
+  ghost_content:

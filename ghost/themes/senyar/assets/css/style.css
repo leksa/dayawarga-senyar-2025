@@ -1,0 +1,985 @@
+/* ============================================
+   SENYAR THEME - Siklon Senyar Blog
+   Dayawarga Disaster Monitoring System
+   Design matching: TentangView.vue
+   ============================================ */
+
+/* Import Inter font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    /* Colors - Matching TentangView */
+    --color-primary: #2563eb;      /* blue-600 */
+    --color-primary-dark: #1d4ed8; /* blue-700 */
+    --color-primary-light: #dbeafe; /* blue-100 */
+
+    --color-green: #16a34a;        /* green-600 */
+    --color-green-light: #dcfce7;  /* green-100 */
+
+    --color-purple: #9333ea;       /* purple-600 */
+    --color-purple-light: #f3e8ff; /* purple-100 */
+
+    --color-amber: #d97706;        /* amber-600 */
+    --color-amber-light: #fef3c7;  /* amber-100 */
+
+    --color-cyan: #0891b2;         /* cyan-600 */
+    --color-cyan-light: #cffafe;   /* cyan-100 */
+
+    /* Neutrals - gray palette */
+    --color-bg: #ffffff;
+    --color-bg-alt: #f9fafb;       /* gray-50 */
+    --color-text: #111827;         /* gray-900 */
+    --color-text-secondary: #4b5563; /* gray-600 */
+    --color-text-muted: #6b7280;   /* gray-500 */
+    --color-border: #e5e7eb;       /* gray-200 */
+    --color-border-light: #f3f4f6; /* gray-100 */
+
+    /* Typography */
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+    /* Spacing */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-12: 3rem;
+
+    /* Layout */
+    --container-max: 48rem; /* max-w-3xl = 768px */
+    --content-max: 48rem;
+
+    /* Border radius */
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
+}
+
+/* Reset */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.625;
+    color: var(--color-text-secondary);
+    background: linear-gradient(to bottom, var(--color-bg-alt), var(--color-bg));
+    min-height: 100vh;
+}
+
+a {
+    color: var(--color-primary);
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+a:hover {
+    color: var(--color-primary-dark);
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--color-text);
+    font-weight: 700;
+    line-height: 1.25;
+    margin: 0;
+}
+
+p {
+    margin: 0;
+}
+
+/* Container */
+.container {
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 0 var(--space-8);
+}
+
+/* ============================================
+   HEADER - Clean minimal header
+   ============================================ */
+.site-header {
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-border);
+    padding: var(--space-4) 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.site-header .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 72rem;
+}
+
+.site-logo {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.site-logo img {
+    height: 36px;
+    width: auto;
+}
+
+.site-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+.site-nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: var(--space-6);
+}
+
+.site-nav a {
+    color: var(--color-text-secondary);
+    font-weight: 500;
+    font-size: 0.875rem;
+    transition: color 0.15s ease;
+}
+
+.site-nav a:hover {
+    color: var(--color-primary);
+}
+
+/* ============================================
+   HERO - Simple header section
+   ============================================ */
+.hero {
+    margin-bottom: var(--space-12);
+}
+
+.hero h1 {
+    font-size: 2.25rem;
+    margin-bottom: var(--space-4);
+}
+
+.site-description {
+    font-size: 1.25rem;
+    color: var(--color-text-secondary);
+    line-height: 1.75;
+}
+
+.site-description strong {
+    color: var(--color-text);
+}
+
+/* ============================================
+   INFO BOX - Blue callout box
+   ============================================ */
+.info-box {
+    background: #eff6ff; /* blue-50 */
+    border-left: 4px solid var(--color-primary);
+    padding: var(--space-6);
+    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+    margin-bottom: var(--space-12);
+}
+
+.info-box p {
+    color: #374151; /* gray-700 */
+    line-height: 1.75;
+}
+
+.info-box strong {
+    color: var(--color-text);
+}
+
+/* ============================================
+   POSTS GRID - Card layout
+   ============================================ */
+.posts-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+    padding: var(--space-12) 0;
+}
+
+.post-card {
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.post-card:hover {
+    border-color: #93c5fd; /* blue-300 */
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.post-card-image img {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+}
+
+.post-card-content {
+    padding: var(--space-6);
+}
+
+.post-card-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: var(--space-2);
+    line-height: 1.4;
+}
+
+.post-card-title a {
+    color: var(--color-text);
+}
+
+.post-card-title a:hover {
+    color: var(--color-primary);
+}
+
+.post-card-excerpt {
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-4);
+    font-size: 0.9375rem;
+    line-height: 1.625;
+}
+
+.post-card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+}
+
+.post-card-tag {
+    background: var(--color-primary);
+    color: white;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+/* Feature card - with icon style like TentangView */
+.post-card.featured {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-4);
+    padding: var(--space-6);
+}
+
+.post-card.featured .post-card-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: var(--radius-xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.post-card.featured .post-card-icon.green {
+    background: var(--color-green-light);
+    color: var(--color-green);
+}
+
+.post-card.featured .post-card-icon.purple {
+    background: var(--color-purple-light);
+    color: var(--color-purple);
+}
+
+.post-card.featured .post-card-icon.cyan {
+    background: var(--color-cyan-light);
+    color: var(--color-cyan);
+}
+
+/* ============================================
+   SINGLE POST
+   ============================================ */
+.post-header {
+    margin-bottom: var(--space-12);
+}
+
+.post-tag {
+    display: inline-block;
+    background: var(--color-primary);
+    color: white;
+    padding: var(--space-1) var(--space-4);
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    margin-bottom: var(--space-4);
+}
+
+.post-title {
+    font-size: 2.25rem;
+    line-height: 1.25;
+    margin-bottom: var(--space-4);
+}
+
+.post-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+    flex-wrap: wrap;
+}
+
+.post-author {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.post-author img {
+    width: 32px;
+    height: 32px;
+    border-radius: 9999px;
+    object-fit: cover;
+}
+
+.post-feature-image {
+    margin: 0 0 var(--space-8);
+}
+
+.post-feature-image img {
+    width: 100%;
+    border-radius: var(--radius-xl);
+}
+
+.post-feature-image figcaption {
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    margin-top: var(--space-3);
+}
+
+/* Post Content */
+.post-content {
+    font-size: 1rem;
+    line-height: 1.75;
+    color: var(--color-text-secondary);
+}
+
+.post-content strong {
+    color: var(--color-text);
+    font-weight: 600;
+}
+
+.post-content h2 {
+    font-size: 1.5rem;
+    margin-top: var(--space-12);
+    margin-bottom: var(--space-6);
+}
+
+.post-content h3 {
+    font-size: 1.25rem;
+    margin-top: var(--space-8);
+    margin-bottom: var(--space-4);
+}
+
+.post-content p {
+    margin-bottom: var(--space-6);
+}
+
+.post-content img {
+    border-radius: var(--radius-lg);
+    margin: var(--space-6) 0;
+}
+
+.post-content blockquote {
+    background: #eff6ff; /* blue-50 */
+    border-left: 4px solid var(--color-primary);
+    margin: var(--space-6) 0;
+    padding: var(--space-6);
+    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+    font-style: normal;
+}
+
+.post-content blockquote p {
+    margin: 0;
+    color: #374151;
+}
+
+.post-content ul,
+.post-content ol {
+    margin: var(--space-6) 0;
+    padding-left: var(--space-6);
+}
+
+.post-content li {
+    margin-bottom: var(--space-2);
+}
+
+.post-content pre {
+    background: var(--color-text);
+    color: white;
+    padding: var(--space-6);
+    border-radius: var(--radius-lg);
+    overflow-x: auto;
+    font-size: 0.875rem;
+}
+
+.post-content code {
+    font-family: 'Fira Code', 'Monaco', monospace;
+}
+
+.post-content a {
+    color: var(--color-primary);
+    text-decoration: underline;
+    text-decoration-color: #93c5fd;
+    text-underline-offset: 2px;
+}
+
+.post-content a:hover {
+    text-decoration-color: var(--color-primary);
+}
+
+/* Post Footer */
+.post-footer {
+    margin-top: var(--space-12);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--color-border);
+}
+
+.post-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.post-tags .tag {
+    background: var(--color-bg-alt);
+    color: var(--color-text-secondary);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.15s ease;
+}
+
+.post-tags .tag:hover {
+    background: var(--color-primary);
+    color: white;
+}
+
+/* ============================================
+   PAGE
+   ============================================ */
+.page-header {
+    margin-bottom: var(--space-12);
+}
+
+.page-title {
+    font-size: 2.25rem;
+}
+
+.page-content {
+    padding-bottom: var(--space-12);
+}
+
+/* ============================================
+   TAG / AUTHOR HEADER
+   ============================================ */
+.tag-header,
+.author-header {
+    background: var(--color-bg-alt);
+    padding: var(--space-12) 0;
+    margin-bottom: var(--space-8);
+    text-align: center;
+}
+
+.tag-title,
+.author-name {
+    font-size: 1.5rem;
+    margin-bottom: var(--space-2);
+}
+
+.tag-description,
+.author-bio {
+    color: var(--color-text-secondary);
+    max-width: 600px;
+    margin: 0 auto var(--space-4);
+}
+
+.tag-count,
+.author-count {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+}
+
+.author-image {
+    width: 80px;
+    height: 80px;
+    border-radius: 9999px;
+    object-fit: cover;
+    margin-bottom: var(--space-4);
+}
+
+/* ============================================
+   PAGINATION
+   ============================================ */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-12) 0;
+}
+
+.pagination a {
+    padding: var(--space-3) var(--space-6);
+    background: var(--color-primary);
+    color: white;
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    font-size: 0.875rem;
+    transition: background 0.15s ease;
+}
+
+.pagination a:hover {
+    background: var(--color-primary-dark);
+    color: white;
+}
+
+/* ============================================
+   ERROR PAGE
+   ============================================ */
+.error-page {
+    text-align: center;
+    padding: var(--space-12) 0;
+    min-height: 60vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.error-page .container {
+    max-width: 32rem;
+}
+
+.error-code {
+    font-size: 6rem;
+    color: var(--color-primary);
+    line-height: 1;
+    margin-bottom: var(--space-4);
+}
+
+.error-message {
+    font-size: 1.25rem;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-6);
+}
+
+.btn {
+    display: inline-block;
+    padding: var(--space-3) var(--space-8);
+    background: var(--color-primary);
+    color: white;
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    transition: background 0.15s ease;
+}
+
+.btn:hover {
+    background: var(--color-primary-dark);
+    color: white;
+}
+
+/* ============================================
+   CTA BOX - Gradient box like TentangView
+   ============================================ */
+.cta-box {
+    background: linear-gradient(to right, var(--color-primary), var(--color-primary-dark));
+    border-radius: var(--radius-2xl);
+    padding: var(--space-8);
+    text-align: center;
+    color: white;
+    margin: var(--space-12) 0;
+}
+
+.cta-box p {
+    font-size: 1.125rem;
+    margin-bottom: var(--space-2);
+    opacity: 0.9;
+}
+
+.cta-box .cta-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+/* ============================================
+   PRINCIPLE CARDS - Gradient cards
+   ============================================ */
+.principle-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-4);
+    margin: var(--space-6) 0;
+}
+
+.principle-card {
+    padding: var(--space-5);
+    border-radius: var(--radius-xl);
+}
+
+.principle-card.blue {
+    background: linear-gradient(to bottom right, #eff6ff, #dbeafe);
+}
+
+.principle-card.blue .principle-title {
+    color: #1e3a8a;
+}
+
+.principle-card.blue .principle-desc {
+    color: #1d4ed8;
+}
+
+.principle-card.green {
+    background: linear-gradient(to bottom right, #f0fdf4, #dcfce7);
+}
+
+.principle-card.green .principle-title {
+    color: #14532d;
+}
+
+.principle-card.green .principle-desc {
+    color: #16a34a;
+}
+
+.principle-card.purple {
+    background: linear-gradient(to bottom right, #faf5ff, #f3e8ff);
+}
+
+.principle-card.purple .principle-title {
+    color: #581c87;
+}
+
+.principle-card.purple .principle-desc {
+    color: #9333ea;
+}
+
+.principle-card.amber {
+    background: linear-gradient(to bottom right, #fffbeb, #fef3c7);
+}
+
+.principle-card.amber .principle-title {
+    color: #78350f;
+}
+
+.principle-card.amber .principle-desc {
+    color: #d97706;
+}
+
+.principle-title {
+    font-weight: 600;
+    margin-bottom: var(--space-1);
+}
+
+.principle-desc {
+    font-size: 0.875rem;
+}
+
+/* ============================================
+   CONTACT CARD - Person card style
+   ============================================ */
+.contact-card {
+    background: var(--color-bg-alt);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
+}
+
+.contact-name {
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.contact-role {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-2);
+}
+
+.contact-links {
+    display: flex;
+    gap: var(--space-4);
+}
+
+.contact-links a {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    transition: color 0.15s ease;
+}
+
+.contact-links a:hover {
+    color: var(--color-primary);
+}
+
+/* ============================================
+   FOOTER
+   ============================================ */
+.site-footer {
+    background: var(--color-bg);
+    border-top: 1px solid var(--color-border);
+    padding: var(--space-8) 0;
+    text-align: center;
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+    margin-top: var(--space-12);
+}
+
+.site-footer a {
+    color: var(--color-text-secondary);
+}
+
+.site-footer a:hover {
+    color: var(--color-primary);
+}
+
+.site-footer p {
+    margin: var(--space-2) 0;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 var(--space-4);
+    }
+
+    .site-header .container {
+        flex-direction: column;
+        gap: var(--space-4);
+    }
+
+    .site-nav ul {
+        gap: var(--space-4);
+    }
+
+    .hero h1,
+    .post-title,
+    .page-title {
+        font-size: 1.75rem;
+    }
+
+    .site-description {
+        font-size: 1.125rem;
+    }
+
+    .principle-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .post-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-2);
+    }
+}
+
+/* ============================================
+   SITE WRAPPER - Layout with sidebar
+   ============================================ */
+.site-wrapper {
+    display: flex;
+    min-height: 100vh;
+}
+
+.site-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    background: linear-gradient(to bottom, var(--color-bg-alt), var(--color-bg));
+}
+
+.header-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 0 var(--space-8);
+}
+
+.content-container {
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 0 var(--space-8);
+    width: 100%;
+}
+
+/* ============================================
+   SIDEBAR - Left navigation
+   ============================================ */
+.sidebar {
+    width: 18rem;
+    background: var(--color-bg);
+    border-right: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    flex-shrink: 0;
+}
+
+.sidebar-section {
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.sidebar-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #9ca3af; /* gray-400 */
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--space-2);
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2);
+    border-radius: var(--radius-lg);
+    color: var(--color-text-secondary);
+    font-weight: 500;
+    transition: all 0.15s ease;
+}
+
+.sidebar-link:hover {
+    background: var(--color-bg-alt);
+    color: var(--color-text);
+}
+
+.sidebar-link-featured {
+    background: #eff6ff; /* blue-50 */
+    color: var(--color-primary);
+}
+
+.sidebar-link-featured:hover {
+    background: #dbeafe; /* blue-100 */
+    color: var(--color-primary);
+}
+
+.sidebar-icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.sidebar-icon svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.sidebar-icon.blue {
+    background: var(--color-primary);
+    color: white;
+}
+
+.sidebar-icon.gray {
+    background: #4b5563; /* gray-600 */
+    color: white;
+}
+
+.sidebar-icon.green {
+    background: var(--color-green);
+    color: white;
+}
+
+.sidebar-link-text {
+    flex: 1;
+}
+
+.sidebar-arrow {
+    color: #9ca3af;
+    font-size: 1.25rem;
+}
+
+.sidebar-footer {
+    padding: var(--space-4);
+    border-top: 1px solid var(--color-border);
+    margin-top: auto;
+}
+
+.sidebar-footer p {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    line-height: 1.5;
+}
+
+.sidebar-footer a {
+    color: var(--color-primary);
+}
+
+.sidebar-footer a:hover {
+    text-decoration: underline;
+}
+
+/* ============================================
+   READING PROGRESS
+   ============================================ */
+.reading-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: transparent;
+    z-index: 1000;
+}
+
+.reading-progress-bar {
+    height: 100%;
+    background: var(--color-primary);
+    width: 0;
+    transition: width 0.1s ease;
+}
+
+/* ============================================
+   RESPONSIVE - Hide sidebar on mobile
+   ============================================ */
+@media (max-width: 1024px) {
+    .sidebar {
+        display: none;
+    }
+
+    .site-wrapper {
+        flex-direction: column;
+    }
+}

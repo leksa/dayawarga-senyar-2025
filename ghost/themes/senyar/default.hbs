@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="{{@site.locale}}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{meta_title}}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{{asset "css/style.css"}}">
+
+    {{ghost_head}}
+</head>
+<body class="{{body_class}}">
+    <div class="site-wrapper">
+        {{> sidebar}}
+
+        <div class="site-content">
+            <header class="site-header">
+                <div class="header-inner">
+                    <a href="{{@site.url}}" class="site-logo">
+                        {{#if @site.logo}}
+                            <img src="{{@site.logo}}" alt="{{@site.title}}">
+                        {{/if}}
+                        <span class="site-title">{{@site.title}}</span>
+                    </a>
+
+                    <nav class="site-nav">
+                        {{navigation}}
+                    </nav>
+                </div>
+            </header>
+
+            <main class="site-main">
+                <div class="content-container">
+                    {{{body}}}
+                </div>
+            </main>
+
+            <footer class="site-footer">
+                <div class="content-container">
+                    <p>&copy; {{date format="YYYY"}} {{@site.title}}</p>
+                    <p>Powered by <a href="https://ghost.org" target="_blank">Ghost</a> &middot; <a href="https://dayawarga.com" target="_blank">Dayawarga</a></p>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    {{ghost_foot}}
+    <script src="{{asset "js/main.js"}}"></script>
+</body>
+</html>

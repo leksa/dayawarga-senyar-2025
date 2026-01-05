@@ -1,0 +1,37 @@
+{{!< default}}
+
+<div class="container">
+    <header class="tag-header">
+        <h1 class="tag-title">{{name}}</h1>
+        {{#if description}}
+            <p class="tag-description">{{description}}</p>
+        {{/if}}
+        <span class="tag-count">{{plural ../pagination.total empty="No posts" singular="% post" plural="% posts"}}</span>
+    </header>
+
+    <section class="posts-grid">
+        {{#foreach posts}}
+            <article class="post-card {{post_class}}">
+                {{#if feature_image}}
+                    <a href="{{url}}" class="post-card-image">
+                        <img src="{{img_url feature_image size="m"}}" alt="{{title}}">
+                    </a>
+                {{/if}}
+
+                <div class="post-card-content">
+                    <h2 class="post-card-title">
+                        <a href="{{url}}">{{title}}</a>
+                    </h2>
+                    <p class="post-card-excerpt">{{excerpt words="30"}}</p>
+                    <div class="post-card-meta">
+                        <time datetime="{{date format="YYYY-MM-DD"}}">
+                            {{date format="DD MMM YYYY"}}
+                        </time>
+                    </div>
+                </div>
+            </article>
+        {{/foreach}}
+    </section>
+
+    {{pagination}}
+</div>
