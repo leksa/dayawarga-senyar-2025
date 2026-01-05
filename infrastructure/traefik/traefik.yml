@@ -26,7 +26,7 @@ providers:
 certificatesResolvers:
   letsencrypt:
     acme:
-      email: ${ACME_EMAIL:-admin@dayawarga.com}
+      email: admin@dayawarga.com
       storage: /letsencrypt/acme.json
       httpChallenge:
         entryPoint: web
