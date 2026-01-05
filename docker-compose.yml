@@ -1,11 +1,9 @@
-version: '3.8'
-
 services:
   # ============================================
   # TRAEFIK - Reverse Proxy & Load Balancer
   # ============================================
   traefik:
-    image: traefik:v3.0
+    image: traefik:v3.2
     container_name: senyar-traefik
     restart: unless-stopped
     ports:
