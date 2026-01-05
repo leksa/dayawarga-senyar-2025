@@ -35,7 +35,7 @@ services:
     restart: unless-stopped
     environment:
       - POSTGRES_USER=${DB_USER:-senyar}
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-senyar123}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:?DB_PASSWORD required in .env}
       - POSTGRES_DB=${DB_NAME:-senyar}
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -63,7 +63,7 @@ services:
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=${DB_USER:-senyar}
-      - DB_PASSWORD=${DB_PASSWORD:-senyar123}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD required in .env}
       - DB_NAME=${DB_NAME:-senyar}
       - ODK_BASE_URL=${ODK_BASE_URL:-https://data.dayawarga.com}
       - ODK_EMAIL=${ODK_EMAIL}
@@ -151,7 +151,7 @@ services:
       - tools
     environment:
       - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL:-admin@local.dev}
-      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD:-admin123}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD:-changeme}
       - PGADMIN_CONFIG_SERVER_MODE=False
     volumes:
       - pgadmin_data:/var/lib/pgadmin
