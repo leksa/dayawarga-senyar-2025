@@ -16,6 +16,7 @@ services:
       - traefik_letsencrypt:/letsencrypt
     environment:
       - ACME_EMAIL=${ACME_EMAIL:-admin@dayawarga.com}
+      - DOCKER_API_VERSION=1.45
     networks:
       - senyar-network
     labels:
