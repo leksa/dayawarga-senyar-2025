@@ -3,7 +3,7 @@ services:
   # TRAEFIK - Reverse Proxy & Load Balancer
   # ============================================
   traefik:
-    image: traefik:v3.2
+    image: traefik:v2.11
     container_name: senyar-traefik
     restart: unless-stopped
     ports:
@@ -16,7 +16,6 @@ services:
       - traefik_letsencrypt:/letsencrypt
     environment:
       - ACME_EMAIL=${ACME_EMAIL:-admin@dayawarga.com}
-      - DOCKER_API_VERSION=1.45
     networks:
       - senyar-network
     labels:
