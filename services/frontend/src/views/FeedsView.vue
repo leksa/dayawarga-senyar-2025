@@ -122,9 +122,14 @@ const fetchFeeds = async (reset = true) => {
       since: getThirtyDaysAgo(), // Always filter last 30 days
     }
 
-    // Search by location_name only
+    // Check if search is UUID or name
     if (searchQuery.value) {
-      filter.location_name = searchQuery.value
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      if (uuidRegex.test(searchQuery.value)) {
+        filter.location_id = searchQuery.value
+      } else {
+        filter.location_name = searchQuery.value
+      }
     }
     if (selectedCategory.value) {
       filter.category = selectedCategory.value
