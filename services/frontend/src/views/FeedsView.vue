@@ -213,62 +213,65 @@ const allCategories = [
     <!-- Feeds Content -->
     <main class="flex-1 bg-gray-50 flex flex-col overflow-hidden">
       <!-- Header -->
-      <div class="bg-white border-b border-gray-200 px-6 py-4">
+      <div class="bg-white border-b border-gray-200 px-3 md:px-6 py-3 md:py-4">
         <div class="max-w-4xl mx-auto">
-          <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center justify-between mb-3 md:mb-4">
             <div>
-              <h1 class="text-2xl font-bold text-gray-900">Informasi Terbaru</h1>
+              <h1 class="text-lg md:text-2xl font-bold text-gray-900">Informasi Terbaru</h1>
               <div class="flex items-center gap-2 mt-1">
-                <span class="relative flex h-2.5 w-2.5">
+                <span class="relative flex h-2 w-2 md:h-2.5 md:w-2.5">
                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 md:h-2.5 md:w-2.5 bg-green-500"></span>
                 </span>
-                <span class="text-sm text-gray-500">Live Feeds - {{ total }} updates sebulan terakhir</span>
+                <span class="text-xs md:text-sm text-gray-500">{{ total }} updates</span>
               </div>
             </div>
-            <Button variant="outline" class="gap-2">
+            <Button variant="outline" class="gap-2 hidden md:flex">
               <Download class="w-4 h-4" />
               Export
             </Button>
           </div>
 
-          <!-- Filters Row -->
-          <div class="flex gap-3">
+          <!-- Filters Row - Stack on mobile -->
+          <div class="flex flex-col md:flex-row gap-2 md:gap-3">
             <!-- Search by Location Name -->
             <div class="flex-1 relative">
               <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 v-model="searchQuery"
-                placeholder="Cari nama posko, faskes, dll..."
+                placeholder="Cari nama posko..."
                 class="pl-9 w-full"
                 @keyup.enter="handleSearch"
               />
             </div>
 
-            <!-- Category Filter -->
-            <div class="w-48">
-              <select
-                v-model="selectedCategory"
-                class="w-full h-10 text-sm border border-gray-200 rounded-lg px-3 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Semua Kategori</option>
-                <option v-for="cat in allCategories" :key="cat.value" :value="cat.value">
-                  {{ cat.label }}
-                </option>
-              </select>
-            </div>
+            <!-- Filter selects in row on mobile -->
+            <div class="flex gap-2">
+              <!-- Category Filter -->
+              <div class="flex-1 md:w-48 md:flex-initial">
+                <select
+                  v-model="selectedCategory"
+                  class="w-full h-10 text-sm border border-gray-200 rounded-lg px-2 md:px-3 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Kategori</option>
+                  <option v-for="cat in allCategories" :key="cat.value" :value="cat.value">
+                    {{ cat.label }}
+                  </option>
+                </select>
+              </div>
 
-            <!-- Tags Filter (Single Select) -->
-            <div class="w-48">
-              <select
-                v-model="selectedTag"
-                class="w-full h-10 text-sm border border-gray-200 rounded-lg px-3 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Semua Tags</option>
-                <option v-for="tag in allTags" :key="tag.value" :value="tag.value">
-                  {{ tag.label }}
-                </option>
-              </select>
+              <!-- Tags Filter (Single Select) -->
+              <div class="flex-1 md:w-48 md:flex-initial">
+                <select
+                  v-model="selectedTag"
+                  class="w-full h-10 text-sm border border-gray-200 rounded-lg px-2 md:px-3 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Tags</option>
+                  <option v-for="tag in allTags" :key="tag.value" :value="tag.value">
+                    {{ tag.label }}
+                  </option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -312,7 +315,7 @@ const allCategories = [
 
       <!-- Feeds List -->
       <div v-else class="flex-1 overflow-y-auto">
-        <div class="max-w-4xl mx-auto py-4 px-6">
+        <div class="max-w-4xl mx-auto py-3 md:py-4 px-3 md:px-6">
           <!-- Empty State -->
           <div v-if="formattedFeeds.length === 0" class="text-center py-12">
             <Filter class="w-12 h-12 text-gray-300 mx-auto mb-4" />
@@ -321,11 +324,11 @@ const allCategories = [
           </div>
 
           <!-- Feed Items -->
-          <div class="space-y-3">
+          <div class="space-y-2 md:space-y-3">
             <div
               v-for="update in formattedFeeds"
               :key="update.id"
-              class="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-sm transition-shadow"
+              class="bg-white rounded-lg border border-gray-200 p-3 md:p-4 hover:shadow-sm transition-shadow"
             >
               <div class="flex items-center justify-between mb-2">
                 <span class="text-xs text-gray-500">{{ update.timestamp }}</span>

@@ -198,15 +198,27 @@ const closePhotoModal = () => {
 </script>
 
 <template>
+  <!-- Mobile backdrop -->
+  <div
+    v-if="marker"
+    class="fixed inset-0 bg-black/50 z-40 lg:hidden"
+    @click="emit('close')"
+  />
+
   <aside
     v-if="marker"
-    class="w-96 bg-white border-l border-gray-200 flex flex-col h-full overflow-hidden"
+    class="fixed inset-x-0 bottom-0 h-[85vh] lg:h-full lg:relative lg:inset-auto lg:w-96 bg-white border-t lg:border-t-0 lg:border-l border-gray-200 flex flex-col overflow-hidden z-50 rounded-t-2xl lg:rounded-none"
   >
+    <!-- Mobile drag handle -->
+    <div class="lg:hidden flex justify-center pt-2 pb-1">
+      <div class="w-10 h-1 bg-gray-300 rounded-full" />
+    </div>
+
     <!-- Header -->
-    <div class="p-4 border-b border-gray-200">
-      <div class="flex items-start justify-between">
-        <div>
-          <h2 class="text-lg font-semibold text-gray-900">{{ marker.name }}</h2>
+    <div class="p-3 lg:p-4 border-b border-gray-200">
+      <div class="flex items-start justify-between gap-2">
+        <div class="flex-1 min-w-0">
+          <h2 class="text-base lg:text-lg font-semibold text-gray-900 truncate">{{ marker.name }}</h2>
           <div class="flex items-center gap-2 mt-1">
             <Badge :variant="statusVariant">Status Posko: {{ statusLabel }}</Badge>
           </div>
@@ -260,8 +272,8 @@ const closePhotoModal = () => {
       </div>
 
       <!-- Thumbnails Grid -->
-      <div class="flex-1 overflow-y-auto p-4">
-        <div class="grid grid-cols-2 gap-3">
+      <div class="flex-1 overflow-y-auto p-3 lg:p-4">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-2 lg:gap-3">
           <div
             v-for="photo in cachedPhotos"
             :key="photo.id"
