@@ -198,22 +198,17 @@ const closePhotoModal = () => {
 </script>
 
 <template>
-  <!-- Mobile backdrop -->
+  <!-- Mobile backdrop (covers area behind panel, clicking closes it) -->
   <div
     v-if="marker"
-    class="fixed inset-0 bg-black/50 z-40 lg:hidden"
+    class="fixed inset-0 left-14 bg-black/30 z-40 lg:hidden"
     @click="emit('close')"
   />
 
   <aside
     v-if="marker"
-    class="fixed inset-x-0 bottom-0 h-[85vh] lg:h-full lg:relative lg:inset-auto lg:w-96 bg-white border-t lg:border-t-0 lg:border-l border-gray-200 flex flex-col overflow-hidden z-50 rounded-t-2xl lg:rounded-none"
+    class="fixed inset-y-0 left-14 right-0 lg:h-full lg:relative lg:inset-auto lg:w-96 bg-white border-l border-gray-200 flex flex-col overflow-hidden z-50 lg:border-t-0"
   >
-    <!-- Mobile drag handle -->
-    <div class="lg:hidden flex justify-center pt-2 pb-1">
-      <div class="w-10 h-1 bg-gray-300 rounded-full" />
-    </div>
-
     <!-- Header -->
     <div class="p-3 lg:p-4 border-b border-gray-200">
       <div class="flex items-start justify-between gap-2">

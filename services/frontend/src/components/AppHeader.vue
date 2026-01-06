@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { HelpCircle, Clock, Menu } from 'lucide-vue-next'
+import { HelpCircle, Clock } from 'lucide-vue-next'
 import { api } from '@/services/api'
-import { useSidebar } from '@/composables/useSidebar'
-
-const { toggle: toggleSidebar } = useSidebar()
 
 const lastSyncTime = ref<string>('')
 
@@ -30,17 +27,8 @@ onMounted(async () => {
 
 <template>
   <header class="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-2 md:px-4">
-    <!-- Left: Menu button (mobile) + Logo -->
+    <!-- Left: Logo -->
     <div class="flex items-center gap-2">
-      <!-- Mobile menu button -->
-      <button
-        @click="toggleSidebar"
-        class="lg:hidden p-2 -ml-1 rounded-lg hover:bg-gray-100 transition-colors"
-        aria-label="Toggle menu"
-      >
-        <Menu class="w-6 h-6 text-gray-600" />
-      </button>
-
       <!-- Logo -->
       <RouterLink to="/" class="flex items-center gap-2 md:gap-3 hover:opacity-80 transition-opacity">
         <img src="/logo.png" alt="Dayawarga Logo" class="w-8 h-8 md:w-10 md:h-10 object-contain" />
