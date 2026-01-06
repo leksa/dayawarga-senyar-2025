@@ -196,6 +196,7 @@ const allTags = [
   { value: 'listrik', label: 'Listrik' },
   { value: 'internet', label: 'Internet' },
   { value: 'sinyal_selular', label: 'Sinyal Selular' },
+  { value: 'sanitasi_mck', label: 'Sanitasi MCK' },
 ]
 
 // Predefined categories
