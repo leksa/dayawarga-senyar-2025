@@ -1,7 +1,9 @@
-name: Deploy to Production
+name: CI/CD Pipeline
 
 on:
   push:
+    branches: [main, development]
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
