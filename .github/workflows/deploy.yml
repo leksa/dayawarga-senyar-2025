@@ -102,6 +102,11 @@ jobs:
             EOFS3
             fi
 
+            # Ensure S3_PATH_PREFIX is set correctly
+            if grep -q "S3_PATH_PREFIX=" .env; then
+              sed -i 's/S3_PATH_PREFIX=.*/S3_PATH_PREFIX=dayawarga/' .env
+            fi
+
             # Build and restart services
             echo "Building containers..."
             docker compose build --no-cache api frontend
