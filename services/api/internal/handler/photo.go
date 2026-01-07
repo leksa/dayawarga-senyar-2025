@@ -51,6 +51,7 @@ func (h *PhotoHandler) GetPhotosByLocation(c *gin.Context) {
 		IsCached    bool    `json:"is_cached"`
 		FileSize    *int    `json:"file_size,omitempty"`
 		URL         string  `json:"url,omitempty"`
+		StoragePath string  `json:"storage_path,omitempty"`
 		CreatedAt   string  `json:"created_at"`
 	}
 
@@ -63,6 +64,9 @@ func (h *PhotoHandler) GetPhotosByLocation(c *gin.Context) {
 			IsCached:  photo.IsCached,
 			FileSize:  photo.FileSize,
 			CreatedAt: photo.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		}
+		if photo.StoragePath != nil {
+			pr.StoragePath = *photo.StoragePath
 		}
 		if photo.IsCached {
 			pr.URL = "/api/v1/photos/" + photo.ID.String() + "/file"
