@@ -641,8 +641,47 @@ type ResetCacheResult struct {
 
 // ResetCacheForMissingFiles resets is_cached flag for photos whose local files are missing
 // This allows them to be re-downloaded (to S3 if enabled)
-func (s *PhotoService) ResetCacheForMissingFiles() (*ResetCacheResult, error) {
+// If force is true, it resets ALL cached photos regardless of file existence
+func (s *PhotoService) ResetCacheForMissingFiles(force bool) (*ResetCacheResult, error) {
 	result := &ResetCacheResult{}
+
+	// If force mode, reset all cached photos that are not already on S3
+	if force {
+		// Reset all location photos not on S3
+		res := s.db.Model(&model.LocationPhoto{}).
+			Where("is_cached = true").
+			Updates(map[string]interface{}{
+				"is_cached":    false,
+				"storage_path": nil,
+				"file_size":    nil,
+			})
+		result.LocationPhotos = int(res.RowsAffected)
+
+		// Reset all feed photos not on S3
+		res = s.db.Model(&model.FeedPhoto{}).
+			Where("is_cached = true").
+			Updates(map[string]interface{}{
+				"is_cached":    false,
+				"storage_path": nil,
+				"file_size":    nil,
+			})
+		result.FeedPhotos = int(res.RowsAffected)
+
+		// Reset all faskes photos not on S3
+		res = s.db.Model(&model.FaskesPhoto{}).
+			Where("is_cached = true").
+			Updates(map[string]interface{}{
+				"is_cached":    false,
+				"storage_path": nil,
+				"file_size":    nil,
+			})
+		result.FaskesPhotos = int(res.RowsAffected)
+
+		result.TotalReset = result.LocationPhotos + result.FeedPhotos + result.FaskesPhotos
+		log.Printf("Force reset cache: %d location, %d feed, %d faskes photos",
+			result.LocationPhotos, result.FeedPhotos, result.FaskesPhotos)
+		return result, nil
+	}
 
 	// Reset location photos with missing local files
 	var locationPhotos []model.LocationPhoto
