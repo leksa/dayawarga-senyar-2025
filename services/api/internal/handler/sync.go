@@ -11,15 +11,17 @@ import (
 
 // SyncHandler handles sync-related API endpoints
 type SyncHandler struct {
-	syncService     *service.SyncService
-	feedSyncService *service.FeedSyncService
+	syncService       *service.SyncService
+	feedSyncService   *service.FeedSyncService
+	faskesSyncService *service.FaskesSyncService
 }
 
 // NewSyncHandler creates a new sync handler
-func NewSyncHandler(syncService *service.SyncService, feedSyncService *service.FeedSyncService) *SyncHandler {
+func NewSyncHandler(syncService *service.SyncService, feedSyncService *service.FeedSyncService, faskesSyncService *service.FaskesSyncService) *SyncHandler {
 	return &SyncHandler{
-		syncService:     syncService,
-		feedSyncService: feedSyncService,
+		syncService:       syncService,
+		feedSyncService:   feedSyncService,
+		faskesSyncService: faskesSyncService,
 	}
 }
 
@@ -121,6 +123,61 @@ func (h *SyncHandler) GetFeedSyncStatus(c *gin.Context) {
 			Success: false,
 			Error: &dto.ErrorInfo{
 				Code:    "FEED_STATUS_FETCH_FAILED",
+				Message: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.APIResponse{
+		Success: true,
+		Data:    state,
+	})
+}
+
+// SyncFaskes triggers a full sync of all faskes submissions
+// @Summary Sync all faskes submissions
+// @Description Fetches all approved faskes submissions from ODK Central and syncs to PostgreSQL
+// @Tags sync
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.APIResponse
+// @Failure 500 {object} dto.APIResponse
+// @Router /api/v1/sync/faskes [post]
+func (h *SyncHandler) SyncFaskes(c *gin.Context) {
+	result, err := h.faskesSyncService.SyncAll()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.APIResponse{
+			Success: false,
+			Error: &dto.ErrorInfo{
+				Code:    "FASKES_SYNC_FAILED",
+				Message: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.APIResponse{
+		Success: true,
+		Data:    result,
+	})
+}
+
+// GetFaskesSyncStatus returns the current faskes sync status
+// @Summary Get faskes sync status
+// @Description Returns the current synchronization status for faskes form
+// @Tags sync
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.APIResponse
+// @Router /api/v1/sync/faskes/status [get]
+func (h *SyncHandler) GetFaskesSyncStatus(c *gin.Context) {
+	state, err := h.faskesSyncService.GetSyncState()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.APIResponse{
+			Success: false,
+			Error: &dto.ErrorInfo{
+				Code:    "FASKES_STATUS_FETCH_FAILED",
 				Message: err.Error(),
 			},
 		})

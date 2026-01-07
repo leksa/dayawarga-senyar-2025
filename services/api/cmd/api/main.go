@@ -85,9 +85,20 @@ func main() {
 	}
 	odkFeedClient := odk.NewClient(odkFeedConfig)
 
+	// Initialize ODK client for faskes form
+	odkFaskesConfig := &odk.ODKConfig{
+		BaseURL:   cfg.ODKBaseURL,
+		Email:     cfg.ODKEmail,
+		Password:  cfg.ODKPassword,
+		ProjectID: cfg.ODKProjectID,
+		FormID:    cfg.ODKFaskesFormID,
+	}
+	odkFaskesClient := odk.NewClient(odkFaskesConfig)
+
 	// Initialize services
 	syncService := service.NewSyncService(db, odkPoskoClient, cfg.ODKFormID)
 	feedSyncService := service.NewFeedSyncService(db, odkFeedClient, cfg.ODKFeedFormID)
+	faskesSyncService := service.NewFaskesSyncService(db, odkFaskesClient, cfg.ODKFaskesFormID)
 	photoService := service.NewPhotoService(db, odkPoskoClient, cfg.PhotoStoragePath)
 
 	// Initialize SSE Hub for real-time updates
@@ -107,7 +118,7 @@ func main() {
 	locationHandler := handler.NewLocationHandler(locationRepo, feedRepo)
 	feedHandler := handler.NewFeedHandler(feedRepo)
 	healthHandler := handler.NewHealthHandler(db)
-	syncHandler := handler.NewSyncHandler(syncService, feedSyncService)
+	syncHandler := handler.NewSyncHandler(syncService, feedSyncService, faskesSyncService)
 	photoHandler := handler.NewPhotoHandler(photoService)
 	sseHandler := handler.NewSSEHandler(sseHub)
 	schedulerHandler := handler.NewSchedulerHandler(autoScheduler)
@@ -168,6 +179,8 @@ func main() {
 		v1.GET("/sync/status", syncHandler.GetSyncStatus)
 		v1.POST("/sync/feed", syncHandler.SyncFeeds)
 		v1.GET("/sync/feed/status", syncHandler.GetFeedSyncStatus)
+		v1.POST("/sync/faskes", syncHandler.SyncFaskes)
+		v1.GET("/sync/faskes/status", syncHandler.GetFaskesSyncStatus)
 		v1.POST("/sync/photos", photoHandler.SyncPhotos)
 
 		// Scheduler endpoints

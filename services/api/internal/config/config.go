@@ -26,12 +26,13 @@ type Config struct {
 	CORSOrigins string
 
 	// ODK Central
-	ODKBaseURL     string
-	ODKEmail       string
-	ODKPassword    string
-	ODKProjectID   int
-	ODKFormID      string
-	ODKFeedFormID  string
+	ODKBaseURL      string
+	ODKEmail        string
+	ODKPassword     string
+	ODKProjectID    int
+	ODKFormID       string
+	ODKFeedFormID   string
+	ODKFaskesFormID string
 
 	// Storage
 	PhotoStoragePath string
@@ -57,6 +58,7 @@ func Load() *Config {
 		ODKProjectID:  getEnvInt("ODK_PROJECT_ID", 3),
 		ODKFormID:        getEnv("ODK_FORM_ID", "form_posko_v1"),
 		ODKFeedFormID:    getEnv("ODK_FEED_FORM_ID", "form_feed_v1"),
+		ODKFaskesFormID:  getEnv("ODK_FASKES_FORM_ID", "form_faskes_v1"),
 		PhotoStoragePath: getEnv("PHOTO_STORAGE_PATH", "./storage/photos"),
 	}
 }
