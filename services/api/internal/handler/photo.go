@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -129,6 +130,23 @@ func (h *PhotoHandler) GetPhotoFile(c *gin.Context) {
 		return
 	}
 
+	// Get storage path
+	storagePath, err := h.photoService.GetPhotoPath(photoID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	// If S3 URL, redirect to it directly (more efficient)
+	if strings.HasPrefix(storagePath, "http") {
+		c.Redirect(http.StatusFound, storagePath)
+		return
+	}
+
+	// Local file - stream it
 	reader, filename, err := h.photoService.GetPhotoReader(photoID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
@@ -210,6 +228,23 @@ func (h *PhotoHandler) GetFeedPhotoFile(c *gin.Context) {
 		return
 	}
 
+	// Get storage path
+	storagePath, err := h.photoService.GetFeedPhotoPath(photoID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	// If S3 URL, redirect to it directly
+	if strings.HasPrefix(storagePath, "http") {
+		c.Redirect(http.StatusFound, storagePath)
+		return
+	}
+
+	// Local file - stream it
 	reader, filename, err := h.photoService.GetFeedPhotoReader(photoID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
@@ -281,6 +316,23 @@ func (h *PhotoHandler) GetFaskesPhotoFile(c *gin.Context) {
 		return
 	}
 
+	// Get storage path
+	storagePath, err := h.photoService.GetFaskesPhotoPath(photoID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	// If S3 URL, redirect to it directly
+	if strings.HasPrefix(storagePath, "http") {
+		c.Redirect(http.StatusFound, storagePath)
+		return
+	}
+
+	// Local file - stream it
 	reader, filename, err := h.photoService.GetFaskesPhotoReader(photoID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
