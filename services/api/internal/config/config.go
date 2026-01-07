@@ -36,6 +36,15 @@ type Config struct {
 
 	// Storage
 	PhotoStoragePath string
+
+	// S3 Storage (optional - if enabled, photos stored in S3)
+	S3Enabled         bool
+	S3Endpoint        string
+	S3Bucket          string
+	S3AccessKeyID     string
+	S3SecretAccessKey string
+	S3Region          string
+	S3PathPrefix      string
 }
 
 func Load() *Config {
@@ -60,6 +69,14 @@ func Load() *Config {
 		ODKFeedFormID:    getEnv("ODK_FEED_FORM_ID", "form_feed_v1"),
 		ODKFaskesFormID:  getEnv("ODK_FASKES_FORM_ID", "form_faskes_v1"),
 		PhotoStoragePath: getEnv("PHOTO_STORAGE_PATH", "./storage/photos"),
+		// S3 Storage
+		S3Enabled:         getEnvBool("S3_ENABLED", false),
+		S3Endpoint:        getEnv("S3_ENDPOINT", ""),
+		S3Bucket:          getEnv("S3_BUCKET", ""),
+		S3AccessKeyID:     getEnv("S3_ACCESS_KEY_ID", ""),
+		S3SecretAccessKey: getEnv("S3_SECRET_ACCESS_KEY", ""),
+		S3Region:          getEnv("S3_REGION", "auto"),
+		S3PathPrefix:      getEnv("S3_PATH_PREFIX", ""),
 	}
 }
 
@@ -74,6 +91,15 @@ func getEnvInt(key string, defaultValue int) int {
 	if value := os.Getenv(key); value != "" {
 		if intVal, err := strconv.Atoi(value); err == nil {
 			return intVal
+		}
+	}
+	return defaultValue
+}
+
+func getEnvBool(key string, defaultValue bool) bool {
+	if value := os.Getenv(key); value != "" {
+		if boolVal, err := strconv.ParseBool(value); err == nil {
+			return boolVal
 		}
 	}
 	return defaultValue

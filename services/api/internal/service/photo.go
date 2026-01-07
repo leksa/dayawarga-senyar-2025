@@ -1,16 +1,19 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/leksa/datamapper-senyar/internal/model"
 	"github.com/leksa/datamapper-senyar/internal/odk"
+	"github.com/leksa/datamapper-senyar/internal/storage"
 	"gorm.io/gorm"
 )
 
@@ -19,9 +22,11 @@ type PhotoService struct {
 	db          *gorm.DB
 	odkClient   *odk.Client
 	storagePath string
+	s3Storage   *storage.S3Storage
+	useS3       bool
 }
 
-// NewPhotoService creates a new photo service
+// NewPhotoService creates a new photo service with local storage
 func NewPhotoService(db *gorm.DB, odkClient *odk.Client, storagePath string) *PhotoService {
 	// Create storage directory if it doesn't exist
 	if err := os.MkdirAll(storagePath, 0755); err != nil {
@@ -32,10 +37,22 @@ func NewPhotoService(db *gorm.DB, odkClient *odk.Client, storagePath string) *Ph
 		db:          db,
 		odkClient:   odkClient,
 		storagePath: storagePath,
+		useS3:       false,
 	}
 }
 
-// DownloadAndSavePhoto downloads a photo from ODK Central and saves it to local storage
+// NewPhotoServiceWithS3 creates a new photo service with S3 storage
+func NewPhotoServiceWithS3(db *gorm.DB, odkClient *odk.Client, storagePath string, s3Storage *storage.S3Storage) *PhotoService {
+	return &PhotoService{
+		db:          db,
+		odkClient:   odkClient,
+		storagePath: storagePath,
+		s3Storage:   s3Storage,
+		useS3:       s3Storage != nil,
+	}
+}
+
+// DownloadAndSavePhoto downloads a photo from ODK Central and saves it to storage (S3 or local)
 func (s *PhotoService) DownloadAndSavePhoto(photo *model.LocationPhoto, submissionID string) error {
 	// Download from ODK Central
 	data, err := s.odkClient.GetAttachment(submissionID, photo.Filename)
@@ -43,36 +60,69 @@ func (s *PhotoService) DownloadAndSavePhoto(photo *model.LocationPhoto, submissi
 		return fmt.Errorf("failed to download attachment: %w", err)
 	}
 
-	// Create location-specific directory
-	locationDir := filepath.Join(s.storagePath, photo.LocationID.String())
-	if err := os.MkdirAll(locationDir, 0755); err != nil {
-		return fmt.Errorf("failed to create location directory: %w", err)
-	}
-
-	// Generate unique filename to avoid conflicts
+	// Generate unique filename
 	ext := filepath.Ext(photo.Filename)
 	newFilename := fmt.Sprintf("%s_%s%s", photo.PhotoType, uuid.New().String()[:8], ext)
-	storagePath := filepath.Join(locationDir, newFilename)
+	fileSize := len(data)
 
-	// Write file
-	if err := os.WriteFile(storagePath, data, 0644); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
+	var storagePath string
+
+	if s.useS3 {
+		// Upload to S3
+		key := fmt.Sprintf("locations/%s/%s", photo.LocationID.String(), newFilename)
+		contentType := getContentType(ext)
+		url, err := s.s3Storage.Upload(context.Background(), key, data, contentType)
+		if err != nil {
+			return fmt.Errorf("failed to upload to S3: %w", err)
+		}
+		storagePath = url
+		log.Printf("Uploaded photo to S3: %s -> %s", photo.Filename, url)
+	} else {
+		// Save to local filesystem
+		locationDir := filepath.Join(s.storagePath, photo.LocationID.String())
+		if err := os.MkdirAll(locationDir, 0755); err != nil {
+			return fmt.Errorf("failed to create location directory: %w", err)
+		}
+		storagePath = filepath.Join(locationDir, newFilename)
+		if err := os.WriteFile(storagePath, data, 0644); err != nil {
+			return fmt.Errorf("failed to write file: %w", err)
+		}
+		log.Printf("Downloaded photo: %s -> %s", photo.Filename, storagePath)
 	}
 
 	// Update database record
-	fileSize := len(data)
 	photo.StoragePath = &storagePath
 	photo.IsCached = true
 	photo.FileSize = &fileSize
 
 	if err := s.db.Save(photo).Error; err != nil {
-		// Clean up file if database update fails
-		os.Remove(storagePath)
+		// Clean up if database update fails
+		if s.useS3 {
+			key := fmt.Sprintf("locations/%s/%s", photo.LocationID.String(), newFilename)
+			s.s3Storage.Delete(context.Background(), key)
+		} else {
+			os.Remove(storagePath)
+		}
 		return fmt.Errorf("failed to update database: %w", err)
 	}
 
-	log.Printf("Downloaded photo: %s -> %s", photo.Filename, storagePath)
 	return nil
+}
+
+// getContentType returns the MIME type based on file extension
+func getContentType(ext string) string {
+	switch strings.ToLower(ext) {
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".png":
+		return "image/png"
+	case ".gif":
+		return "image/gif"
+	case ".webp":
+		return "image/webp"
+	default:
+		return "application/octet-stream"
+	}
 }
 
 // SyncPhotos downloads all uncached photos for a location
@@ -170,17 +220,47 @@ func (s *PhotoService) GetPhotosByLocation(locationID uuid.UUID) ([]model.Locati
 
 // GetPhotoReader returns a reader for the photo file
 func (s *PhotoService) GetPhotoReader(photoID uuid.UUID) (io.ReadCloser, string, error) {
-	path, err := s.GetPhotoPath(photoID)
-	if err != nil {
-		return nil, "", err
+	var photo model.LocationPhoto
+	if err := s.db.First(&photo, photoID).Error; err != nil {
+		return nil, "", fmt.Errorf("photo not found: %w", err)
 	}
 
-	file, err := os.Open(path)
+	if photo.StoragePath == nil || *photo.StoragePath == "" {
+		return nil, "", fmt.Errorf("photo not cached")
+	}
+
+	storagePath := *photo.StoragePath
+
+	// Check if it's an S3 URL
+	if s.useS3 && strings.HasPrefix(storagePath, "http") {
+		// Extract key from URL and get from S3
+		key := extractS3Key(storagePath)
+		reader, contentType, err := s.s3Storage.GetReader(context.Background(), key)
+		if err != nil {
+			return nil, "", fmt.Errorf("failed to get from S3: %w", err)
+		}
+		_ = contentType // We return filename, not content type
+		return reader, filepath.Base(key), nil
+	}
+
+	// Local file
+	file, err := os.Open(storagePath)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to open file: %w", err)
 	}
 
-	return file, filepath.Base(path), nil
+	return file, filepath.Base(storagePath), nil
+}
+
+// extractS3Key extracts the S3 key from a full URL
+func extractS3Key(url string) string {
+	// URL format: https://bucket.endpoint/key or https://endpoint/bucket/key
+	// We need to extract the path after the bucket
+	parts := strings.SplitN(url, "/", 4)
+	if len(parts) >= 4 {
+		return parts[3]
+	}
+	return url
 }
 
 // DeletePhoto deletes a photo from storage and database
@@ -229,7 +309,7 @@ func (s *PhotoService) CleanupOrphanedFiles() (int, error) {
 	return cleaned, err
 }
 
-// DownloadAndSaveFeedPhoto downloads a feed photo from ODK Central and saves it to local storage
+// DownloadAndSaveFeedPhoto downloads a feed photo from ODK Central and saves it to storage (S3 or local)
 func (s *PhotoService) DownloadAndSaveFeedPhoto(photo *model.FeedPhoto, submissionID string, formID string) error {
 	// Download from ODK Central using the feed form
 	data, err := s.odkClient.GetAttachmentForForm(formID, submissionID, photo.Filename)
@@ -237,35 +317,52 @@ func (s *PhotoService) DownloadAndSaveFeedPhoto(photo *model.FeedPhoto, submissi
 		return fmt.Errorf("failed to download feed attachment: %w", err)
 	}
 
-	// Create feed-specific directory
-	feedDir := filepath.Join(s.storagePath, "feeds", photo.FeedID.String())
-	if err := os.MkdirAll(feedDir, 0755); err != nil {
-		return fmt.Errorf("failed to create feed directory: %w", err)
-	}
-
-	// Generate unique filename to avoid conflicts
+	// Generate unique filename
 	ext := filepath.Ext(photo.Filename)
 	newFilename := fmt.Sprintf("%s_%s%s", photo.PhotoType, uuid.New().String()[:8], ext)
-	storagePath := filepath.Join(feedDir, newFilename)
+	fileSize := len(data)
 
-	// Write file
-	if err := os.WriteFile(storagePath, data, 0644); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
+	var storagePath string
+
+	if s.useS3 {
+		// Upload to S3
+		key := fmt.Sprintf("feeds/%s/%s", photo.FeedID.String(), newFilename)
+		contentType := getContentType(ext)
+		url, err := s.s3Storage.Upload(context.Background(), key, data, contentType)
+		if err != nil {
+			return fmt.Errorf("failed to upload feed photo to S3: %w", err)
+		}
+		storagePath = url
+		log.Printf("Uploaded feed photo to S3: %s -> %s", photo.Filename, url)
+	} else {
+		// Save to local filesystem
+		feedDir := filepath.Join(s.storagePath, "feeds", photo.FeedID.String())
+		if err := os.MkdirAll(feedDir, 0755); err != nil {
+			return fmt.Errorf("failed to create feed directory: %w", err)
+		}
+		storagePath = filepath.Join(feedDir, newFilename)
+		if err := os.WriteFile(storagePath, data, 0644); err != nil {
+			return fmt.Errorf("failed to write file: %w", err)
+		}
+		log.Printf("Downloaded feed photo: %s -> %s", photo.Filename, storagePath)
 	}
 
 	// Update database record
-	fileSize := len(data)
 	photo.StoragePath = &storagePath
 	photo.IsCached = true
 	photo.FileSize = &fileSize
 
 	if err := s.db.Save(photo).Error; err != nil {
-		// Clean up file if database update fails
-		os.Remove(storagePath)
+		// Clean up if database update fails
+		if s.useS3 {
+			key := fmt.Sprintf("feeds/%s/%s", photo.FeedID.String(), newFilename)
+			s.s3Storage.Delete(context.Background(), key)
+		} else {
+			os.Remove(storagePath)
+		}
 		return fmt.Errorf("failed to update database: %w", err)
 	}
 
-	log.Printf("Downloaded feed photo: %s -> %s", photo.Filename, storagePath)
 	return nil
 }
 
@@ -330,17 +427,34 @@ func (s *PhotoService) GetFeedPhotoPath(photoID uuid.UUID) (string, error) {
 
 // GetFeedPhotoReader returns a reader for the feed photo file
 func (s *PhotoService) GetFeedPhotoReader(photoID uuid.UUID) (io.ReadCloser, string, error) {
-	path, err := s.GetFeedPhotoPath(photoID)
-	if err != nil {
-		return nil, "", err
+	var photo model.FeedPhoto
+	if err := s.db.First(&photo, photoID).Error; err != nil {
+		return nil, "", fmt.Errorf("feed photo not found: %w", err)
 	}
 
-	file, err := os.Open(path)
+	if photo.StoragePath == nil || *photo.StoragePath == "" {
+		return nil, "", fmt.Errorf("feed photo not cached")
+	}
+
+	storagePath := *photo.StoragePath
+
+	// Check if it's an S3 URL
+	if s.useS3 && strings.HasPrefix(storagePath, "http") {
+		key := extractS3Key(storagePath)
+		reader, _, err := s.s3Storage.GetReader(context.Background(), key)
+		if err != nil {
+			return nil, "", fmt.Errorf("failed to get feed photo from S3: %w", err)
+		}
+		return reader, filepath.Base(key), nil
+	}
+
+	// Local file
+	file, err := os.Open(storagePath)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to open file: %w", err)
 	}
 
-	return file, filepath.Base(path), nil
+	return file, filepath.Base(storagePath), nil
 }
 
 // GetFeedPhotoByID returns a feed photo by ID
@@ -356,7 +470,7 @@ func (s *PhotoService) GetFeedPhotoByID(photoID uuid.UUID) (*model.FeedPhoto, er
 // FASKES PHOTOS
 // ========================================
 
-// DownloadAndSaveFaskesPhoto downloads a faskes photo from ODK Central and saves it to local storage
+// DownloadAndSaveFaskesPhoto downloads a faskes photo from ODK Central and saves it to storage (S3 or local)
 func (s *PhotoService) DownloadAndSaveFaskesPhoto(photo *model.FaskesPhoto, submissionID string, formID string) error {
 	// Download from ODK Central using the faskes form
 	data, err := s.odkClient.GetAttachmentForForm(formID, submissionID, photo.Filename)
@@ -364,35 +478,52 @@ func (s *PhotoService) DownloadAndSaveFaskesPhoto(photo *model.FaskesPhoto, subm
 		return fmt.Errorf("failed to download faskes attachment: %w", err)
 	}
 
-	// Create faskes-specific directory
-	faskesDir := filepath.Join(s.storagePath, "faskes", photo.FaskesID.String())
-	if err := os.MkdirAll(faskesDir, 0755); err != nil {
-		return fmt.Errorf("failed to create faskes directory: %w", err)
-	}
-
-	// Generate unique filename to avoid conflicts
+	// Generate unique filename
 	ext := filepath.Ext(photo.Filename)
 	newFilename := fmt.Sprintf("%s_%s%s", photo.PhotoType, uuid.New().String()[:8], ext)
-	storagePath := filepath.Join(faskesDir, newFilename)
+	fileSize := len(data)
 
-	// Write file
-	if err := os.WriteFile(storagePath, data, 0644); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
+	var storagePath string
+
+	if s.useS3 {
+		// Upload to S3
+		key := fmt.Sprintf("faskes/%s/%s", photo.FaskesID.String(), newFilename)
+		contentType := getContentType(ext)
+		url, err := s.s3Storage.Upload(context.Background(), key, data, contentType)
+		if err != nil {
+			return fmt.Errorf("failed to upload faskes photo to S3: %w", err)
+		}
+		storagePath = url
+		log.Printf("Uploaded faskes photo to S3: %s -> %s", photo.Filename, url)
+	} else {
+		// Save to local filesystem
+		faskesDir := filepath.Join(s.storagePath, "faskes", photo.FaskesID.String())
+		if err := os.MkdirAll(faskesDir, 0755); err != nil {
+			return fmt.Errorf("failed to create faskes directory: %w", err)
+		}
+		storagePath = filepath.Join(faskesDir, newFilename)
+		if err := os.WriteFile(storagePath, data, 0644); err != nil {
+			return fmt.Errorf("failed to write file: %w", err)
+		}
+		log.Printf("Downloaded faskes photo: %s -> %s", photo.Filename, storagePath)
 	}
 
 	// Update database record
-	fileSize := len(data)
 	photo.StoragePath = &storagePath
 	photo.IsCached = true
 	photo.FileSize = &fileSize
 
 	if err := s.db.Save(photo).Error; err != nil {
-		// Clean up file if database update fails
-		os.Remove(storagePath)
+		// Clean up if database update fails
+		if s.useS3 {
+			key := fmt.Sprintf("faskes/%s/%s", photo.FaskesID.String(), newFilename)
+			s.s3Storage.Delete(context.Background(), key)
+		} else {
+			os.Remove(storagePath)
+		}
 		return fmt.Errorf("failed to update database: %w", err)
 	}
 
-	log.Printf("Downloaded faskes photo: %s -> %s", photo.Filename, storagePath)
 	return nil
 }
 
@@ -457,17 +588,34 @@ func (s *PhotoService) GetFaskesPhotoPath(photoID uuid.UUID) (string, error) {
 
 // GetFaskesPhotoReader returns a reader for the faskes photo file
 func (s *PhotoService) GetFaskesPhotoReader(photoID uuid.UUID) (io.ReadCloser, string, error) {
-	path, err := s.GetFaskesPhotoPath(photoID)
-	if err != nil {
-		return nil, "", err
+	var photo model.FaskesPhoto
+	if err := s.db.First(&photo, photoID).Error; err != nil {
+		return nil, "", fmt.Errorf("faskes photo not found: %w", err)
 	}
 
-	file, err := os.Open(path)
+	if photo.StoragePath == nil || *photo.StoragePath == "" {
+		return nil, "", fmt.Errorf("faskes photo not cached")
+	}
+
+	storagePath := *photo.StoragePath
+
+	// Check if it's an S3 URL
+	if s.useS3 && strings.HasPrefix(storagePath, "http") {
+		key := extractS3Key(storagePath)
+		reader, _, err := s.s3Storage.GetReader(context.Background(), key)
+		if err != nil {
+			return nil, "", fmt.Errorf("failed to get faskes photo from S3: %w", err)
+		}
+		return reader, filepath.Base(key), nil
+	}
+
+	// Local file
+	file, err := os.Open(storagePath)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to open file: %w", err)
 	}
 
-	return file, filepath.Base(path), nil
+	return file, filepath.Base(storagePath), nil
 }
 
 // GetFaskesPhotosByFaskesID returns all photos for a faskes

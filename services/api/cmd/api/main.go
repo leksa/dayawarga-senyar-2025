@@ -18,6 +18,7 @@ import (
 	"github.com/leksa/datamapper-senyar/internal/scheduler"
 	"github.com/leksa/datamapper-senyar/internal/service"
 	"github.com/leksa/datamapper-senyar/internal/sse"
+	"github.com/leksa/datamapper-senyar/internal/storage"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -100,7 +101,29 @@ func main() {
 	syncService := service.NewSyncService(db, odkPoskoClient, cfg.ODKFormID)
 	feedSyncService := service.NewFeedSyncService(db, odkFeedClient, cfg.ODKFeedFormID)
 	faskesSyncService := service.NewFaskesSyncService(db, odkFaskesClient, cfg.ODKFaskesFormID)
-	photoService := service.NewPhotoService(db, odkPoskoClient, cfg.PhotoStoragePath)
+
+	// Initialize photo service (with optional S3 storage)
+	var photoService *service.PhotoService
+	if cfg.S3Enabled {
+		s3Config := storage.S3Config{
+			Endpoint:        cfg.S3Endpoint,
+			Bucket:          cfg.S3Bucket,
+			AccessKeyID:     cfg.S3AccessKeyID,
+			SecretAccessKey: cfg.S3SecretAccessKey,
+			Region:          cfg.S3Region,
+			PathPrefix:      cfg.S3PathPrefix,
+			UsePathStyle:    true, // Required for S3-compatible storage like CloudHost
+		}
+		s3Storage, err := storage.NewS3Storage(s3Config)
+		if err != nil {
+			log.Fatalf("Failed to initialize S3 storage: %v", err)
+		}
+		photoService = service.NewPhotoServiceWithS3(db, odkPoskoClient, cfg.PhotoStoragePath, s3Storage)
+		log.Printf("S3 storage enabled: %s/%s", cfg.S3Endpoint, cfg.S3Bucket)
+	} else {
+		photoService = service.NewPhotoService(db, odkPoskoClient, cfg.PhotoStoragePath)
+		log.Println("Using local filesystem for photo storage")
+	}
 
 	// Initialize SSE Hub for real-time updates
 	sseHub := sse.NewHub()
