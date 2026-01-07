@@ -231,7 +231,10 @@ const displayPhotos = computed(() => {
 const getPhotoUrl = (photo: Photo | { id: string; url?: string }) => {
   // For faskes photos, use the URL directly from API response
   if ('url' in photo && photo.url && photo.url.startsWith('/api')) {
-    return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}${photo.url}`
+    // Extract base URL (without /api/v1 suffix)
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1'
+    const baseUrl = apiUrl.replace(/\/api\/v1$/, '')
+    return `${baseUrl}${photo.url}`
   }
   return api.getPhotoUrl(photo.id)
 }
