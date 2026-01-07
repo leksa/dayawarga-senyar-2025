@@ -626,3 +626,249 @@ func (s *PhotoService) GetFaskesPhotosByFaskesID(faskesID uuid.UUID) ([]model.Fa
 	}
 	return photos, nil
 }
+
+// ========================================
+// S3 MIGRATION
+// ========================================
+
+// MigrationResult holds the result of a migration operation
+type MigrationResult struct {
+	LocationPhotos *PhotoSyncResult `json:"location_photos"`
+	FeedPhotos     *PhotoSyncResult `json:"feed_photos"`
+	FaskesPhotos   *PhotoSyncResult `json:"faskes_photos"`
+	TotalMigrated  int              `json:"total_migrated"`
+	TotalErrors    int              `json:"total_errors"`
+	Duration       string           `json:"duration"`
+}
+
+// MigrateToS3 migrates all locally cached photos to S3
+func (s *PhotoService) MigrateToS3() (*MigrationResult, error) {
+	if !s.useS3 {
+		return nil, fmt.Errorf("S3 storage is not enabled")
+	}
+
+	startTime := time.Now()
+	result := &MigrationResult{}
+
+	// Migrate location photos
+	locationResult, err := s.migrateLocationPhotosToS3()
+	if err != nil {
+		log.Printf("Error migrating location photos: %v", err)
+	}
+	result.LocationPhotos = locationResult
+
+	// Migrate feed photos
+	feedResult, err := s.migrateFeedPhotosToS3()
+	if err != nil {
+		log.Printf("Error migrating feed photos: %v", err)
+	}
+	result.FeedPhotos = feedResult
+
+	// Migrate faskes photos
+	faskesResult, err := s.migrateFaskesPhotosToS3()
+	if err != nil {
+		log.Printf("Error migrating faskes photos: %v", err)
+	}
+	result.FaskesPhotos = faskesResult
+
+	// Calculate totals
+	if result.LocationPhotos != nil {
+		result.TotalMigrated += result.LocationPhotos.Downloaded
+		result.TotalErrors += result.LocationPhotos.Errors
+	}
+	if result.FeedPhotos != nil {
+		result.TotalMigrated += result.FeedPhotos.Downloaded
+		result.TotalErrors += result.FeedPhotos.Errors
+	}
+	if result.FaskesPhotos != nil {
+		result.TotalMigrated += result.FaskesPhotos.Downloaded
+		result.TotalErrors += result.FaskesPhotos.Errors
+	}
+
+	result.Duration = time.Since(startTime).String()
+
+	return result, nil
+}
+
+// migrateLocationPhotosToS3 migrates location photos from local storage to S3
+func (s *PhotoService) migrateLocationPhotosToS3() (*PhotoSyncResult, error) {
+	result := &PhotoSyncResult{
+		StartTime: time.Now(),
+	}
+
+	// Find all cached photos that are NOT yet on S3 (storage_path doesn't start with http)
+	var photos []model.LocationPhoto
+	err := s.db.Where("is_cached = true AND storage_path IS NOT NULL AND storage_path NOT LIKE 'http%'").
+		Find(&photos).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch local photos: %w", err)
+	}
+
+	result.TotalFound = len(photos)
+	log.Printf("Found %d location photos to migrate to S3", len(photos))
+
+	for _, photo := range photos {
+		if photo.StoragePath == nil {
+			continue
+		}
+
+		localPath := *photo.StoragePath
+
+		// Read local file
+		data, err := os.ReadFile(localPath)
+		if err != nil {
+			result.Errors++
+			result.ErrorDetails = append(result.ErrorDetails, fmt.Sprintf("%s: failed to read local file: %v", photo.Filename, err))
+			continue
+		}
+
+		// Generate S3 key
+		ext := filepath.Ext(localPath)
+		key := fmt.Sprintf("locations/%s/%s", photo.LocationID.String(), filepath.Base(localPath))
+		contentType := getContentType(ext)
+
+		// Upload to S3
+		url, err := s.s3Storage.Upload(context.Background(), key, data, contentType)
+		if err != nil {
+			result.Errors++
+			result.ErrorDetails = append(result.ErrorDetails, fmt.Sprintf("%s: failed to upload to S3: %v", photo.Filename, err))
+			continue
+		}
+
+		// Update database with S3 URL
+		photo.StoragePath = &url
+		if err := s.db.Save(&photo).Error; err != nil {
+			result.Errors++
+			result.ErrorDetails = append(result.ErrorDetails, fmt.Sprintf("%s: failed to update database: %v", photo.Filename, err))
+			// Try to delete from S3 since we couldn't update the DB
+			s.s3Storage.Delete(context.Background(), key)
+			continue
+		}
+
+		log.Printf("Migrated location photo to S3: %s -> %s", localPath, url)
+		result.Downloaded++
+	}
+
+	result.EndTime = time.Now()
+	result.Duration = result.EndTime.Sub(result.StartTime).String()
+
+	return result, nil
+}
+
+// migrateFeedPhotosToS3 migrates feed photos from local storage to S3
+func (s *PhotoService) migrateFeedPhotosToS3() (*PhotoSyncResult, error) {
+	result := &PhotoSyncResult{
+		StartTime: time.Now(),
+	}
+
+	var photos []model.FeedPhoto
+	err := s.db.Where("is_cached = true AND storage_path IS NOT NULL AND storage_path NOT LIKE 'http%'").
+		Find(&photos).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch local feed photos: %w", err)
+	}
+
+	result.TotalFound = len(photos)
+	log.Printf("Found %d feed photos to migrate to S3", len(photos))
+
+	for _, photo := range photos {
+		if photo.StoragePath == nil {
+			continue
+		}
+
+		localPath := *photo.StoragePath
+
+		data, err := os.ReadFile(localPath)
+		if err != nil {
+			result.Errors++
+			result.ErrorDetails = append(result.ErrorDetails, fmt.Sprintf("%s: failed to read local file: %v", photo.Filename, err))
+			continue
+		}
+
+		ext := filepath.Ext(localPath)
+		key := fmt.Sprintf("feeds/%s/%s", photo.FeedID.String(), filepath.Base(localPath))
+		contentType := getContentType(ext)
+
+		url, err := s.s3Storage.Upload(context.Background(), key, data, contentType)
+		if err != nil {
+			result.Errors++
+			result.ErrorDetails = append(result.ErrorDetails, fmt.Sprintf("%s: failed to upload to S3: %v", photo.Filename, err))
+			continue
+		}
+
+		photo.StoragePath = &url
+		if err := s.db.Save(&photo).Error; err != nil {
+			result.Errors++
+			result.ErrorDetails = append(result.ErrorDetails, fmt.Sprintf("%s: failed to update database: %v", photo.Filename, err))
+			s.s3Storage.Delete(context.Background(), key)
+			continue
+		}
+
+		log.Printf("Migrated feed photo to S3: %s -> %s", localPath, url)
+		result.Downloaded++
+	}
+
+	result.EndTime = time.Now()
+	result.Duration = result.EndTime.Sub(result.StartTime).String()
+
+	return result, nil
+}
+
+// migrateFaskesPhotosToS3 migrates faskes photos from local storage to S3
+func (s *PhotoService) migrateFaskesPhotosToS3() (*PhotoSyncResult, error) {
+	result := &PhotoSyncResult{
+		StartTime: time.Now(),
+	}
+
+	var photos []model.FaskesPhoto
+	err := s.db.Where("is_cached = true AND storage_path IS NOT NULL AND storage_path NOT LIKE 'http%'").
+		Find(&photos).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch local faskes photos: %w", err)
+	}
+
+	result.TotalFound = len(photos)
+	log.Printf("Found %d faskes photos to migrate to S3", len(photos))
+
+	for _, photo := range photos {
+		if photo.StoragePath == nil {
+			continue
+		}
+
+		localPath := *photo.StoragePath
+
+		data, err := os.ReadFile(localPath)
+		if err != nil {
+			result.Errors++
+			result.ErrorDetails = append(result.ErrorDetails, fmt.Sprintf("%s: failed to read local file: %v", photo.Filename, err))
+			continue
+		}
+
+		ext := filepath.Ext(localPath)
+		key := fmt.Sprintf("faskes/%s/%s", photo.FaskesID.String(), filepath.Base(localPath))
+		contentType := getContentType(ext)
+
+		url, err := s.s3Storage.Upload(context.Background(), key, data, contentType)
+		if err != nil {
+			result.Errors++
+			result.ErrorDetails = append(result.ErrorDetails, fmt.Sprintf("%s: failed to upload to S3: %v", photo.Filename, err))
+			continue
+		}
+
+		photo.StoragePath = &url
+		if err := s.db.Save(&photo).Error; err != nil {
+			result.Errors++
+			result.ErrorDetails = append(result.ErrorDetails, fmt.Sprintf("%s: failed to update database: %v", photo.Filename, err))
+			s.s3Storage.Delete(context.Background(), key)
+			continue
+		}
+
+		log.Printf("Migrated faskes photo to S3: %s -> %s", localPath, url)
+		result.Downloaded++
+	}
+
+	result.EndTime = time.Now()
+	result.Duration = result.EndTime.Sub(result.StartTime).String()
+
+	return result, nil
+}

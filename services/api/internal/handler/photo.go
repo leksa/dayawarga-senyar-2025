@@ -385,3 +385,24 @@ func (h *PhotoHandler) SyncFaskesPhotos(c *gin.Context) {
 		"data":    result,
 	})
 }
+
+// ========================================
+// S3 MIGRATION ENDPOINT
+// ========================================
+
+// MigrateToS3 migrates all locally cached photos to S3
+func (h *PhotoHandler) MigrateToS3(c *gin.Context) {
+	result, err := h.photoService.MigrateToS3()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    result,
+	})
+}

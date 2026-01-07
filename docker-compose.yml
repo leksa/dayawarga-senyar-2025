@@ -108,10 +108,10 @@ services:
     build:
       context: ./services/frontend
       dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=https://api.dayawarga.com/api/v1
     container_name: senyar-frontend
     restart: unless-stopped
-    environment:
-      - VITE_API_URL=https://api.dayawarga.com/api/v1
     depends_on:
       - api
     networks:
