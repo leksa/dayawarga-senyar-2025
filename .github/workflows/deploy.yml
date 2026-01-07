@@ -93,6 +93,15 @@ jobs:
             echo "Starting services..."
             docker compose up -d
 
+            # Run database migrations
+            echo "Running database migrations..."
+            for migration in infrastructure/database/migrations/*.sql; do
+              if [ -f "$migration" ]; then
+                echo "Applying migration: $migration"
+                docker compose exec -T postgres psql -U senyar -d senyar -f "/docker-entrypoint-initdb.d/$(basename $migration)" 2>/dev/null || true
+              fi
+            done
+
             # Cleanup old images
             docker image prune -f
 
