@@ -144,6 +144,72 @@ export interface SyncStatus {
   updated_at: string
 }
 
+// Faskes (Health Facilities) types
+export interface FaskesFeature {
+  type: 'Feature'
+  id: string
+  geometry: {
+    type: 'Point'
+    coordinates: [number, number]
+  }
+  properties: {
+    odk_submission_id?: string
+    nama: string
+    jenis_faskes: string
+    status_faskes: string
+    kondisi_faskes?: string
+    alamat_singkat?: string
+    updated_at: string
+  }
+}
+
+export interface FaskesListResponse {
+  type: 'FeatureCollection'
+  features: FaskesFeature[]
+}
+
+export interface FaskesDetail {
+  id: string
+  odk_submission_id?: string
+  nama: string
+  jenis_faskes: string
+  status_faskes: string
+  kondisi_faskes?: string
+  geometry: {
+    type: 'Point'
+    coordinates: [number, number]
+    altitude?: number
+    accuracy?: number
+  }
+  alamat: Record<string, unknown>
+  identitas: Record<string, unknown>
+  isolasi?: Record<string, unknown>
+  infrastruktur?: Record<string, unknown>
+  sdm?: Record<string, unknown>
+  perbekalan?: Record<string, unknown>
+  klaster?: Record<string, unknown>
+  photos: {
+    type: string
+    filename: string
+    url: string
+  }[]
+  meta: {
+    submitted_at?: string
+    updated_at: string
+    submitter?: string
+  }
+}
+
+export interface FaskesFilter {
+  jenis_faskes?: string
+  status_faskes?: string
+  kondisi_faskes?: string
+  search?: string
+  bbox?: string
+  page?: number
+  limit?: number
+}
+
 export const api = {
   async getLocations(filter?: LocationFilter): Promise<APIResponse<LocationListResponse>> {
     const params = new URLSearchParams()
@@ -196,5 +262,24 @@ export const api = {
 
   async getSyncStatus(): Promise<APIResponse<SyncStatus>> {
     return fetchAPI<SyncStatus>('/sync/status')
+  },
+
+  // Faskes (Health Facilities) endpoints
+  async getFaskes(filter?: FaskesFilter): Promise<APIResponse<FaskesListResponse>> {
+    const params = new URLSearchParams()
+    if (filter?.jenis_faskes) params.append('jenis_faskes', filter.jenis_faskes)
+    if (filter?.status_faskes) params.append('status_faskes', filter.status_faskes)
+    if (filter?.kondisi_faskes) params.append('kondisi_faskes', filter.kondisi_faskes)
+    if (filter?.search) params.append('search', filter.search)
+    if (filter?.bbox) params.append('bbox', filter.bbox)
+    if (filter?.page) params.append('page', filter.page.toString())
+    if (filter?.limit) params.append('limit', filter.limit.toString())
+
+    const query = params.toString()
+    return fetchAPI<FaskesListResponse>(`/faskes${query ? `?${query}` : ''}`)
+  },
+
+  async getFaskesById(id: string): Promise<APIResponse<FaskesDetail>> {
+    return fetchAPI<FaskesDetail>(`/faskes/${id}`)
   },
 }

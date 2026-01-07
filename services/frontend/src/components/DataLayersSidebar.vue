@@ -21,7 +21,7 @@ const emit = defineEmits<{
 const emergencyLayers = ref<Layer[]>([
   { id: 'shelter', name: 'Titik Posko', icon: Home, color: 'bg-gray-300', colorEnabled: 'bg-blue-500', enabled: true, available: true },
   { id: 'water', name: 'Air Bersih', icon: Droplets, color: 'bg-gray-300', colorEnabled: 'bg-cyan-500', enabled: false, available: false },
-  { id: 'medical', name: 'Fasilitas Kesehatan', icon: Cross, color: 'bg-gray-300', colorEnabled: 'bg-red-500', enabled: false, available: false },
+  { id: 'medical', name: 'Fasilitas Kesehatan', icon: Cross, color: 'bg-gray-300', colorEnabled: 'bg-red-500', enabled: false, available: true },
 ])
 
 watch(emergencyLayers, (layers) => {

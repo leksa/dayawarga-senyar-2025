@@ -2,24 +2,30 @@
 import { ref, onMounted, watch } from 'vue'
 import { Plus, Minus, Locate, Layers } from 'lucide-vue-next'
 import { useLocations } from '@/composables/useLocations'
+import { useFaskes } from '@/composables/useFaskes'
 import type { MapMarker } from '@/types'
 
 const props = withDefaults(defineProps<{
   showMarkers?: boolean
+  showFaskes?: boolean
 }>(), {
-  showMarkers: true
+  showMarkers: true,
+  showFaskes: false
 })
 
 const emit = defineEmits<{
   'marker-click': [marker: MapMarker]
+  'faskes-click': [marker: any]
 }>()
 
 const { markers, fetchLocations, loading, lastUpdate } = useLocations()
+const { markers: faskesMarkers, fetchFaskes } = useFaskes()
 const mapContainer = ref<HTMLElement | null>(null)
 const showLayerMenu = ref(false)
 const activeLayer = ref<'street' | 'satellite' | 'terrain'>('street')
 let map: any = null
 let markerLayer: any = null
+let faskesLayer: any = null
 let currentTileLayer: any = null
 
 const tileLayers = {
@@ -48,8 +54,19 @@ const markerIcons: Record<string, { color: string; icon: string }> = {
   dapur_umum: { color: '#10B981', icon: '🍲' },
 }
 
+const faskesIcons: Record<string, { color: string; icon: string }> = {
+  rumah_sakit: { color: '#DC2626', icon: '🏥' },
+  puskesmas: { color: '#EA580C', icon: '🩺' },
+  klinik: { color: '#D97706', icon: '💊' },
+  posko_kes_darurat: { color: '#EF4444', icon: '⛑️' },
+}
+
 const getMarkerIcon = (type: string) => {
   return markerIcons[type] || { color: '#6B7280', icon: '📍' }
+}
+
+const getFaskesIcon = (jenisFaskes: string) => {
+  return faskesIcons[jenisFaskes] || { color: '#EF4444', icon: '🏥' }
 }
 
 onMounted(async () => {
@@ -66,9 +83,16 @@ onMounted(async () => {
   }).addTo(map)
 
   markerLayer = L.layerGroup().addTo(map)
+  faskesLayer = L.layerGroup()
 
   // Fetch locations from API
   await fetchLocations()
+
+  // Fetch faskes if enabled
+  if (props.showFaskes) {
+    await fetchFaskes()
+    faskesLayer.addTo(map)
+  }
 })
 
 // Watch for showMarkers prop changes
@@ -78,6 +102,20 @@ watch(() => props.showMarkers, (show) => {
     markerLayer.addTo(map)
   } else {
     markerLayer.remove()
+  }
+})
+
+// Watch for showFaskes prop changes
+watch(() => props.showFaskes, async (show) => {
+  if (!faskesLayer) return
+  if (show) {
+    // Fetch faskes data if not already loaded
+    if (faskesMarkers.value.length === 0) {
+      await fetchFaskes()
+    }
+    faskesLayer.addTo(map)
+  } else {
+    faskesLayer.remove()
   }
 })
 
@@ -114,6 +152,32 @@ watch(markers, async (newMarkers) => {
   if (bounds.length > 0) {
     map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 })
   }
+}, { immediate: true })
+
+// Watch for faskes marker changes and update map
+watch(faskesMarkers, async (newMarkers) => {
+  if (!map || !faskesLayer) return
+
+  const L = await import('leaflet')
+  faskesLayer.clearLayers()
+
+  if (newMarkers.length === 0) return
+
+  newMarkers.forEach((marker) => {
+    const iconConfig = getFaskesIcon(marker.jenisFaskes)
+    const customIcon = L.divIcon({
+      className: 'custom-marker',
+      html: `<div style="background-color: ${iconConfig.color}; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); font-size: 14px;">${iconConfig.icon}</div>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+    })
+
+    L.marker([marker.lat, marker.lng], { icon: customIcon })
+      .addTo(faskesLayer)
+      .on('click', () => {
+        emit('faskes-click', marker)
+      })
+  })
 }, { immediate: true })
 
 const zoomIn = () => map?.zoomIn()
@@ -154,6 +218,7 @@ defineExpose({
   lastUpdate,
   loading,
   refreshLocations: fetchLocations,
+  refreshFaskes: fetchFaskes,
 })
 </script>
 

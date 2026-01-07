@@ -64,6 +64,7 @@ func main() {
 	// Initialize repositories
 	locationRepo := repository.NewLocationRepository(db)
 	feedRepo := repository.NewFeedRepository(db)
+	faskesRepo := repository.NewFaskesRepository(db)
 
 	// Initialize ODK client for posko form
 	odkPoskoConfig := &odk.ODKConfig{
@@ -117,6 +118,7 @@ func main() {
 	// Initialize handlers
 	locationHandler := handler.NewLocationHandler(locationRepo, feedRepo)
 	feedHandler := handler.NewFeedHandler(feedRepo)
+	faskesHandler := handler.NewFaskesHandler(faskesRepo)
 	healthHandler := handler.NewHealthHandler(db)
 	syncHandler := handler.NewSyncHandler(syncService, feedSyncService, faskesSyncService)
 	photoHandler := handler.NewPhotoHandler(photoService)
@@ -161,6 +163,10 @@ func main() {
 			// Locations (cached)
 			cached.GET("/locations", locationHandler.GetLocations)
 			cached.GET("/locations/:id", locationHandler.GetLocationByID)
+
+			// Faskes - Health facilities (cached)
+			cached.GET("/faskes", faskesHandler.GetFaskes)
+			cached.GET("/faskes/:id", faskesHandler.GetFaskesByID)
 
 			// Feeds (cached)
 			cached.GET("/feeds", feedHandler.GetFeeds)

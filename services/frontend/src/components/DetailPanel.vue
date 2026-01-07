@@ -5,10 +5,11 @@ import Badge from './ui/Badge.vue'
 import Button from './ui/Button.vue'
 import PhotoModal from './PhotoModal.vue'
 import type { MapMarker } from '@/types'
-import { api, type LocationDetail, type Feed, type Photo } from '@/services/api'
+import { api, type LocationDetail, type FaskesDetail, type Feed, type Photo } from '@/services/api'
 
 interface Props {
   marker: MapMarker | null
+  faskes?: any | null
 }
 
 const props = defineProps<Props>()
@@ -18,6 +19,7 @@ const emit = defineEmits<{
 }>()
 
 const locationDetail = ref<LocationDetail | null>(null)
+const faskesDetail = ref<FaskesDetail | null>(null)
 const latestFeed = ref<Feed | null>(null)
 const loading = ref(false)
 
@@ -27,12 +29,19 @@ const viewMode = ref<'detail' | 'gallery'>('detail')
 const selectedPhotoUrl = ref<string | null>(null)
 const isModalOpen = ref(false)
 
+// Check if we are showing faskes or location
+const isFaskesView = computed(() => !!props.faskes)
+
 // Collapsible sections state
 const expandedSections = ref<Record<string, boolean>>({
   pengungsi: false,
   fasilitas: false,
   komunikasi: false,
   akses: false,
+  isolasi: false,
+  infrastruktur: false,
+  sdm: false,
+  perbekalan: false,
 })
 
 const toggleSection = (section: string) => {
@@ -75,6 +84,26 @@ watch(() => props.marker, async (newMarker) => {
     }
   } catch (e) {
     console.error('Failed to fetch location detail:', e)
+  } finally {
+    loading.value = false
+  }
+}, { immediate: true })
+
+// Fetch faskes detail when faskes prop changes
+watch(() => props.faskes, async (newFaskes) => {
+  if (!newFaskes) {
+    faskesDetail.value = null
+    return
+  }
+
+  loading.value = true
+  try {
+    const detailRes = await api.getFaskesById(newFaskes.id)
+    if (detailRes.success && detailRes.data) {
+      faskesDetail.value = detailRes.data
+    }
+  } catch (e) {
+    console.error('Failed to fetch faskes detail:', e)
   } finally {
     loading.value = false
   }
@@ -200,24 +229,47 @@ const closePhotoModal = () => {
 <template>
   <!-- Mobile backdrop (covers area behind panel, clicking closes it) -->
   <div
-    v-if="marker"
+    v-if="marker || faskes"
     class="fixed inset-0 left-14 bg-black/30 z-40 lg:hidden"
     @click="emit('close')"
   />
 
   <aside
-    v-if="marker"
+    v-if="marker || faskes"
     class="fixed inset-y-0 left-14 right-0 lg:h-full lg:relative lg:inset-auto lg:w-96 bg-white border-l border-gray-200 flex flex-col overflow-hidden z-50 lg:border-t-0"
   >
-    <!-- Header -->
-    <div class="p-3 lg:p-4 border-b border-gray-200">
+    <!-- Header for Location/Posko -->
+    <div v-if="!isFaskesView" class="p-3 lg:p-4 border-b border-gray-200">
       <div class="flex items-start justify-between gap-2">
         <div class="flex-1 min-w-0">
-          <h2 class="text-base lg:text-lg font-semibold text-gray-900 truncate">{{ marker.name }}</h2>
+          <h2 class="text-base lg:text-lg font-semibold text-gray-900 truncate">{{ marker?.name }}</h2>
           <div class="flex items-center gap-2 mt-1">
             <Badge :variant="statusVariant">Status Posko: {{ statusLabel }}</Badge>
           </div>
           <div class="text-xs text-gray-500 mt-1">ID: {{ locationId }}</div>
+        </div>
+        <button
+          class="p-1 hover:bg-gray-100 rounded"
+          @click="emit('close')"
+        >
+          <X class="w-5 h-5 text-gray-400" />
+        </button>
+      </div>
+    </div>
+
+    <!-- Header for Faskes -->
+    <div v-if="isFaskesView" class="p-3 lg:p-4 border-b border-gray-200">
+      <div class="flex items-start justify-between gap-2">
+        <div class="flex-1 min-w-0">
+          <h2 class="text-base lg:text-lg font-semibold text-gray-900 truncate">{{ faskes?.name || faskesDetail?.nama }}</h2>
+          <div class="flex items-center gap-2 mt-1">
+            <Badge :variant="faskesDetail?.status_faskes === 'operasional' ? 'success' : 'danger'">
+              {{ faskesDetail?.status_faskes === 'operasional' ? 'Operasional' : 'Non-aktif' }}
+            </Badge>
+            <Badge variant="outline" class="capitalize">
+              {{ (faskesDetail?.jenis_faskes || faskes?.jenisFaskes || '').replace(/_/g, ' ') }}
+            </Badge>
+          </div>
         </div>
         <button
           class="p-1 hover:bg-gray-100 rounded"
@@ -294,8 +346,8 @@ const closePhotoModal = () => {
       <span class="text-gray-500">Memuat data...</span>
     </div>
 
-    <!-- Content (Detail View) -->
-    <div v-if="!loading && viewMode === 'detail'" class="flex-1 overflow-y-auto">
+    <!-- Content (Detail View) - Location/Posko -->
+    <div v-if="!loading && viewMode === 'detail' && !isFaskesView" class="flex-1 overflow-y-auto">
       <!-- Latest Update for this location -->
       <div v-if="latestFeed" class="p-4 border-b border-gray-200 bg-blue-50">
         <div class="flex items-center gap-2 mb-2">
@@ -625,8 +677,159 @@ const closePhotoModal = () => {
       </div>
     </div>
 
+    <!-- Content (Detail View) - Faskes -->
+    <div v-if="!loading && viewMode === 'detail' && isFaskesView" class="flex-1 overflow-y-auto">
+      <!-- Informasi Umum Faskes -->
+      <div class="p-4 border-b border-gray-200">
+        <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <Home class="w-4 h-4" />
+          Informasi Umum Faskes
+        </h3>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <div class="text-xs text-gray-500">Jenis Faskes</div>
+            <div class="text-sm font-medium capitalize">
+              {{ (faskesDetail?.jenis_faskes || '').replace(/_/g, ' ') }}
+            </div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500">Status</div>
+            <div class="text-sm font-medium capitalize">
+              {{ faskesDetail?.status_faskes || '-' }}
+            </div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500">Kondisi</div>
+            <div class="text-sm font-medium capitalize">
+              {{ (faskesDetail?.kondisi_faskes || '-').replace(/_/g, ' ') }}
+            </div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500">Last Update</div>
+            <div class="text-sm font-medium">
+              {{ formatRelativeTime(faskesDetail?.meta?.updated_at) }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kontak Faskes -->
+      <div class="p-4 border-b border-gray-200">
+        <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <Phone class="w-4 h-4" />
+          Kontak Faskes
+        </h3>
+        <div class="space-y-3">
+          <div class="flex items-start gap-3">
+            <User class="w-5 h-5 text-gray-400 mt-0.5" />
+            <div>
+              <div class="text-sm font-medium">
+                {{ (faskesDetail?.identitas as any)?.nama_pj_faskes || '-' }}
+              </div>
+              <div class="text-xs text-gray-500">Penanggung Jawab</div>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <Phone class="w-5 h-5 text-blue-500 mt-0.5" />
+            <div>
+              <div class="text-sm font-medium">
+                {{ (faskesDetail?.identitas as any)?.contact_pj_faskes || '-' }}
+              </div>
+              <div class="text-xs text-gray-500">Kontak PJ</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alamat Faskes -->
+      <div class="p-4 border-b border-gray-200">
+        <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <MapPin class="w-4 h-4" />
+          Alamat
+        </h3>
+        <div class="text-sm text-gray-600">
+          <p>
+            Desa {{ (faskesDetail?.alamat as any)?.nama_desa || '-' }},
+            Kec. {{ (faskesDetail?.alamat as any)?.nama_kecamatan || '-' }}
+          </p>
+          <p>
+            {{ (faskesDetail?.alamat as any)?.nama_kota_kab || '-' }},
+            {{ (faskesDetail?.alamat as any)?.nama_provinsi || '-' }}
+          </p>
+        </div>
+      </div>
+
+      <!-- SDM -->
+      <div v-if="faskesDetail?.sdm" class="border-b border-gray-200">
+        <button
+          class="w-full flex items-center justify-between p-4 hover:bg-gray-50"
+          @click="toggleSection('sdm')"
+        >
+          <span class="font-medium text-gray-700 flex items-center gap-2">
+            <Users class="w-4 h-4" />
+            Sumber Daya Manusia
+          </span>
+          <component :is="expandedSections.sdm ? ChevronUp : ChevronDown" class="w-5 h-5 text-gray-400" />
+        </button>
+        <div v-if="expandedSections.sdm" class="px-4 pb-4">
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <span class="text-gray-500">Dokter:</span>
+              <span class="ml-1 font-medium">{{ (faskesDetail?.sdm as any)?.tenaga_dokter || '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Perawat:</span>
+              <span class="ml-1 font-medium">{{ (faskesDetail?.sdm as any)?.tenaga_perawat || '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Bidan:</span>
+              <span class="ml-1 font-medium">{{ (faskesDetail?.sdm as any)?.tenaga_bidan || '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Apoteker:</span>
+              <span class="ml-1 font-medium">{{ (faskesDetail?.sdm as any)?.tenaga_apoteker || '-' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Infrastruktur -->
+      <div v-if="faskesDetail?.infrastruktur" class="border-b border-gray-200">
+        <button
+          class="w-full flex items-center justify-between p-4 hover:bg-gray-50"
+          @click="toggleSection('infrastruktur')"
+        >
+          <span class="font-medium text-gray-700 flex items-center gap-2">
+            <Home class="w-4 h-4" />
+            Infrastruktur
+          </span>
+          <component :is="expandedSections.infrastruktur ? ChevronUp : ChevronDown" class="w-5 h-5 text-gray-400" />
+        </button>
+        <div v-if="expandedSections.infrastruktur" class="px-4 pb-4">
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <span class="text-gray-500">Sumber Listrik:</span>
+              <span class="ml-1 font-medium capitalize">{{ (faskesDetail?.infrastruktur as any)?.sumber_listrik || '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Sumber Air:</span>
+              <span class="ml-1 font-medium capitalize">{{ (faskesDetail?.infrastruktur as any)?.sumber_air || '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Sinyal:</span>
+              <span class="ml-1 font-medium capitalize">{{ (faskesDetail?.infrastruktur as any)?.ketersediaan_sinyal || '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Internet:</span>
+              <span class="ml-1 font-medium capitalize">{{ (faskesDetail?.infrastruktur as any)?.ketersediaan_internet || '-' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Footer (only in detail mode) -->
-    <div v-if="viewMode === 'detail'" class="p-4 border-t border-gray-200">
+    <div v-if="viewMode === 'detail' && !isFaskesView" class="p-4 border-t border-gray-200">
       <Button variant="primary" class="w-full">
         Generate Report
       </Button>

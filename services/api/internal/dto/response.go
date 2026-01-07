@@ -115,6 +115,49 @@ type FeedResponse struct {
 	Coordinates  []float64 `json:"coordinates,omitempty"`
 }
 
+// FaskesListResponse for GET /faskes
+type FaskesListResponse struct {
+	Type     string                  `json:"type"`
+	Features []FaskesFeatureResponse `json:"features"`
+}
+
+type FaskesFeatureResponse struct {
+	Type       string               `json:"type"`
+	ID         string               `json:"id"`
+	Geometry   *GeoJSONGeometry     `json:"geometry"`
+	Properties FaskesListProperties `json:"properties"`
+}
+
+type FaskesListProperties struct {
+	ODKSubmissionID string    `json:"odk_submission_id,omitempty"`
+	Nama            string    `json:"nama"`
+	JenisFaskes     string    `json:"jenis_faskes"`
+	StatusFaskes    string    `json:"status_faskes"`
+	KondisiFaskes   string    `json:"kondisi_faskes,omitempty"`
+	AlamatSingkat   string    `json:"alamat_singkat,omitempty"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+// FaskesDetailResponse for GET /faskes/:id
+type FaskesDetailResponse struct {
+	ID              string                 `json:"id"`
+	ODKSubmissionID string                 `json:"odk_submission_id,omitempty"`
+	Nama            string                 `json:"nama"`
+	JenisFaskes     string                 `json:"jenis_faskes"`
+	StatusFaskes    string                 `json:"status_faskes"`
+	KondisiFaskes   string                 `json:"kondisi_faskes,omitempty"`
+	Geometry        *LocationGeometry      `json:"geometry"`
+	Alamat          map[string]interface{} `json:"alamat"`
+	Identitas       map[string]interface{} `json:"identitas"`
+	Isolasi         map[string]interface{} `json:"isolasi,omitempty"`
+	Infrastruktur   map[string]interface{} `json:"infrastruktur,omitempty"`
+	SDM             map[string]interface{} `json:"sdm,omitempty"`
+	Perbekalan      map[string]interface{} `json:"perbekalan,omitempty"`
+	Klaster         map[string]interface{} `json:"klaster,omitempty"`
+	Photos          []PhotoResponse        `json:"photos"`
+	Meta            LocationMeta           `json:"meta"`
+}
+
 // HealthResponse for GET /health
 type HealthResponse struct {
 	Status    string            `json:"status"`
