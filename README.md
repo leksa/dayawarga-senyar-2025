@@ -228,6 +228,7 @@ Jika Anda menemukan bug atau memiliki ide fitur baru:
 1. Tambah form ODK, Sync dan tampilan untuk verifikasi Fasilitas Kesehatan (data available Tim Tanggap Darurat Kemenkes)
 2. Tambah form ODK, Sync dan tampilan untuk verifikasi titik jembatan (data available tim survei Kementerian PU)
 3. Feed Updates bisa koordinat bebas untuk laporan relawan di mana saja
+4. Feed Updates tampil di peta dgn foto visual situasi
 
 ## Kontak Developer
 
