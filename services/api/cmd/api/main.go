@@ -220,6 +220,7 @@ func main() {
 		v1.POST("/sync/feed-photos", photoHandler.SyncFeedPhotos)     // Feed photos
 		v1.POST("/sync/faskes-photos", photoHandler.SyncFaskesPhotos) // Faskes photos
 		v1.POST("/migrate/s3", photoHandler.MigrateToS3)              // Migrate local photos to S3
+		v1.POST("/photos/reset-cache", photoHandler.ResetCache)       // Reset cache for missing files
 
 		// Scheduler endpoints
 		scheduler := v1.Group("/scheduler")

@@ -406,3 +406,21 @@ func (h *PhotoHandler) MigrateToS3(c *gin.Context) {
 		"data":    result,
 	})
 }
+
+// ResetCache resets cache status for photos with missing local files
+func (h *PhotoHandler) ResetCache(c *gin.Context) {
+	result, err := h.photoService.ResetCacheForMissingFiles()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    result,
+		"message": "Cache reset complete. Run /sync/photos to re-download photos to S3.",
+	})
+}

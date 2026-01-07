@@ -628,6 +628,98 @@ func (s *PhotoService) GetFaskesPhotosByFaskesID(faskesID uuid.UUID) ([]model.Fa
 }
 
 // ========================================
+// CACHE RESET
+// ========================================
+
+// ResetCacheResult holds the result of a cache reset operation
+type ResetCacheResult struct {
+	LocationPhotos int `json:"location_photos"`
+	FeedPhotos     int `json:"feed_photos"`
+	FaskesPhotos   int `json:"faskes_photos"`
+	TotalReset     int `json:"total_reset"`
+}
+
+// ResetCacheForMissingFiles resets is_cached flag for photos whose local files are missing
+// This allows them to be re-downloaded (to S3 if enabled)
+func (s *PhotoService) ResetCacheForMissingFiles() (*ResetCacheResult, error) {
+	result := &ResetCacheResult{}
+
+	// Reset location photos with missing local files
+	var locationPhotos []model.LocationPhoto
+	if err := s.db.Where("is_cached = true AND storage_path IS NOT NULL AND storage_path NOT LIKE 'http%'").Find(&locationPhotos).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch location photos: %w", err)
+	}
+
+	for _, photo := range locationPhotos {
+		if photo.StoragePath == nil {
+			continue
+		}
+		// Check if local file exists
+		if _, err := os.Stat(*photo.StoragePath); os.IsNotExist(err) {
+			// File doesn't exist, reset cache status
+			photo.IsCached = false
+			photo.StoragePath = nil
+			photo.FileSize = nil
+			if err := s.db.Save(&photo).Error; err != nil {
+				log.Printf("Failed to reset cache for location photo %s: %v", photo.ID, err)
+				continue
+			}
+			result.LocationPhotos++
+			log.Printf("Reset cache for location photo: %s (file missing: %s)", photo.ID, *photo.StoragePath)
+		}
+	}
+
+	// Reset feed photos with missing local files
+	var feedPhotos []model.FeedPhoto
+	if err := s.db.Where("is_cached = true AND storage_path IS NOT NULL AND storage_path NOT LIKE 'http%'").Find(&feedPhotos).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch feed photos: %w", err)
+	}
+
+	for _, photo := range feedPhotos {
+		if photo.StoragePath == nil {
+			continue
+		}
+		if _, err := os.Stat(*photo.StoragePath); os.IsNotExist(err) {
+			photo.IsCached = false
+			photo.StoragePath = nil
+			photo.FileSize = nil
+			if err := s.db.Save(&photo).Error; err != nil {
+				log.Printf("Failed to reset cache for feed photo %s: %v", photo.ID, err)
+				continue
+			}
+			result.FeedPhotos++
+			log.Printf("Reset cache for feed photo: %s", photo.ID)
+		}
+	}
+
+	// Reset faskes photos with missing local files
+	var faskesPhotos []model.FaskesPhoto
+	if err := s.db.Where("is_cached = true AND storage_path IS NOT NULL AND storage_path NOT LIKE 'http%'").Find(&faskesPhotos).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch faskes photos: %w", err)
+	}
+
+	for _, photo := range faskesPhotos {
+		if photo.StoragePath == nil {
+			continue
+		}
+		if _, err := os.Stat(*photo.StoragePath); os.IsNotExist(err) {
+			photo.IsCached = false
+			photo.StoragePath = nil
+			photo.FileSize = nil
+			if err := s.db.Save(&photo).Error; err != nil {
+				log.Printf("Failed to reset cache for faskes photo %s: %v", photo.ID, err)
+				continue
+			}
+			result.FaskesPhotos++
+			log.Printf("Reset cache for faskes photo: %s", photo.ID)
+		}
+	}
+
+	result.TotalReset = result.LocationPhotos + result.FeedPhotos + result.FaskesPhotos
+	return result, nil
+}
+
+// ========================================
 // S3 MIGRATION
 // ========================================
 
