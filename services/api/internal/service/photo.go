@@ -253,12 +253,24 @@ func (s *PhotoService) GetPhotoReader(photoID uuid.UUID) (io.ReadCloser, string,
 }
 
 // extractS3Key extracts the S3 key from a full URL
+// URL format: https://is3.cloudhost.id/bucket/prefix/path/to/file.ext
+// Returns key WITHOUT the prefix (since S3Storage.GetReader adds prefix via buildKey)
 func extractS3Key(url string) string {
-	// URL format: https://bucket.endpoint/key or https://endpoint/bucket/key
-	// We need to extract the path after the bucket
-	parts := strings.SplitN(url, "/", 4)
-	if len(parts) >= 4 {
-		return parts[3]
+	// Parse URL: https://is3.cloudhost.id/media/dayawarga/locations/uuid/file.png
+	// We need: locations/uuid/file.png (without bucket and prefix)
+	parts := strings.SplitN(url, "/", 6)
+	// parts[0] = "https:"
+	// parts[1] = ""
+	// parts[2] = "is3.cloudhost.id"
+	// parts[3] = "media" (bucket)
+	// parts[4] = "dayawarga" (prefix)
+	// parts[5] = "locations/uuid/file.png" (actual key)
+	if len(parts) >= 6 {
+		return parts[5]
+	}
+	// Fallback for URLs without prefix
+	if len(parts) >= 5 {
+		return parts[4]
 	}
 	return url
 }
