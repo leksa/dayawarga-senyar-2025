@@ -1,6 +1,6 @@
 # Dayawarga Senyar 2025
 
-Sistem Informasi Geografis (GIS) untuk pemantauan dan pengelolaan data bencana Siklon Senyar di Sumatra 2025. Platform ini menyediakan peta interaktif untuk visualisasi lokasi posko pengungsian, informasi terbaru (feeds), dan dokumentasi foto dari lapangan.
+Sistem Informasi Geografis (GIS) berbasis collection dan layer data eksisting untuk pemantauan dan pengelolaan data bencana Siklon Senyar di Sumatra 2025. Platform ini menyediakan peta interaktif untuk visualisasi lokasi posko pengungsian, informasi terbaru (feeds), dan dokumentasi foto dari lapangan.
 
 **Live Demo:** [https://dayawarga.com](https://dayawarga.com)
 
@@ -223,6 +223,12 @@ Jika Anda menemukan bug atau memiliki ide fitur baru:
 2. **Buat Issue baru** dengan deskripsi yang jelas
 3. **Gunakan label** yang sesuai (bug, enhancement, question, dll)
 
+## Next release in a week
+
+1. Tambah form ODK, Sync dan tampilan untuk verifikasi Fasilitas Kesehatan (data available Tim Tanggap Darurat Kemenkes)
+2. Tambah form ODK, Sync dan tampilan untuk verifikasi titik jembatan (data available tim survei Kementerian PU)
+3. Feed Updates bisa koordinat bebas untuk laporan relawan di mana saja
+
 ## Kontak Developer
 
 - **GitHub Issues:** [github.com/leksa/dayawarga-senyar-2025/issues](https://github.com/leksa/dayawarga-senyar-2025/issues)
@@ -235,4 +241,4 @@ MIT License - Silakan gunakan dan modifikasi sesuai kebutuhan.
 
 ---
 
-**Dayawarga** - Platform Pemantauan Bencana Berbasis Komunitas
+**Dayawarga** - Platform Pemantauan Bencana Berbasis Komunitas Relawan dan Warga
