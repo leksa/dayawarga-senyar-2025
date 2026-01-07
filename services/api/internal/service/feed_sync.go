@@ -99,11 +99,12 @@ func (s *FeedSyncService) processSubmission(submission map[string]interface{}, r
 		}
 	}
 
-	// Map submission to feed
-	feed, err := MapFeedSubmission(submission)
+	// Map submission to feed with photos
+	feedResult, err := MapFeedSubmissionWithPhotos(submission)
 	if err != nil {
 		return fmt.Errorf("failed to map feed submission %s: %w", odkID, err)
 	}
+	feed := feedResult.Feed
 
 	// Resolve location_id: the calc_location_id from ODK is the entity name, not our DB UUID
 	// We need to lookup the location by matching the nama_posko
@@ -124,6 +125,23 @@ func (s *FeedSyncService) processSubmission(submission map[string]interface{}, r
 		}
 	}
 
+	// Resolve faskes_id: lookup by nama_faskes
+	if feed.FaskesID != nil {
+		if namaFaskes, ok := submission["calc_nama_faskes"].(string); ok && namaFaskes != "" {
+			var faskes model.Faskes
+			if err := s.db.Where("nama = ?", namaFaskes).First(&faskes).Error; err == nil {
+				feed.FaskesID = &faskes.ID
+				log.Printf("Resolved faskes_id for '%s' -> %s", namaFaskes, faskes.ID)
+			} else {
+				log.Printf("Warning: Could not find faskes '%s', setting faskes_id to NULL", namaFaskes)
+				feed.FaskesID = nil
+			}
+		} else {
+			log.Printf("Warning: No calc_nama_faskes in submission, setting faskes_id to NULL")
+			feed.FaskesID = nil
+		}
+	}
+
 	// Check if feed already exists
 	var existingFeed model.Feed
 	err = s.db.Where("odk_submission_id = ?", odkID).First(&existingFeed).Error
@@ -133,20 +151,54 @@ func (s *FeedSyncService) processSubmission(submission map[string]interface{}, r
 		if err := s.createFeed(feed); err != nil {
 			return fmt.Errorf("failed to create feed for %s: %w", odkID, err)
 		}
+
+		// Save photos
+		if len(feedResult.Photos) > 0 {
+			if err := s.saveFeedPhotos(feed.ID, feedResult.Photos); err != nil {
+				log.Printf("Warning: Failed to save photos for feed %s: %v", odkID, err)
+			}
+		}
+
 		result.Created++
-		log.Printf("Created feed: %s (%s)", odkID, feed.Category)
+		log.Printf("Created feed: %s (%s) with %d photos", odkID, feed.Category, len(feedResult.Photos))
 	} else if err == nil {
 		// Update existing feed
 		feed.ID = existingFeed.ID
 		if err := s.updateFeed(feed); err != nil {
 			return fmt.Errorf("failed to update feed for %s: %w", odkID, err)
 		}
+
+		// Update photos (delete existing and re-create)
+		if len(feedResult.Photos) > 0 {
+			s.db.Where("feed_id = ?", feed.ID).Delete(&model.FeedPhoto{})
+			if err := s.saveFeedPhotos(feed.ID, feedResult.Photos); err != nil {
+				log.Printf("Warning: Failed to update photos for feed %s: %v", odkID, err)
+			}
+		}
+
 		result.Updated++
-		log.Printf("Updated feed: %s (%s)", odkID, feed.Category)
+		log.Printf("Updated feed: %s (%s) with %d photos", odkID, feed.Category, len(feedResult.Photos))
 	} else {
 		return fmt.Errorf("database error checking feed %s: %w", odkID, err)
 	}
 
+	return nil
+}
+
+// saveFeedPhotos saves photo records for a feed
+func (s *FeedSyncService) saveFeedPhotos(feedID uuid.UUID, photos []FeedPhotoInfo) error {
+	for _, photo := range photos {
+		feedPhoto := model.FeedPhoto{
+			ID:        uuid.New(),
+			FeedID:    feedID,
+			PhotoType: photo.PhotoType,
+			Filename:  photo.Filename,
+			IsCached:  false,
+		}
+		if err := s.db.Create(&feedPhoto).Error; err != nil {
+			return fmt.Errorf("failed to save photo %s: %w", photo.Filename, err)
+		}
+	}
 	return nil
 }
 
@@ -157,33 +209,49 @@ func (s *FeedSyncService) createFeed(feed *model.Feed) error {
 	feed.CreatedAt = now
 	feed.UpdatedAt = now
 
-	// Build SQL with geometry
-	sql := `
-		INSERT INTO information_feeds (
-			id, location_id, odk_submission_id,
-			content, category, type, username, organization,
-			geom, raw_data, submitted_at, created_at, updated_at
-		) VALUES (
-			?, ?, ?,
-			?, ?, ?, ?, ?,
-			ST_SetSRID(ST_MakePoint(?, ?), 4326), ?, ?, ?, ?
-		)
-	`
+	// Check if we have valid coordinates
+	hasCoords := feed.Longitude != nil && feed.Latitude != nil && *feed.Longitude != 0 && *feed.Latitude != 0
 
-	lon := float64(0)
-	lat := float64(0)
-	if feed.Longitude != nil {
-		lon = *feed.Longitude
-	}
-	if feed.Latitude != nil {
-		lat = *feed.Latitude
+	var sql string
+	var args []interface{}
+
+	if hasCoords {
+		sql = `
+			INSERT INTO information_feeds (
+				id, location_id, faskes_id, odk_submission_id,
+				content, category, type, username, organization,
+				geom, raw_data, submitted_at, created_at, updated_at
+			) VALUES (
+				?, ?, ?, ?,
+				?, ?, ?, ?, ?,
+				ST_SetSRID(ST_MakePoint(?, ?), 4326), ?, ?, ?, ?
+			)
+		`
+		args = []interface{}{
+			feed.ID, feed.LocationID, feed.FaskesID, feed.ODKSubmissionID,
+			feed.Content, feed.Category, feed.Type, feed.Username, feed.Organization,
+			*feed.Longitude, *feed.Latitude, feed.RawData, feed.SubmittedAt, feed.CreatedAt, feed.UpdatedAt,
+		}
+	} else {
+		sql = `
+			INSERT INTO information_feeds (
+				id, location_id, faskes_id, odk_submission_id,
+				content, category, type, username, organization,
+				geom, raw_data, submitted_at, created_at, updated_at
+			) VALUES (
+				?, ?, ?, ?,
+				?, ?, ?, ?, ?,
+				NULL, ?, ?, ?, ?
+			)
+		`
+		args = []interface{}{
+			feed.ID, feed.LocationID, feed.FaskesID, feed.ODKSubmissionID,
+			feed.Content, feed.Category, feed.Type, feed.Username, feed.Organization,
+			feed.RawData, feed.SubmittedAt, feed.CreatedAt, feed.UpdatedAt,
+		}
 	}
 
-	return s.db.Exec(sql,
-		feed.ID, feed.LocationID, feed.ODKSubmissionID,
-		feed.Content, feed.Category, feed.Type, feed.Username, feed.Organization,
-		lon, lat, feed.RawData, feed.SubmittedAt, feed.CreatedAt, feed.UpdatedAt,
-	).Error
+	return s.db.Exec(sql, args...).Error
 }
 
 // updateFeed updates an existing feed
@@ -191,41 +259,70 @@ func (s *FeedSyncService) updateFeed(feed *model.Feed) error {
 	now := time.Now()
 	feed.UpdatedAt = now
 
-	sql := `
-		UPDATE information_feeds SET
-			location_id = ?,
-			content = ?,
-			category = ?,
-			type = ?,
-			username = ?,
-			geom = ST_SetSRID(ST_MakePoint(?, ?), 4326),
-			raw_data = ?,
-			submitted_at = ?,
-			updated_at = ?
-		WHERE id = ?
-	`
+	// Check if we have valid coordinates
+	hasCoords := feed.Longitude != nil && feed.Latitude != nil && *feed.Longitude != 0 && *feed.Latitude != 0
 
-	lon := float64(0)
-	lat := float64(0)
-	if feed.Longitude != nil {
-		lon = *feed.Longitude
-	}
-	if feed.Latitude != nil {
-		lat = *feed.Latitude
+	var sql string
+	var args []interface{}
+
+	if hasCoords {
+		sql = `
+			UPDATE information_feeds SET
+				location_id = ?,
+				faskes_id = ?,
+				content = ?,
+				category = ?,
+				type = ?,
+				username = ?,
+				geom = ST_SetSRID(ST_MakePoint(?, ?), 4326),
+				raw_data = ?,
+				submitted_at = ?,
+				updated_at = ?
+			WHERE id = ?
+		`
+		args = []interface{}{
+			feed.LocationID,
+			feed.FaskesID,
+			feed.Content,
+			feed.Category,
+			feed.Type,
+			feed.Username,
+			*feed.Longitude, *feed.Latitude,
+			feed.RawData,
+			feed.SubmittedAt,
+			feed.UpdatedAt,
+			feed.ID,
+		}
+	} else {
+		sql = `
+			UPDATE information_feeds SET
+				location_id = ?,
+				faskes_id = ?,
+				content = ?,
+				category = ?,
+				type = ?,
+				username = ?,
+				geom = NULL,
+				raw_data = ?,
+				submitted_at = ?,
+				updated_at = ?
+			WHERE id = ?
+		`
+		args = []interface{}{
+			feed.LocationID,
+			feed.FaskesID,
+			feed.Content,
+			feed.Category,
+			feed.Type,
+			feed.Username,
+			feed.RawData,
+			feed.SubmittedAt,
+			feed.UpdatedAt,
+			feed.ID,
+		}
 	}
 
-	return s.db.Exec(sql,
-		feed.LocationID,
-		feed.Content,
-		feed.Category,
-		feed.Type,
-		feed.Username,
-		lon, lat,
-		feed.RawData,
-		feed.SubmittedAt,
-		feed.UpdatedAt,
-		feed.ID,
-	).Error
+	return s.db.Exec(sql, args...).Error
 }
 
 // updateSyncState updates the sync_state table for feed form

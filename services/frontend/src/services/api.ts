@@ -53,10 +53,26 @@ export interface LocationDetail {
   }
 }
 
+export interface FeedPhoto {
+  id: string
+  type: string
+  filename: string
+  url: string
+}
+
+export interface FeedRegion {
+  provinsi?: string
+  kota_kab?: string
+  kecamatan?: string
+  desa?: string
+}
+
 export interface Feed {
   id: string
   location_id?: string
   location_name?: string
+  faskes_id?: string
+  faskes_name?: string
   content: string
   category: string
   type?: string
@@ -64,6 +80,8 @@ export interface Feed {
   organization?: string
   submitted_at: string
   coordinates?: [number, number]
+  photos?: FeedPhoto[]
+  region?: FeedRegion
 }
 
 export interface Photo {
@@ -258,6 +276,10 @@ export const api = {
 
   getPhotoUrl(photoId: string): string {
     return `${API_BASE_URL}/photos/${photoId}/file`
+  },
+
+  getFeedPhotoUrl(photoId: string): string {
+    return `${API_BASE_URL}/feeds/photos/${photoId}/file`
   },
 
   async getSyncStatus(): Promise<APIResponse<SyncStatus>> {

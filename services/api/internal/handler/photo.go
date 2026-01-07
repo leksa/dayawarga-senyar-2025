@@ -193,3 +193,195 @@ func (h *PhotoHandler) CleanupOrphaned(c *gin.Context) {
 		},
 	})
 }
+
+// GetFeedPhotoFile serves the actual feed photo file
+func (h *PhotoHandler) GetFeedPhotoFile(c *gin.Context) {
+	photoIDStr := c.Param("id")
+	photoID, err := uuid.Parse(photoIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "invalid photo ID",
+		})
+		return
+	}
+
+	reader, filename, err := h.photoService.GetFeedPhotoReader(photoID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+	defer reader.Close()
+
+	// Determine content type based on extension
+	ext := filepath.Ext(filename)
+	contentType := "application/octet-stream"
+	switch ext {
+	case ".jpg", ".jpeg":
+		contentType = "image/jpeg"
+	case ".png":
+		contentType = "image/png"
+	case ".gif":
+		contentType = "image/gif"
+	case ".webp":
+		contentType = "image/webp"
+	}
+
+	c.Header("Content-Type", contentType)
+	c.Header("Content-Disposition", "inline; filename="+filename)
+
+	c.Stream(func(w io.Writer) bool {
+		io.Copy(w, reader)
+		return false
+	})
+}
+
+// SyncFeedPhotos triggers feed photo synchronization
+func (h *PhotoHandler) SyncFeedPhotos(c *gin.Context) {
+	formID := c.Query("form_id")
+	if formID == "" {
+		formID = "form_feed_v1" // default feed form ID
+	}
+
+	result, err := h.photoService.SyncFeedPhotos(formID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    result,
+	})
+}
+
+// ========================================
+// FASKES PHOTOS ENDPOINTS
+// ========================================
+
+// GetFaskesPhotoFile serves the actual faskes photo file
+func (h *PhotoHandler) GetFaskesPhotoFile(c *gin.Context) {
+	photoIDStr := c.Param("id")
+	photoID, err := uuid.Parse(photoIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "invalid photo ID",
+		})
+		return
+	}
+
+	reader, filename, err := h.photoService.GetFaskesPhotoReader(photoID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+	defer reader.Close()
+
+	// Determine content type based on extension
+	ext := filepath.Ext(filename)
+	contentType := "application/octet-stream"
+	switch ext {
+	case ".jpg", ".jpeg":
+		contentType = "image/jpeg"
+	case ".png":
+		contentType = "image/png"
+	case ".gif":
+		contentType = "image/gif"
+	case ".webp":
+		contentType = "image/webp"
+	}
+
+	c.Header("Content-Type", contentType)
+	c.Header("Content-Disposition", "inline; filename="+filename)
+
+	c.Stream(func(w io.Writer) bool {
+		io.Copy(w, reader)
+		return false
+	})
+}
+
+// GetPhotosByFaskes returns all photos for a faskes
+func (h *PhotoHandler) GetPhotosByFaskes(c *gin.Context) {
+	faskesIDStr := c.Param("id")
+	faskesID, err := uuid.Parse(faskesIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "invalid faskes ID",
+		})
+		return
+	}
+
+	photos, err := h.photoService.GetFaskesPhotosByFaskesID(faskesID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	// Build photo URLs
+	type PhotoResponse struct {
+		ID        string `json:"id"`
+		PhotoType string `json:"photo_type"`
+		Filename  string `json:"filename"`
+		IsCached  bool   `json:"is_cached"`
+		FileSize  *int   `json:"file_size,omitempty"`
+		URL       string `json:"url,omitempty"`
+		CreatedAt string `json:"created_at"`
+	}
+
+	var response []PhotoResponse
+	for _, photo := range photos {
+		pr := PhotoResponse{
+			ID:        photo.ID.String(),
+			PhotoType: photo.PhotoType,
+			Filename:  photo.Filename,
+			IsCached:  photo.IsCached,
+			FileSize:  photo.FileSize,
+			CreatedAt: photo.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		}
+		if photo.IsCached {
+			pr.URL = "/api/v1/faskes/photos/" + photo.ID.String() + "/file"
+		}
+		response = append(response, pr)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    response,
+	})
+}
+
+// SyncFaskesPhotos triggers faskes photo synchronization
+func (h *PhotoHandler) SyncFaskesPhotos(c *gin.Context) {
+	formID := c.Query("form_id")
+	if formID == "" {
+		formID = "form_faskes_v1" // default faskes form ID
+	}
+
+	result, err := h.photoService.SyncFaskesPhotos(formID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    result,
+	})
+}

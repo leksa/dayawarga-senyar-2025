@@ -103,16 +103,36 @@ type LocationMeta struct {
 
 // FeedResponse for GET /feeds
 type FeedResponse struct {
-	ID           string    `json:"id"`
-	LocationID   *string   `json:"location_id,omitempty"`
-	LocationName *string   `json:"location_name,omitempty"`
-	Content      string    `json:"content"`
-	Category     string    `json:"category"`
-	Type         *string   `json:"type,omitempty"`
-	Username     *string   `json:"username,omitempty"`
-	Organization *string   `json:"organization,omitempty"`
-	SubmittedAt  time.Time `json:"submitted_at"`
-	Coordinates  []float64 `json:"coordinates,omitempty"`
+	ID           string              `json:"id"`
+	LocationID   *string             `json:"location_id,omitempty"`
+	LocationName *string             `json:"location_name,omitempty"`
+	FaskesID     *string             `json:"faskes_id,omitempty"`
+	FaskesName   *string             `json:"faskes_name,omitempty"`
+	Content      string              `json:"content"`
+	Category     string              `json:"category"`
+	Type         *string             `json:"type,omitempty"`
+	Username     *string             `json:"username,omitempty"`
+	Organization *string             `json:"organization,omitempty"`
+	SubmittedAt  time.Time           `json:"submitted_at"`
+	Coordinates  []float64           `json:"coordinates,omitempty"`
+	Photos       []FeedPhotoResponse `json:"photos,omitempty"`
+	Region       *FeedRegion         `json:"region,omitempty"`
+}
+
+// FeedRegion contains regional information from ODK submission
+type FeedRegion struct {
+	Provinsi  string `json:"provinsi,omitempty"`
+	KotaKab   string `json:"kota_kab,omitempty"`
+	Kecamatan string `json:"kecamatan,omitempty"`
+	Desa      string `json:"desa,omitempty"`
+}
+
+// FeedPhotoResponse for feed photo data
+type FeedPhotoResponse struct {
+	ID       string `json:"id"`
+	Type     string `json:"type"`
+	Filename string `json:"filename"`
+	URL      string `json:"url"`
 }
 
 // FaskesListResponse for GET /faskes

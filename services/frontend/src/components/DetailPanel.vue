@@ -42,6 +42,7 @@ const expandedSections = ref<Record<string, boolean>>({
   infrastruktur: false,
   sdm: false,
   perbekalan: false,
+  klaster: false,
 })
 
 const toggleSection = (section: string) => {
@@ -115,6 +116,15 @@ const locationId = computed(() => {
   const alamat = locationDetail.value.alamat as Record<string, string>
   const idDesa = alamat.id_desa || ''
   const nama = locationDetail.value.identitas?.nama || props.marker?.name || ''
+  return `${idDesa} - ${nama}`
+})
+
+// Format ID for faskes
+const faskesId = computed(() => {
+  if (!faskesDetail.value?.alamat) return '-'
+  const alamat = faskesDetail.value.alamat as Record<string, string>
+  const idDesa = alamat.id_desa || ''
+  const nama = faskesDetail.value.nama || props.faskes?.name || ''
   return `${idDesa} - ${nama}`
 })
 
@@ -201,12 +211,33 @@ const formatTerisolir = (value: unknown) => {
 // Photo helpers
 const cachedPhotos = computed(() => photos.value.filter(p => p.is_cached && p.url))
 
-const getPhotoUrl = (photo: Photo) => {
+// Faskes photos from detail response
+const faskesPhotos = computed(() => {
+  if (!faskesDetail.value?.photos) return []
+  return faskesDetail.value.photos.map((p, idx) => ({
+    id: `faskes-photo-${idx}`,
+    filename: p.filename,
+    photo_type: p.type,
+    url: p.url,
+  }))
+})
+
+// Combined photos for display (location or faskes)
+const displayPhotos = computed(() => {
+  if (isFaskesView.value) return faskesPhotos.value
+  return cachedPhotos.value
+})
+
+const getPhotoUrl = (photo: Photo | { id: string; url?: string }) => {
+  // For faskes photos, use the URL directly from API response
+  if ('url' in photo && photo.url && photo.url.startsWith('/api')) {
+    return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'}${photo.url}`
+  }
   return api.getPhotoUrl(photo.id)
 }
 
 const openPhotoGallery = () => {
-  if (cachedPhotos.value.length > 0) {
+  if (displayPhotos.value.length > 0) {
     viewMode.value = 'gallery'
   }
 }
@@ -264,12 +295,10 @@ const closePhotoModal = () => {
           <h2 class="text-base lg:text-lg font-semibold text-gray-900 truncate">{{ faskes?.name || faskesDetail?.nama }}</h2>
           <div class="flex items-center gap-2 mt-1">
             <Badge :variant="faskesDetail?.status_faskes === 'operasional' ? 'success' : 'danger'">
-              {{ faskesDetail?.status_faskes === 'operasional' ? 'Operasional' : 'Non-aktif' }}
-            </Badge>
-            <Badge variant="outline" class="capitalize">
-              {{ (faskesDetail?.jenis_faskes || faskes?.jenisFaskes || '').replace(/_/g, ' ') }}
+              Status Faskes: {{ faskesDetail?.status_faskes === 'operasional' ? 'Operasional' : 'Non-aktif' }}
             </Badge>
           </div>
+          <div class="text-xs text-gray-500 mt-1">ID: {{ faskesId }}</div>
         </div>
         <button
           class="p-1 hover:bg-gray-100 rounded"
@@ -281,20 +310,20 @@ const closePhotoModal = () => {
     </div>
 
     <!-- Photo Section (when photos available and in detail mode) -->
-    <div v-if="!loading && cachedPhotos.length > 0 && viewMode === 'detail'" class="relative">
+    <div v-if="!loading && displayPhotos.length > 0 && viewMode === 'detail'" class="relative">
       <div
         class="cursor-pointer group"
         @click="openPhotoGallery"
       >
         <img
-          :src="getPhotoUrl(cachedPhotos[0])"
-          :alt="cachedPhotos[0].filename"
+          :src="getPhotoUrl(displayPhotos[0])"
+          :alt="displayPhotos[0].filename"
           class="w-full h-48 object-cover"
         />
         <!-- Photo count badge -->
         <div class="absolute bottom-3 right-3 bg-black/70 text-white px-3 py-1.5 rounded-full text-sm flex items-center gap-1.5 group-hover:bg-black/80 transition-colors">
           <Camera class="w-4 h-4" />
-          <span>{{ cachedPhotos.length }} Foto</span>
+          <span>{{ displayPhotos.length }} Foto</span>
         </div>
         <!-- Hover overlay -->
         <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
@@ -315,17 +344,17 @@ const closePhotoModal = () => {
         >
           <ArrowLeft class="w-5 h-5 text-gray-600" />
         </button>
-        <h3 class="font-semibold text-gray-900">Galeri Foto ({{ cachedPhotos.length }})</h3>
+        <h3 class="font-semibold text-gray-900">Galeri Foto ({{ displayPhotos.length }})</h3>
       </div>
 
       <!-- Thumbnails Grid -->
       <div class="flex-1 overflow-y-auto p-3 lg:p-4">
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-2 lg:gap-3">
           <div
-            v-for="photo in cachedPhotos"
+            v-for="photo in displayPhotos"
             :key="photo.id"
             class="relative aspect-square cursor-pointer group rounded-lg overflow-hidden"
-            @click="openPhotoModal(photo)"
+            @click="openPhotoModal(photo as Photo)"
           >
             <img
               :src="getPhotoUrl(photo)"
@@ -679,6 +708,15 @@ const closePhotoModal = () => {
 
     <!-- Content (Detail View) - Faskes -->
     <div v-if="!loading && viewMode === 'detail' && isFaskesView" class="flex-1 overflow-y-auto">
+      <!-- Update Terbaru placeholder for Faskes -->
+      <div class="p-4 border-b border-gray-200 bg-gray-50">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+          <span class="text-xs font-medium text-gray-600">Update Terbaru</span>
+        </div>
+        <p class="text-sm text-gray-500">Belum ada update untuk fasilitas kesehatan ini.</p>
+      </div>
+
       <!-- Informasi Umum Faskes -->
       <div class="p-4 border-b border-gray-200">
         <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
@@ -693,21 +731,21 @@ const closePhotoModal = () => {
             </div>
           </div>
           <div>
-            <div class="text-xs text-gray-500">Status</div>
-            <div class="text-sm font-medium capitalize">
-              {{ faskesDetail?.status_faskes || '-' }}
-            </div>
-          </div>
-          <div>
             <div class="text-xs text-gray-500">Kondisi</div>
             <div class="text-sm font-medium capitalize">
               {{ (faskesDetail?.kondisi_faskes || '-').replace(/_/g, ' ') }}
             </div>
           </div>
           <div>
-            <div class="text-xs text-gray-500">Last Update</div>
+            <div class="text-xs text-gray-500">Terisolir</div>
             <div class="text-sm font-medium">
-              {{ formatRelativeTime(faskesDetail?.meta?.updated_at) }}
+              {{ formatTerisolir((faskesDetail?.isolasi as any)?.terisolir) }}
+            </div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500">Penanggung Jawab Faskes</div>
+            <div class="text-sm font-medium">
+              {{ (faskesDetail?.identitas as any)?.nama_pj_faskes || '-' }}
             </div>
           </div>
         </div>
@@ -721,41 +759,23 @@ const closePhotoModal = () => {
         </h3>
         <div class="space-y-3">
           <div class="flex items-start gap-3">
-            <User class="w-5 h-5 text-gray-400 mt-0.5" />
-            <div>
-              <div class="text-sm font-medium">
-                {{ (faskesDetail?.identitas as any)?.nama_pj_faskes || '-' }}
-              </div>
-              <div class="text-xs text-gray-500">Penanggung Jawab</div>
-            </div>
-          </div>
-          <div class="flex items-start gap-3">
             <Phone class="w-5 h-5 text-blue-500 mt-0.5" />
             <div>
               <div class="text-sm font-medium">
                 {{ (faskesDetail?.identitas as any)?.contact_pj_faskes || '-' }}
               </div>
-              <div class="text-xs text-gray-500">Kontak PJ</div>
+              <div class="text-xs text-gray-500">Nomor Kontak Penanggung Jawab</div>
             </div>
           </div>
-        </div>
-      </div>
-
-      <!-- Alamat Faskes -->
-      <div class="p-4 border-b border-gray-200">
-        <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-          <MapPin class="w-4 h-4" />
-          Alamat
-        </h3>
-        <div class="text-sm text-gray-600">
-          <p>
-            Desa {{ (faskesDetail?.alamat as any)?.nama_desa || '-' }},
-            Kec. {{ (faskesDetail?.alamat as any)?.nama_kecamatan || '-' }}
-          </p>
-          <p>
-            {{ (faskesDetail?.alamat as any)?.nama_kota_kab || '-' }},
-            {{ (faskesDetail?.alamat as any)?.nama_provinsi || '-' }}
-          </p>
+          <div class="flex items-start gap-3">
+            <Clock class="w-5 h-5 text-gray-400 mt-0.5" />
+            <div>
+              <div class="text-sm font-medium">
+                {{ formatRelativeTime(faskesDetail?.meta?.updated_at) }}
+              </div>
+              <div class="text-xs text-gray-500">Last Update</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -774,20 +794,44 @@ const closePhotoModal = () => {
         <div v-if="expandedSections.sdm" class="px-4 pb-4">
           <div class="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <span class="text-gray-500">Dokter:</span>
-              <span class="ml-1 font-medium">{{ (faskesDetail?.sdm as any)?.tenaga_dokter || '-' }}</span>
+              <span class="text-gray-500">Dokter Umum:</span>
+              <span class="ml-1 font-medium">{{ (faskesDetail?.sdm as any)?.dokter_umum ?? '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Dokter Gigi:</span>
+              <span class="ml-1 font-medium">{{ (faskesDetail?.sdm as any)?.dokter_gigi ?? '-' }}</span>
             </div>
             <div>
               <span class="text-gray-500">Perawat:</span>
-              <span class="ml-1 font-medium">{{ (faskesDetail?.sdm as any)?.tenaga_perawat || '-' }}</span>
+              <span class="ml-1 font-medium">{{ (faskesDetail?.sdm as any)?.perawat ?? '-' }}</span>
             </div>
             <div>
               <span class="text-gray-500">Bidan:</span>
-              <span class="ml-1 font-medium">{{ (faskesDetail?.sdm as any)?.tenaga_bidan || '-' }}</span>
+              <span class="ml-1 font-medium">{{ (faskesDetail?.sdm as any)?.bidan ?? '-' }}</span>
             </div>
             <div>
               <span class="text-gray-500">Apoteker:</span>
-              <span class="ml-1 font-medium">{{ (faskesDetail?.sdm as any)?.tenaga_apoteker || '-' }}</span>
+              <span class="ml-1 font-medium">{{ (faskesDetail?.sdm as any)?.apoteker ?? '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Tenaga Kefarmasian:</span>
+              <span class="ml-1 font-medium">{{ (faskesDetail?.sdm as any)?.tenaga_kefarmasian ?? '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Ahli Gizi:</span>
+              <span class="ml-1 font-medium">{{ (faskesDetail?.sdm as any)?.ahli_gizi ?? '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Psikolog:</span>
+              <span class="ml-1 font-medium">{{ (faskesDetail?.sdm as any)?.psikolog ?? '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Tenaga Kesmas:</span>
+              <span class="ml-1 font-medium">{{ (faskesDetail?.sdm as any)?.tenaga_kesehatan_masyarakat ?? '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Perekam Medis:</span>
+              <span class="ml-1 font-medium">{{ (faskesDetail?.sdm as any)?.perekam_medis ?? '-' }}</span>
             </div>
           </div>
         </div>
@@ -816,6 +860,14 @@ const closePhotoModal = () => {
               <span class="ml-1 font-medium capitalize">{{ (faskesDetail?.infrastruktur as any)?.sumber_air || '-' }}</span>
             </div>
             <div>
+              <span class="text-gray-500">Ketersediaan Air:</span>
+              <span class="ml-1 font-medium capitalize">{{ (faskesDetail?.infrastruktur as any)?.ketersediaan_air || '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Penerangan:</span>
+              <span class="ml-1 font-medium capitalize">{{ (faskesDetail?.infrastruktur as any)?.kondisi_penerangan || '-' }}</span>
+            </div>
+            <div>
               <span class="text-gray-500">Sinyal:</span>
               <span class="ml-1 font-medium capitalize">{{ (faskesDetail?.infrastruktur as any)?.ketersediaan_sinyal || '-' }}</span>
             </div>
@@ -823,7 +875,155 @@ const closePhotoModal = () => {
               <span class="text-gray-500">Internet:</span>
               <span class="ml-1 font-medium capitalize">{{ (faskesDetail?.infrastruktur as any)?.ketersediaan_internet || '-' }}</span>
             </div>
+            <div>
+              <span class="text-gray-500">Sterilisasi:</span>
+              <span class="ml-1 font-medium capitalize">{{ (faskesDetail?.infrastruktur as any)?.kapasitas_sterilisasi || '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Jaringan ORARI:</span>
+              <span class="ml-1 font-medium">{{ formatYesNo((faskesDetail?.infrastruktur as any)?.jaringan_orari) }}</span>
+            </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Perbekalan -->
+      <div v-if="faskesDetail?.perbekalan" class="border-b border-gray-200">
+        <button
+          class="w-full flex items-center justify-between p-4 hover:bg-gray-50"
+          @click="toggleSection('perbekalan')"
+        >
+          <span class="font-medium text-gray-700 flex items-center gap-2">
+            <Home class="w-4 h-4" />
+            Perbekalan Kesehatan
+          </span>
+          <component :is="expandedSections.perbekalan ? ChevronUp : ChevronDown" class="w-5 h-5 text-gray-400" />
+        </button>
+        <div v-if="expandedSections.perbekalan" class="px-4 pb-4">
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <span class="text-gray-500">Obat/BHP:</span>
+              <span class="ml-1 font-medium capitalize">{{ (faskesDetail?.perbekalan as any)?.obat_bahan_habis_pakai || '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Alat Kesehatan:</span>
+              <span class="ml-1 font-medium capitalize">{{ (faskesDetail?.perbekalan as any)?.alat_kesehatan || '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Kit Persalinan:</span>
+              <span class="ml-1 font-medium capitalize">{{ (faskesDetail?.perbekalan as any)?.persalinan_kit || '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Hygiene Kit:</span>
+              <span class="ml-1 font-medium capitalize">{{ (faskesDetail?.perbekalan as any)?.hygiene_kit || '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Aquatab:</span>
+              <span class="ml-1 font-medium capitalize">{{ (faskesDetail?.perbekalan as any)?.aquatab || '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Kaporit:</span>
+              <span class="ml-1 font-medium capitalize">{{ (faskesDetail?.perbekalan as any)?.kaporit || '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">PAC:</span>
+              <span class="ml-1 font-medium capitalize">{{ (faskesDetail?.perbekalan as any)?.pac || '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Kantong Sampah:</span>
+              <span class="ml-1 font-medium capitalize">{{ (faskesDetail?.perbekalan as any)?.kantong_sampah || '-' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Isolasi -->
+      <div v-if="faskesDetail?.isolasi" class="border-b border-gray-200">
+        <button
+          class="w-full flex items-center justify-between p-4 hover:bg-gray-50"
+          @click="toggleSection('isolasi')"
+        >
+          <span class="font-medium text-gray-700 flex items-center gap-2">
+            <Navigation class="w-4 h-4" />
+            Akses & Isolasi
+          </span>
+          <component :is="expandedSections.isolasi ? ChevronUp : ChevronDown" class="w-5 h-5 text-gray-400" />
+        </button>
+        <div v-if="expandedSections.isolasi" class="px-4 pb-4">
+          <div class="space-y-2 text-sm">
+            <div>
+              <span class="text-gray-500">Status Isolasi:</span>
+              <span class="ml-1 font-medium">{{ formatTerisolir((faskesDetail?.isolasi as any)?.terisolir) }}</span>
+            </div>
+            <div v-if="(faskesDetail?.isolasi as any)?.akses_via">
+              <span class="text-gray-500">Akses Via:</span>
+              <span class="ml-1 font-medium capitalize">{{ (faskesDetail?.isolasi as any)?.akses_via || '-' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Klaster -->
+      <div v-if="faskesDetail?.klaster" class="border-b border-gray-200">
+        <button
+          class="w-full flex items-center justify-between p-4 hover:bg-gray-50"
+          @click="toggleSection('klaster')"
+        >
+          <span class="font-medium text-gray-700 flex items-center gap-2">
+            <Users class="w-4 h-4" />
+            Klaster Layanan
+          </span>
+          <component :is="expandedSections.klaster ? ChevronUp : ChevronDown" class="w-5 h-5 text-gray-400" />
+        </button>
+        <div v-if="expandedSections.klaster" class="px-4 pb-4">
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <span class="text-gray-500">Yankes:</span>
+              <span class="ml-1 font-medium">{{ formatYesNo((faskesDetail?.klaster as any)?.klaster_yankes) }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Gizi:</span>
+              <span class="ml-1 font-medium">{{ formatYesNo((faskesDetail?.klaster as any)?.klaster_gizi) }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Kesehatan Jiwa:</span>
+              <span class="ml-1 font-medium">{{ formatYesNo((faskesDetail?.klaster as any)?.klaster_jiwa) }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Reproduksi:</span>
+              <span class="ml-1 font-medium">{{ formatYesNo((faskesDetail?.klaster as any)?.klaster_reproduksi) }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Kendali Penyakit:</span>
+              <span class="ml-1 font-medium">{{ formatYesNo((faskesDetail?.klaster as any)?.klaster_kendali_penyakit) }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Logistik Kes:</span>
+              <span class="ml-1 font-medium">{{ formatYesNo((faskesDetail?.klaster as any)?.klaster_logkes) }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">DVI:</span>
+              <span class="ml-1 font-medium">{{ formatYesNo((faskesDetail?.klaster as any)?.klaster_dvi) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alamat Faskes -->
+      <div class="p-4 border-b border-gray-200">
+        <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <MapPin class="w-4 h-4" />
+          Alamat
+        </h3>
+        <div class="text-sm text-gray-600">
+          <p>
+            Desa {{ (faskesDetail?.alamat as any)?.nama_desa || '-' }},
+            Kec. {{ (faskesDetail?.alamat as any)?.nama_kecamatan || '-' }}
+          </p>
+          <p>
+            {{ (faskesDetail?.alamat as any)?.nama_kota_kab || '-' }},
+            {{ (faskesDetail?.alamat as any)?.nama_provinsi || '-' }}
+          </p>
         </div>
       </div>
     </div>

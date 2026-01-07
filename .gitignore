@@ -31,3 +31,7 @@ data/
 # Temp files
 *.tmp
 *.temp
+.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+docker-compose.override.yml

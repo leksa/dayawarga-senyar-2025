@@ -173,8 +173,14 @@ func main() {
 			cached.GET("/locations/:id/feeds", feedHandler.GetFeedsByLocation)
 
 			// Photos (cached)
+			// Posko photos
 			cached.GET("/locations/:id/photos", photoHandler.GetPhotosByLocation)
 			cached.GET("/photos/:id/file", photoHandler.GetPhotoFile)
+			// Feed photos
+			cached.GET("/feeds/photos/:id/file", photoHandler.GetFeedPhotoFile)
+			// Faskes photos
+			cached.GET("/faskes/:id/photos", photoHandler.GetPhotosByFaskes)
+			cached.GET("/faskes/photos/:id/file", photoHandler.GetFaskesPhotoFile)
 		}
 
 		// SSE Events (no cache, streaming)
@@ -187,7 +193,9 @@ func main() {
 		v1.GET("/sync/feed/status", syncHandler.GetFeedSyncStatus)
 		v1.POST("/sync/faskes", syncHandler.SyncFaskes)
 		v1.GET("/sync/faskes/status", syncHandler.GetFaskesSyncStatus)
-		v1.POST("/sync/photos", photoHandler.SyncPhotos)
+		v1.POST("/sync/photos", photoHandler.SyncPhotos)              // Posko photos
+		v1.POST("/sync/feed-photos", photoHandler.SyncFeedPhotos)     // Feed photos
+		v1.POST("/sync/faskes-photos", photoHandler.SyncFaskesPhotos) // Faskes photos
 
 		// Scheduler endpoints
 		scheduler := v1.Group("/scheduler")

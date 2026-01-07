@@ -248,3 +248,32 @@ func (c *Client) GetAttachment(submissionID, filename string) ([]byte, error) {
 
 	return io.ReadAll(resp.Body)
 }
+
+// GetAttachmentForForm downloads an attachment from a submission for a specific form
+func (c *Client) GetAttachmentForForm(formID, submissionID, filename string) ([]byte, error) {
+	if err := c.authenticate(); err != nil {
+		return nil, err
+	}
+
+	attachmentURL := fmt.Sprintf("%s/v1/projects/%d/forms/%s/submissions/%s/attachments/%s",
+		c.config.BaseURL, c.config.ProjectID, formID, submissionID, filename)
+
+	req, err := http.NewRequest("GET", attachmentURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.token)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch attachment: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("attachment request failed with status %d", resp.StatusCode)
+	}
+
+	return io.ReadAll(resp.Body)
+}

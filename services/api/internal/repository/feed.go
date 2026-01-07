@@ -30,6 +30,30 @@ type FeedWithCoords struct {
 	Longitude    *float64 `json:"longitude"`
 	Latitude     *float64 `json:"latitude"`
 	LocationName *string  `json:"location_name"`
+	FaskesName   *string  `json:"faskes_name"`
+}
+
+// GetPhotosForFeed retrieves all photos for a specific feed
+func (r *FeedRepository) GetPhotosForFeed(feedID uuid.UUID) ([]model.FeedPhoto, error) {
+	var photos []model.FeedPhoto
+	err := r.db.Where("feed_id = ?", feedID).Find(&photos).Error
+	return photos, err
+}
+
+// GetPhotosForFeeds retrieves all photos for multiple feeds (batch query)
+func (r *FeedRepository) GetPhotosForFeeds(feedIDs []uuid.UUID) (map[uuid.UUID][]model.FeedPhoto, error) {
+	var photos []model.FeedPhoto
+	err := r.db.Where("feed_id IN ?", feedIDs).Find(&photos).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// Group photos by feed ID
+	result := make(map[uuid.UUID][]model.FeedPhoto)
+	for _, photo := range photos {
+		result[photo.FeedID] = append(result[photo.FeedID], photo)
+	}
+	return result, nil
 }
 
 func (r *FeedRepository) FindAll(filter FeedFilter) ([]FeedWithCoords, int64, error) {
@@ -41,9 +65,11 @@ func (r *FeedRepository) FindAll(filter FeedFilter) ([]FeedWithCoords, int64, er
 			f.*,
 			ST_X(f.geom) as longitude,
 			ST_Y(f.geom) as latitude,
-			l.nama as location_name
+			l.nama as location_name,
+			fk.nama as faskes_name
 		`).
-		Joins("LEFT JOIN locations l ON l.id = f.location_id")
+		Joins("LEFT JOIN locations l ON l.id = f.location_id").
+		Joins("LEFT JOIN faskes fk ON fk.id = f.faskes_id")
 
 	// Apply filters
 	if filter.LocationID != "" {
@@ -67,7 +93,8 @@ func (r *FeedRepository) FindAll(filter FeedFilter) ([]FeedWithCoords, int64, er
 
 	// Count total
 	countQuery := r.db.Table("information_feeds f").
-		Joins("LEFT JOIN locations l ON l.id = f.location_id")
+		Joins("LEFT JOIN locations l ON l.id = f.location_id").
+		Joins("LEFT JOIN faskes fk ON fk.id = f.faskes_id")
 	if filter.LocationID != "" {
 		countQuery = countQuery.Where("f.location_id = ?", filter.LocationID)
 	}

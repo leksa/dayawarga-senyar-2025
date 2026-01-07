@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { Search, MapPin, Download, Filter } from 'lucide-vue-next'
+import { useRoute, useRouter } from 'vue-router'
+import { Search, MapPin, Download, Filter, Image, Navigation, Megaphone } from 'lucide-vue-next'
 import DataLayersSidebar from '@/components/DataLayersSidebar.vue'
 import Input from '@/components/ui/Input.vue'
 import Badge from '@/components/ui/Badge.vue'
 import Button from '@/components/ui/Button.vue'
-import { api, type Feed, type FeedFilter } from '@/services/api'
+import { api, type Feed, type FeedFilter, type FeedPhoto } from '@/services/api'
 
 const route = useRoute()
+const router = useRouter()
 
 // State
 const feeds = ref<Feed[]>([])
@@ -95,12 +96,46 @@ const formattedFeeds = computed(() => {
     organization: feed.organization ?? '',
     location: feed.location_name ?? '',
     locationId: feed.location_id,
+    faskesName: feed.faskes_name ?? '',
+    faskesId: feed.faskes_id,
     content: feed.content,
     category: feed.category,
     type: feed.type ?? '',
     coordinates: feed.coordinates,
+    photos: feed.photos ?? [],
   }))
 })
+
+// Get photo URL helper
+const getPhotoUrl = (photo: FeedPhoto) => {
+  if (photo.url && photo.url.startsWith('/api')) {
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1'
+    // Remove /api/v1 prefix if present in photo.url since baseUrl already has it
+    const photoPath = photo.url.replace('/api/v1', '')
+    return baseUrl + photoPath
+  }
+  return api.getFeedPhotoUrl(photo.id)
+}
+
+// Navigate to map with coordinates and show popup
+const goToMapWithFeed = (feed: { id: string, coordinates?: [number, number], locationId?: string, faskesId?: string }) => {
+  // Priority: coordinates > location > faskes
+  if (feed.coordinates) {
+    router.push({
+      path: '/',
+      query: {
+        lat: feed.coordinates[1].toString(),
+        lng: feed.coordinates[0].toString(),
+        zoom: '16',
+        feed: feed.id
+      }
+    })
+  } else if (feed.locationId) {
+    router.push({ path: '/', query: { location: feed.locationId } })
+  } else if (feed.faskesId) {
+    router.push({ path: '/', query: { faskes: feed.faskesId } })
+  }
+}
 
 // Has more data to load
 const hasMore = computed(() => feeds.value.length < total.value)
@@ -334,18 +369,68 @@ const allCategories = [
             <div
               v-for="update in formattedFeeds"
               :key="update.id"
-              class="bg-white rounded-lg border border-gray-200 p-3 md:p-4 hover:shadow-sm transition-shadow"
+              class="bg-white rounded-lg border border-gray-200 p-3 md:p-4 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer"
+              @click="goToMapWithFeed({ id: update.id, coordinates: update.coordinates, locationId: update.locationId, faskesId: update.faskesId })"
             >
               <div class="flex items-center justify-between mb-2">
                 <span class="text-xs text-gray-500">{{ update.timestamp }}</span>
+                <!-- Navigate to map indicator -->
+                <div
+                  v-if="update.coordinates || update.locationId || update.faskesId"
+                  class="flex items-center gap-1 text-xs text-blue-500"
+                  title="Klik untuk lihat di peta"
+                >
+                  <Navigation class="w-3.5 h-3.5" />
+                  <span class="hidden sm:inline">Peta</span>
+                </div>
               </div>
               <div class="text-xs text-blue-600 font-medium mb-2">
                 {{ update.username }}{{ update.organization ? ` - ${update.organization}` : '' }}
               </div>
               <div class="flex items-center gap-1.5 mb-2">
-                <MapPin class="w-4 h-4 text-blue-500 flex-shrink-0" />
-                <span class="text-sm font-medium text-gray-900">{{ update.location || 'Lokasi tidak diketahui' }}</span>
+                <!-- Show different icon based on whether it's related to a location/faskes -->
+                <template v-if="update.locationId">
+                  <MapPin class="w-4 h-4 text-blue-500 flex-shrink-0" />
+                  <span class="text-sm font-medium text-blue-600">{{ update.location }}</span>
+                </template>
+                <template v-else-if="update.faskesId">
+                  <MapPin class="w-4 h-4 text-green-500 flex-shrink-0" />
+                  <span class="text-sm font-medium text-green-600">{{ update.faskesName }}</span>
+                  <Badge variant="success" class="ml-1 text-xs">Faskes</Badge>
+                </template>
+                <template v-else-if="update.coordinates">
+                  <Megaphone class="w-4 h-4 text-orange-500 flex-shrink-0" />
+                  <span class="text-sm font-medium text-orange-600">Laporan Situasi</span>
+                </template>
               </div>
+
+              <!-- Photo thumbnail -->
+              <div v-if="update.photos.length > 0" class="mb-3">
+                <div class="flex gap-2 overflow-x-auto">
+                  <div
+                    v-for="photo in update.photos.slice(0, 3)"
+                    :key="photo.id"
+                    class="relative flex-shrink-0"
+                  >
+                    <img
+                      :src="getPhotoUrl(photo)"
+                      :alt="photo.filename"
+                      class="w-20 h-20 md:w-24 md:h-24 object-cover rounded-lg border border-gray-200"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div
+                    v-if="update.photos.length > 3"
+                    class="w-20 h-20 md:w-24 md:h-24 flex-shrink-0 bg-gray-100 rounded-lg flex items-center justify-center"
+                  >
+                    <div class="text-center">
+                      <Image class="w-5 h-5 text-gray-400 mx-auto" />
+                      <span class="text-xs text-gray-500">+{{ update.photos.length - 3 }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <p class="text-sm text-gray-600 mb-3 leading-relaxed">{{ update.content }}</p>
               <div class="flex flex-wrap gap-2">
                 <Badge :variant="categoryColors[update.category] || 'outline'">
