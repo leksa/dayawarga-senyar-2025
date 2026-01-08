@@ -33,6 +33,8 @@ type SyncResult struct {
 	TotalFetched int       `json:"total_fetched"`
 	Created      int       `json:"created"`
 	Updated      int       `json:"updated"`
+	Deleted      int       `json:"deleted,omitempty"`
+	Skipped      int       `json:"skipped,omitempty"`
 	Errors       int       `json:"errors"`
 	StartTime    time.Time `json:"start_time"`
 	EndTime      time.Time `json:"end_time"`
@@ -353,4 +355,78 @@ func (s *SyncService) GetSyncState() (*odk.SyncState, error) {
 		return nil, err
 	}
 	return &syncState, nil
+}
+
+// HardSync performs a full sync and deletes records that no longer exist in ODK Central
+func (s *SyncService) HardSync() (*SyncResult, error) {
+	result := &SyncResult{
+		StartTime: time.Now(),
+	}
+
+	s.updateSyncState("hard_syncing", nil)
+
+	// Fetch all approved submissions from ODK Central
+	submissions, err := s.odkClient.GetApprovedSubmissions()
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch submissions: %v", err)
+		s.updateSyncState("error", &errMsg)
+		return nil, fmt.Errorf(errMsg)
+	}
+
+	result.TotalFetched = len(submissions)
+	log.Printf("HardSync: Fetched %d submissions from ODK Central", result.TotalFetched)
+
+	// Build a set of ODK submission IDs from ODK Central
+	odkIDSet := make(map[string]bool)
+	for _, submission := range submissions {
+		if odkID, ok := submission["__id"].(string); ok {
+			odkIDSet[odkID] = true
+		}
+	}
+
+	// Process each submission (create/update)
+	for _, submission := range submissions {
+		if err := s.processSubmission(submission, result); err != nil {
+			result.Errors++
+			result.ErrorDetails = append(result.ErrorDetails, err.Error())
+			log.Printf("Error processing submission: %v", err)
+		}
+	}
+
+	// Find and delete locations that no longer exist in ODK Central
+	var locations []model.Location
+	if err := s.db.Where("odk_submission_id IS NOT NULL").Find(&locations).Error; err != nil {
+		result.Errors++
+		result.ErrorDetails = append(result.ErrorDetails, fmt.Sprintf("failed to fetch existing locations: %v", err))
+	} else {
+		for _, loc := range locations {
+			if loc.ODKSubmissionID != nil && !odkIDSet[*loc.ODKSubmissionID] {
+				// This location no longer exists in ODK Central - delete it
+				log.Printf("HardSync: Deleting location %s (%s) - no longer in ODK Central", loc.Nama, *loc.ODKSubmissionID)
+
+				// Delete associated photos first
+				if err := s.db.Where("location_id = ?", loc.ID).Delete(&model.LocationPhoto{}).Error; err != nil {
+					log.Printf("Warning: failed to delete photos for location %s: %v", loc.ID, err)
+				}
+
+				// Delete the location
+				if err := s.db.Delete(&loc).Error; err != nil {
+					result.Errors++
+					result.ErrorDetails = append(result.ErrorDetails, fmt.Sprintf("failed to delete location %s: %v", loc.ID, err))
+				} else {
+					result.Deleted++
+				}
+			}
+		}
+	}
+
+	result.EndTime = time.Now()
+	result.Duration = result.EndTime.Sub(result.StartTime).String()
+
+	s.updateSyncStateSuccess(result.TotalFetched)
+
+	log.Printf("HardSync completed: %d fetched, %d created, %d updated, %d deleted, %d errors",
+		result.TotalFetched, result.Created, result.Updated, result.Deleted, result.Errors)
+
+	return result, nil
 }

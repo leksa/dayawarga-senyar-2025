@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { Home, Droplets, Cross, Megaphone, ExternalLink, Info, Map, CloudRain, Mountain, Construction } from 'lucide-vue-next'
 import Checkbox from './ui/Checkbox.vue'
+
+// App version from build
+const appVersion = computed(() => import.meta.env.VITE_APP_VERSION || '1.0.0')
 
 interface Layer {
   id: string
@@ -200,6 +203,7 @@ const getLayerColor = (layer: Layer) => {
           GitHub
           <ExternalLink class="w-3 h-3" />
         </a>.
+        <span class="text-gray-400">v{{ appVersion }}</span>
       </p>
     </div>
   </aside>

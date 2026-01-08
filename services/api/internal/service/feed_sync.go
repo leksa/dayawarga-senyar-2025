@@ -33,6 +33,7 @@ type FeedSyncResult struct {
 	TotalFetched int       `json:"total_fetched"`
 	Created      int       `json:"created"`
 	Updated      int       `json:"updated"`
+	Deleted      int       `json:"deleted,omitempty"`
 	Skipped      int       `json:"skipped"`
 	Errors       int       `json:"errors"`
 	StartTime    time.Time `json:"start_time"`
@@ -392,4 +393,78 @@ func (s *FeedSyncService) GetSyncState() (*odk.SyncState, error) {
 		return nil, err
 	}
 	return &syncState, nil
+}
+
+// HardSync performs a full sync and deletes feeds that no longer exist in ODK Central
+func (s *FeedSyncService) HardSync() (*FeedSyncResult, error) {
+	result := &FeedSyncResult{
+		StartTime: time.Now(),
+	}
+
+	s.updateSyncState("hard_syncing", nil)
+
+	// Fetch all approved submissions from ODK Central
+	submissions, err := s.odkClient.GetApprovedSubmissions()
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch feed submissions: %v", err)
+		s.updateSyncState("error", &errMsg)
+		return nil, fmt.Errorf(errMsg)
+	}
+
+	result.TotalFetched = len(submissions)
+	log.Printf("Feed HardSync: Fetched %d submissions from ODK Central", result.TotalFetched)
+
+	// Build a set of ODK submission IDs from ODK Central
+	odkIDSet := make(map[string]bool)
+	for _, submission := range submissions {
+		if odkID, ok := submission["__id"].(string); ok {
+			odkIDSet[odkID] = true
+		}
+	}
+
+	// Process each submission (create/update)
+	for _, submission := range submissions {
+		if err := s.processSubmission(submission, result); err != nil {
+			result.Errors++
+			result.ErrorDetails = append(result.ErrorDetails, err.Error())
+			log.Printf("Error processing feed submission: %v", err)
+		}
+	}
+
+	// Find and delete feeds that no longer exist in ODK Central
+	var feeds []model.Feed
+	if err := s.db.Where("odk_submission_id IS NOT NULL").Find(&feeds).Error; err != nil {
+		result.Errors++
+		result.ErrorDetails = append(result.ErrorDetails, fmt.Sprintf("failed to fetch existing feeds: %v", err))
+	} else {
+		for _, feed := range feeds {
+			if feed.ODKSubmissionID != nil && !odkIDSet[*feed.ODKSubmissionID] {
+				// This feed no longer exists in ODK Central - delete it
+				log.Printf("Feed HardSync: Deleting feed %s (%s) - no longer in ODK Central", feed.ID, *feed.ODKSubmissionID)
+
+				// Delete associated photos first
+				if err := s.db.Where("feed_id = ?", feed.ID).Delete(&model.FeedPhoto{}).Error; err != nil {
+					log.Printf("Warning: failed to delete photos for feed %s: %v", feed.ID, err)
+				}
+
+				// Delete the feed
+				if err := s.db.Delete(&feed).Error; err != nil {
+					result.Errors++
+					result.ErrorDetails = append(result.ErrorDetails, fmt.Sprintf("failed to delete feed %s: %v", feed.ID, err))
+				} else {
+					result.Deleted++
+				}
+			}
+		}
+	}
+
+	result.EndTime = time.Now()
+	result.Duration = result.EndTime.Sub(result.StartTime).String()
+
+	s.updateSyncStateSuccess(result.TotalFetched)
+
+	log.Printf("Feed HardSync completed: %d fetched, %d created, %d updated, %d deleted, %d errors",
+		result.TotalFetched, result.Created, result.Updated, result.Deleted, result.Errors)
+
+	return result, nil
 }

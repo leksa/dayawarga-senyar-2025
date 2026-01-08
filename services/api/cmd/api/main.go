@@ -222,6 +222,11 @@ func main() {
 		v1.POST("/migrate/s3", photoHandler.MigrateToS3)              // Migrate local photos to S3
 		v1.POST("/photos/reset-cache", photoHandler.ResetCache)       // Reset cache for missing files
 
+		// Hard sync endpoints - sync AND delete records not in ODK Central
+		v1.POST("/sync/posko/hard", syncHandler.HardSyncPosko)
+		v1.POST("/sync/feed/hard", syncHandler.HardSyncFeeds)
+		v1.POST("/sync/faskes/hard", syncHandler.HardSyncFaskes)
+
 		// Scheduler endpoints
 		scheduler := v1.Group("/scheduler")
 		{

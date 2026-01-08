@@ -3,9 +3,11 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Build argument for API URL
+# Build arguments
 ARG VITE_API_URL=https://api.dayawarga.com/api/v1
+ARG VITE_APP_VERSION=0.0.0
 ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_APP_VERSION=$VITE_APP_VERSION
 
 # Copy package files
 COPY package*.json ./

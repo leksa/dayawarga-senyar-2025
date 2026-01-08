@@ -313,3 +313,77 @@ func (s *FaskesSyncService) GetSyncState() (*odk.SyncState, error) {
 	}
 	return &syncState, nil
 }
+
+// HardSync performs a full sync and deletes faskes that no longer exist in ODK Central
+func (s *FaskesSyncService) HardSync() (*SyncResult, error) {
+	result := &SyncResult{
+		StartTime: time.Now(),
+	}
+
+	s.updateSyncState("hard_syncing", nil)
+
+	// Fetch all approved submissions from ODK Central
+	submissions, err := s.odkClient.GetApprovedSubmissions()
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to fetch faskes submissions: %v", err)
+		s.updateSyncState("error", &errMsg)
+		return nil, fmt.Errorf(errMsg)
+	}
+
+	result.TotalFetched = len(submissions)
+	log.Printf("Faskes HardSync: Fetched %d submissions from ODK Central", result.TotalFetched)
+
+	// Build a set of ODK submission IDs from ODK Central
+	odkIDSet := make(map[string]bool)
+	for _, submission := range submissions {
+		if odkID, ok := submission["__id"].(string); ok {
+			odkIDSet[odkID] = true
+		}
+	}
+
+	// Process each submission (create/update)
+	for _, submission := range submissions {
+		if err := s.processSubmission(submission, result); err != nil {
+			result.Errors++
+			result.ErrorDetails = append(result.ErrorDetails, err.Error())
+			log.Printf("Error processing faskes submission: %v", err)
+		}
+	}
+
+	// Find and delete faskes that no longer exist in ODK Central
+	var faskesItems []model.Faskes
+	if err := s.db.Where("odk_submission_id IS NOT NULL").Find(&faskesItems).Error; err != nil {
+		result.Errors++
+		result.ErrorDetails = append(result.ErrorDetails, fmt.Sprintf("failed to fetch existing faskes: %v", err))
+	} else {
+		for _, faskes := range faskesItems {
+			if faskes.ODKSubmissionID != nil && !odkIDSet[*faskes.ODKSubmissionID] {
+				// This faskes no longer exists in ODK Central - delete it
+				log.Printf("Faskes HardSync: Deleting faskes %s (%s) - no longer in ODK Central", faskes.Nama, *faskes.ODKSubmissionID)
+
+				// Delete associated photos first
+				if err := s.db.Where("faskes_id = ?", faskes.ID).Delete(&model.FaskesPhoto{}).Error; err != nil {
+					log.Printf("Warning: failed to delete photos for faskes %s: %v", faskes.ID, err)
+				}
+
+				// Delete the faskes
+				if err := s.db.Delete(&faskes).Error; err != nil {
+					result.Errors++
+					result.ErrorDetails = append(result.ErrorDetails, fmt.Sprintf("failed to delete faskes %s: %v", faskes.ID, err))
+				} else {
+					result.Deleted++
+				}
+			}
+		}
+	}
+
+	result.EndTime = time.Now()
+	result.Duration = result.EndTime.Sub(result.StartTime).String()
+
+	s.updateSyncStateSuccess(result.TotalFetched)
+
+	log.Printf("Faskes HardSync completed: %d fetched, %d created, %d updated, %d deleted, %d errors",
+		result.TotalFetched, result.Created, result.Updated, result.Deleted, result.Errors)
+
+	return result, nil
+}

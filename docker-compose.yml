@@ -110,6 +110,7 @@ services:
       dockerfile: Dockerfile
       args:
         - VITE_API_URL=https://api.dayawarga.com/api/v1
+        - VITE_APP_VERSION=${APP_VERSION:-1.1.0}
     container_name: senyar-frontend
     restart: unless-stopped
     depends_on:

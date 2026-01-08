@@ -189,3 +189,91 @@ func (h *SyncHandler) GetFaskesSyncStatus(c *gin.Context) {
 		Data:    state,
 	})
 }
+
+// ========================================
+// HARD SYNC ENDPOINTS
+// ========================================
+
+// HardSyncPosko triggers a hard sync of posko - syncs and deletes removed submissions
+// @Summary Hard sync posko data
+// @Description Syncs posko data and deletes records that no longer exist in ODK Central
+// @Tags sync
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.APIResponse
+// @Failure 500 {object} dto.APIResponse
+// @Router /api/v1/sync/posko/hard [post]
+func (h *SyncHandler) HardSyncPosko(c *gin.Context) {
+	result, err := h.syncService.HardSync()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.APIResponse{
+			Success: false,
+			Error: &dto.ErrorInfo{
+				Code:    "HARD_SYNC_FAILED",
+				Message: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.APIResponse{
+		Success: true,
+		Data:    result,
+	})
+}
+
+// HardSyncFeeds triggers a hard sync of feeds - syncs and deletes removed submissions
+// @Summary Hard sync feed data
+// @Description Syncs feed data and deletes records that no longer exist in ODK Central
+// @Tags sync
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.APIResponse
+// @Failure 500 {object} dto.APIResponse
+// @Router /api/v1/sync/feed/hard [post]
+func (h *SyncHandler) HardSyncFeeds(c *gin.Context) {
+	result, err := h.feedSyncService.HardSync()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.APIResponse{
+			Success: false,
+			Error: &dto.ErrorInfo{
+				Code:    "FEED_HARD_SYNC_FAILED",
+				Message: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.APIResponse{
+		Success: true,
+		Data:    result,
+	})
+}
+
+// HardSyncFaskes triggers a hard sync of faskes - syncs and deletes removed submissions
+// @Summary Hard sync faskes data
+// @Description Syncs faskes data and deletes records that no longer exist in ODK Central
+// @Tags sync
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.APIResponse
+// @Failure 500 {object} dto.APIResponse
+// @Router /api/v1/sync/faskes/hard [post]
+func (h *SyncHandler) HardSyncFaskes(c *gin.Context) {
+	result, err := h.faskesSyncService.HardSync()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.APIResponse{
+			Success: false,
+			Error: &dto.ErrorInfo{
+				Code:    "FASKES_HARD_SYNC_FAILED",
+				Message: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.APIResponse{
+		Success: true,
+		Data:    result,
+	})
+}
