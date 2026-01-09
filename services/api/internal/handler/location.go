@@ -106,6 +106,14 @@ func (h *LocationHandler) GetLocations(c *gin.Context) {
 			odkSubmissionID = *loc.ODKSubmissionID
 		}
 
+		// Get baseline_sumber from identitas
+		baselineSumber := ""
+		if loc.Identitas != nil {
+			if v, ok := loc.Identitas["baseline_sumber"].(string); ok {
+				baselineSumber = v
+			}
+		}
+
 		features[i] = dto.LocationFeatureResponse{
 			Type: "Feature",
 			ID:   loc.ID.String(),
@@ -121,6 +129,7 @@ func (h *LocationHandler) GetLocations(c *gin.Context) {
 				AlamatSingkat:   alamatSingkat,
 				JumlahKK:        jumlahKK,
 				TotalJiwa:       totalJiwa,
+				BaselineSumber:  baselineSumber,
 				UpdatedAt:       loc.UpdatedAt,
 			},
 		}

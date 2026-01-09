@@ -62,6 +62,7 @@ type LocationListProperties struct {
 	AlamatSingkat   string    `json:"alamat_singkat,omitempty"`
 	JumlahKK        int       `json:"jumlah_kk"`
 	TotalJiwa       int       `json:"total_jiwa"`
+	BaselineSumber  string    `json:"baseline_sumber,omitempty"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }
 

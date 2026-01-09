@@ -71,6 +71,9 @@ func MapSubmissionToLocation(submission map[string]interface{}) (*model.Location
 			"nama_relawan":            grpIdentitas["nama_relawan"],
 			"contact_relawan":         grpIdentitas["contact_relawan"],
 			"alamat_dusun":            grpIdentitas["alamat_dusun"],
+			"institusi":               grpIdentitas["institusi"],
+			"mulai_tanggal":           grpIdentitas["mulai_tanggal"],
+			"kota_terdekat":           grpIdentitas["kota_terdekat"],
 		}
 
 		// Extract status_posko from grp_identitas
@@ -101,6 +104,7 @@ func MapSubmissionToLocation(submission map[string]interface{}) (*model.Location
 		dataPengungsi["jenis_pengungsian"] = grpPengungsian["jenis_pengungsian"]
 		dataPengungsi["detail_pengungsian"] = grpPengungsian["detail_pengungsian"]
 		dataPengungsi["total_pengungsi"] = grpPengungsian["total_pengungsi"]
+		dataPengungsi["persen_keterlibatan"] = grpPengungsian["persen_keterlibatan"]
 	}
 
 	// From grp_terisolir
@@ -109,9 +113,11 @@ func MapSubmissionToLocation(submission map[string]interface{}) (*model.Location
 		dataPengungsi["akses_via"] = grpTerisolir["akses_via"]
 	}
 
-	// From grp_data_pengungsi
-	if grpData, ok := submission["grp_data_pengungsi"].(map[string]interface{}); ok {
+	// From grp_demografi (was grp_data_pengungsi in form v1)
+	if grpData, ok := submission["grp_demografi"].(map[string]interface{}); ok {
 		dataPengungsi["jumlah_kk"] = grpData["jumlah_kk"]
+		dataPengungsi["kk_perempuan"] = grpData["kk_perempuan"]
+		dataPengungsi["kk_anak"] = grpData["kk_anak"]
 		dataPengungsi["dewasa_perempuan"] = grpData["dewasa_perempuan"]
 		dataPengungsi["dewasa_laki"] = grpData["dewasa_laki"]
 		dataPengungsi["remaja_perempuan"] = grpData["remaja_perempuan"]
@@ -141,6 +147,7 @@ func MapSubmissionToLocation(submission map[string]interface{}) (*model.Location
 			"dapur_umum":          grpFasilitas["dapur_umum"],
 			"kapasitas_dapur":     grpFasilitas["kapasitas_dapur"],
 			"ketersediaan_air":    grpFasilitas["ketersediaan_air"],
+			"saluran_limbah":      grpFasilitas["saluran_limbah"],
 			"sumber_air":          grpFasilitas["sumber_air"],
 			"toilet_perempuan":    grpFasilitas["toilet_perempuan"],
 			"toilet_laki":         grpFasilitas["toilet_laki"],
@@ -177,7 +184,18 @@ func MapSubmissionToLocation(submission map[string]interface{}) (*model.Location
 		location.Akses = model.JSONB{
 			"jarak_pkm":            grpAkses["jarak_pkm"],
 			"jarak_posko_logistik": grpAkses["jarak_posko_logistik"],
+			"nama_faskes_terdekat": grpAkses["nama_faskes_terdekat"],
+			"terisolir":            grpAkses["terisolir"],
+			"akses_via":            grpAkses["akses_via"],
 		}
+	}
+
+	// Extract baseline_sumber from grp_baseline
+	if grpBaseline, ok := submission["grp_baseline"].(map[string]interface{}); ok {
+		if location.Identitas == nil {
+			location.Identitas = model.JSONB{}
+		}
+		location.Identitas["baseline_sumber"] = grpBaseline["baseline_sumber"]
 	}
 
 	// Store raw submission data
