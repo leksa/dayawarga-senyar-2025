@@ -1,11 +1,15 @@
 name: CI/CD Pipeline
 
 on:
-  push:
-    branches: [main, development]
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      deploy:
+        description: 'Deploy to production server'
+        required: true
+        default: 'true'
+        type: boolean
 
 env:
   REGISTRY: ghcr.io
@@ -64,7 +68,7 @@ jobs:
   deploy:
     needs: [build-api, build-frontend]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.deploy == 'true'
 
     steps:
       - name: Deploy to server via SSH
