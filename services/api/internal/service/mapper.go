@@ -10,19 +10,31 @@ import (
 )
 
 // MapSubmissionToLocation converts an ODK submission to a Location model
+// Uses final_* calculated fields from XLSForm v2, with fallback to nested grp_* fields for dump data
 func MapSubmissionToLocation(submission map[string]interface{}) (*model.Location, error) {
 	location := &model.Location{
 		Type:   "posko",
 		Status: "operational",
 	}
 
+	// Extract nested groups for fallback (dump data doesn't have final_* fields)
+	grpIdentitas, _ := submission["grp_identitas"].(map[string]interface{})
+	grpDemografi, _ := submission["grp_demografi"].(map[string]interface{})
+	grpPengungsian, _ := submission["grp_pengungsian"].(map[string]interface{})
+	grpFasilitas, _ := submission["grp_fasilitas"].(map[string]interface{})
+	grpKomunikasi, _ := submission["grp_komunikasi"].(map[string]interface{})
+	grpAkses, _ := submission["grp_akses"].(map[string]interface{})
+	grpBaseline, _ := submission["grp_baseline"].(map[string]interface{})
+
 	// Extract __id as ODK submission ID
 	if id, ok := submission["__id"].(string); ok {
 		location.ODKSubmissionID = &id
 	}
 
-	// Extract nama from calc_nama_posko
-	if nama, ok := submission["calc_nama_posko"].(string); ok {
+	// Extract nama from calc_nama_posko or nama_posko (fallback for data dump)
+	if nama, ok := submission["calc_nama_posko"].(string); ok && nama != "" {
+		location.Nama = nama
+	} else if nama, ok := submission["nama_posko"].(string); ok && nama != "" {
 		location.Nama = nama
 	}
 
@@ -38,8 +50,8 @@ func MapSubmissionToLocation(submission map[string]interface{}) (*model.Location
 		}
 	}
 
-	// Extract coordinates from calc_geometry ("lat lon" format)
-	if geom, ok := submission["calc_geometry"].(string); ok {
+	// Extract coordinates - try final_geometry first, then grp_identitas.koordinat
+	if geom, ok := submission["final_geometry"].(string); ok && geom != "" {
 		coords := strings.Fields(geom)
 		if len(coords) >= 2 {
 			if lat, err := strconv.ParseFloat(coords[0], 64); err == nil {
@@ -47,6 +59,30 @@ func MapSubmissionToLocation(submission map[string]interface{}) (*model.Location
 			}
 			if lon, err := strconv.ParseFloat(coords[1], 64); err == nil {
 				location.Longitude = &lon
+			}
+		}
+	} else if grpIdentitas != nil {
+		// Fallback: try koordinat from grp_identitas (can be GeoJSON or string)
+		if koordinat, ok := grpIdentitas["koordinat"].(map[string]interface{}); ok {
+			// GeoJSON format: {"type": "Point", "coordinates": [lon, lat, alt]}
+			if coords, ok := koordinat["coordinates"].([]interface{}); ok && len(coords) >= 2 {
+				if lon, ok := coords[0].(float64); ok {
+					location.Longitude = &lon
+				}
+				if lat, ok := coords[1].(float64); ok {
+					location.Latitude = &lat
+				}
+			}
+		} else if koordinatStr, ok := grpIdentitas["koordinat"].(string); ok && koordinatStr != "" {
+			// String format: "lat lon alt accuracy"
+			coords := strings.Fields(koordinatStr)
+			if len(coords) >= 2 {
+				if lat, err := strconv.ParseFloat(coords[0], 64); err == nil {
+					location.Latitude = &lat
+				}
+				if lon, err := strconv.ParseFloat(coords[1], 64); err == nil {
+					location.Longitude = &lon
+				}
 			}
 		}
 	}
@@ -63,139 +99,113 @@ func MapSubmissionToLocation(submission map[string]interface{}) (*model.Location
 		"nama_desa":       getStringValue(submission, "calc_nama_desa"),
 	}
 
-	// Build Identitas JSONB from grp_identitas
-	if grpIdentitas, ok := submission["grp_identitas"].(map[string]interface{}); ok {
-		location.Identitas = model.JSONB{
-			"nama_penanggungjawab":    grpIdentitas["nama_penanggungjawab"],
-			"contact_penanggungjawab": grpIdentitas["contact_penanggungjawab"],
-			"nama_relawan":            grpIdentitas["nama_relawan"],
-			"contact_relawan":         grpIdentitas["contact_relawan"],
-			"alamat_dusun":            grpIdentitas["alamat_dusun"],
-			"institusi":               grpIdentitas["institusi"],
-			"mulai_tanggal":           grpIdentitas["mulai_tanggal"],
-			"kota_terdekat":           grpIdentitas["kota_terdekat"],
-		}
+	// Build Identitas JSONB - try final_* first, fallback to grp_identitas
+	location.Identitas = model.JSONB{
+		"nama_penanggungjawab":    getWithFallback(submission, "final_nama_penanggungjawab", grpIdentitas, "nama_penanggungjawab"),
+		"contact_penanggungjawab": getWithFallback(submission, "final_contact_penanggungjawab", grpIdentitas, "contact_penanggungjawab"),
+		"nama_relawan":            getWithFallback(submission, "final_nama_relawan", grpIdentitas, "nama_relawan"),
+		"contact_relawan":         getWithFallback(submission, "final_contact_relawan", grpIdentitas, "contact_relawan"),
+		"alamat_dusun":            getWithFallback(submission, "final_alamat_dusun", grpIdentitas, "alamat_dusun"),
+		"institusi":               getWithFallback(submission, "final_institusi", grpIdentitas, "institusi"),
+		"mulai_tanggal":           getWithFallback(submission, "final_mulai_tanggal", grpIdentitas, "mulai_tanggal"),
+		"kota_terdekat":           getWithFallback(submission, "final_kota_terdekat", grpIdentitas, "kota_terdekat"),
+		"baseline_sumber":         getWithFallback(submission, "final_baseline_sumber", grpBaseline, "baseline_sumber"),
+	}
 
-		// Extract status_posko from grp_identitas
+	// Extract status_posko - try final_status_posko first, fallback to grp_identitas
+	if statusPosko, ok := submission["final_status_posko"].(string); ok && statusPosko != "" {
+		location.Status = statusPosko
+	} else if grpIdentitas != nil {
 		if statusPosko, ok := grpIdentitas["status_posko"].(string); ok && statusPosko != "" {
 			location.Status = statusPosko
 		}
+	}
 
-		// Extract coordinates from grp_identitas.koordinat if calc_geometry not available
-		if location.Latitude == nil || location.Longitude == nil {
-			if koordinat, ok := grpIdentitas["koordinat"].(map[string]interface{}); ok {
-				if coords, ok := koordinat["coordinates"].([]interface{}); ok && len(coords) >= 2 {
-					if lon, ok := coords[0].(float64); ok {
-						location.Longitude = &lon
-					}
-					if lat, ok := coords[1].(float64); ok {
-						location.Latitude = &lat
-					}
-				}
+	// Build DataPengungsi JSONB - try final_* first, fallback to grp_pengungsian and grp_demografi
+	totalPengungsi := getWithFallback(submission, "final_total_pengungsi", grpPengungsian, "total_pengungsi")
+	dataPengungsi := model.JSONB{
+		"jenis_pengungsian":   getWithFallback(submission, "final_jenis_pengungsian", grpPengungsian, "jenis_pengungsian"),
+		"detail_pengungsian":  getWithFallback(submission, "final_detail_pengungsian", grpPengungsian, "detail_pengungsian"),
+		"persen_keterlibatan": getWithFallback(submission, "final_persen_keterlibatan", grpPengungsian, "persen_keterlibatan"),
+		"total_pengungsi":     totalPengungsi,
+		"total_jiwa":          totalPengungsi, // alias
+		"jumlah_kk":           getWithFallback(submission, "final_jumlah_kk", grpDemografi, "jumlah_kk"),
+		"kk_perempuan":        getWithFallback(submission, "final_kk_perempuan", grpDemografi, "kk_perempuan"),
+		"kk_anak":             getWithFallback(submission, "final_kk_anak", grpDemografi, "kk_anak"),
+		"dewasa_perempuan":    getWithFallback(submission, "final_dewasa_perempuan", grpDemografi, "dewasa_perempuan"),
+		"dewasa_laki":         getWithFallback(submission, "final_dewasa_laki", grpDemografi, "dewasa_laki"),
+		"remaja_perempuan":    getWithFallback(submission, "final_remaja_perempuan", grpDemografi, "remaja_perempuan"),
+		"remaja_laki":         getWithFallback(submission, "final_remaja_laki", grpDemografi, "remaja_laki"),
+		"anak_perempuan":      getWithFallback(submission, "final_anak_perempuan", grpDemografi, "anak_perempuan"),
+		"anak_laki":           getWithFallback(submission, "final_anak_laki", grpDemografi, "anak_laki"),
+		"balita_perempuan":    getWithFallback(submission, "final_balita_perempuan", grpDemografi, "balita_perempuan"),
+		"balita_laki":         getWithFallback(submission, "final_balita_laki", grpDemografi, "balita_laki"),
+		"bayi_perempuan":      getWithFallback(submission, "final_bayi_perempuan", grpDemografi, "bayi_perempuan"),
+		"bayi_laki":           getWithFallback(submission, "final_bayi_laki", grpDemografi, "bayi_laki"),
+		"lansia":              getWithFallback(submission, "final_lansia", grpDemografi, "lansia"),
+		"ibu_menyusui":        getWithFallback(submission, "final_ibu_menyusui", grpDemografi, "ibu_menyusui"),
+		"ibu_hamil":           getWithFallback(submission, "final_ibu_hamil", grpDemografi, "ibu_hamil"),
+		"remaja_tanpa_ortu":   getWithFallback(submission, "final_remaja_tanpa_ortu", grpDemografi, "remaja_tanpa_ortu"),
+		"anak_tanpa_ortu":     getWithFallback(submission, "final_anak_tanpa_ortu", grpDemografi, "anak_tanpa_ortu"),
+		"bayi_tanpa_ibu":      getWithFallback(submission, "final_bayi_tanpa_ibu", grpDemografi, "bayi_tanpa_ibu"),
+		"difabel":             getWithFallback(submission, "final_difabel", grpDemografi, "difabel"),
+		"komorbid":            getWithFallback(submission, "final_komorbid", grpDemografi, "komorbid"),
+	}
+	location.DataPengungsi = dataPengungsi
+
+	// Build Fasilitas JSONB - try final_* first, fallback to grp_fasilitas
+	location.Fasilitas = model.JSONB{
+		"posko_logistik":      getWithFallback(submission, "final_posko_logistik", grpFasilitas, "posko_logistik"),
+		"posko_faskes":        getWithFallback(submission, "final_posko_faskes", grpFasilitas, "posko_faskes"),
+		"dapur_umum":          getWithFallback(submission, "final_dapur_umum", grpFasilitas, "dapur_umum"),
+		"kapasitas_dapur":     getWithFallback(submission, "final_kapasitas_dapur", grpFasilitas, "kapasitas_dapur"),
+		"ketersediaan_air":    getWithFallback(submission, "final_ketersediaan_air", grpFasilitas, "ketersediaan_air"),
+		"kebutuhan_air":       submission["kebutuhan_air"], // root level calculated field
+		"saluran_limbah":      getWithFallback(submission, "final_saluran_limbah", grpFasilitas, "saluran_limbah"),
+		"sumber_air":          getWithFallback(submission, "final_sumber_air", grpFasilitas, "sumber_air"),
+		"toilet_perempuan":    getWithFallback(submission, "final_toilet_perempuan", grpFasilitas, "toilet_perempuan"),
+		"toilet_laki":         getWithFallback(submission, "final_toilet_laki", grpFasilitas, "toilet_laki"),
+		"toilet_campur":       getWithFallback(submission, "final_toilet_campur", grpFasilitas, "toilet_campur"),
+		"tempat_sampah":       getWithFallback(submission, "final_tempat_sampah", grpFasilitas, "tempat_sampah"),
+		"sumber_listrik":      getWithFallback(submission, "final_sumber_listrik", grpFasilitas, "sumber_listrik"),
+		"kondisi_penerangan":  getWithFallback(submission, "final_kondisi_penerangan", grpFasilitas, "kondisi_penerangan"),
+		"titik_akses_listrik": getWithFallback(submission, "final_titik_akses_listrik", grpFasilitas, "titik_akses_listrik"),
+		"posko_tenaga_medis":  getWithFallback(submission, "final_posko_kesehatan", grpFasilitas, "posko_kesehatan"),
+		"posko_obat":          getWithFallback(submission, "final_posko_obat", grpFasilitas, "posko_obat"),
+		"posko_psikososial":   getWithFallback(submission, "final_posko_psikososial", grpFasilitas, "posko_psikososial"),
+		"ruang_laktasi":       getWithFallback(submission, "final_ruang_laktasi", grpFasilitas, "ruang_laktasi"),
+		"layanan_lansia":      getWithFallback(submission, "final_layanan_lansia", grpFasilitas, "layanan_lansia"),
+		"layanan_keluarga":    getWithFallback(submission, "final_layanan_keluarga", grpFasilitas, "layanan_keluarga"),
+		"sekolah_darurat":     getWithFallback(submission, "final_sekolah_darurat", grpFasilitas, "sekolah_darurat"),
+		"program_pengganti":   getWithFallback(submission, "final_program_pengganti", grpFasilitas, "program_pengganti"),
+		"petugas_keamanan":    getWithFallback(submission, "final_petugas_keamanan", grpFasilitas, "petugas_keamanan"),
+		"area_interaksi":      getWithFallback(submission, "final_area_interaksi", grpFasilitas, "area_interaksi"),
+		"area_bermain":        getWithFallback(submission, "final_area_bermain", grpFasilitas, "area_bermain"),
+	}
+
+	// Calculate kebutuhan_air from total_pengungsi if not already set
+	if location.Fasilitas["kebutuhan_air"] == nil {
+		if totalPengungsi != nil {
+			if totalFloat, ok := totalPengungsi.(float64); ok {
+				location.Fasilitas["kebutuhan_air"] = int(totalFloat) * 15
 			}
 		}
 	}
 
-	// Build DataPengungsi JSONB
-	dataPengungsi := model.JSONB{}
-
-	// From grp_pengungsian
-	if grpPengungsian, ok := submission["grp_pengungsian"].(map[string]interface{}); ok {
-		dataPengungsi["jenis_pengungsian"] = grpPengungsian["jenis_pengungsian"]
-		dataPengungsi["detail_pengungsian"] = grpPengungsian["detail_pengungsian"]
-		dataPengungsi["total_pengungsi"] = grpPengungsian["total_pengungsi"]
-		dataPengungsi["persen_keterlibatan"] = grpPengungsian["persen_keterlibatan"]
+	// Build Komunikasi JSONB - try final_* first, fallback to grp_komunikasi
+	location.Komunikasi = model.JSONB{
+		"ketersediaan_sinyal":   getWithFallback(submission, "final_ketersediaan_sinyal", grpKomunikasi, "ketersediaan_sinyal"),
+		"jaringan_orari":        getWithFallback(submission, "final_jaringan_orari", grpKomunikasi, "jaringan_orari"),
+		"ketersediaan_internet": getWithFallback(submission, "final_ketersediaan_internet", grpKomunikasi, "ketersediaan_internet"),
 	}
 
-	// From grp_terisolir
-	if grpTerisolir, ok := submission["grp_terisolir"].(map[string]interface{}); ok {
-		dataPengungsi["terisolir"] = grpTerisolir["terisolir"]
-		dataPengungsi["akses_via"] = grpTerisolir["akses_via"]
-	}
-
-	// From grp_demografi (was grp_data_pengungsi in form v1)
-	if grpData, ok := submission["grp_demografi"].(map[string]interface{}); ok {
-		dataPengungsi["jumlah_kk"] = grpData["jumlah_kk"]
-		dataPengungsi["kk_perempuan"] = grpData["kk_perempuan"]
-		dataPengungsi["kk_anak"] = grpData["kk_anak"]
-		dataPengungsi["dewasa_perempuan"] = grpData["dewasa_perempuan"]
-		dataPengungsi["dewasa_laki"] = grpData["dewasa_laki"]
-		dataPengungsi["remaja_perempuan"] = grpData["remaja_perempuan"]
-		dataPengungsi["remaja_laki"] = grpData["remaja_laki"]
-		dataPengungsi["anak_perempuan"] = grpData["anak_perempuan"]
-		dataPengungsi["anak_laki"] = grpData["anak_laki"]
-		dataPengungsi["balita_perempuan"] = grpData["balita_perempuan"]
-		dataPengungsi["balita_laki"] = grpData["balita_laki"]
-		dataPengungsi["bayi_perempuan"] = grpData["bayi_perempuan"]
-		dataPengungsi["bayi_laki"] = grpData["bayi_laki"]
-		dataPengungsi["lansia"] = grpData["lansia"]
-		dataPengungsi["ibu_menyusui"] = grpData["ibu_menyusui"]
-		dataPengungsi["ibu_hamil"] = grpData["ibu_hamil"]
-		dataPengungsi["remaja_tanpa_ortu"] = grpData["remaja_tanpa_ortu"]
-		dataPengungsi["anak_tanpa_ortu"] = grpData["anak_tanpa_ortu"]
-		dataPengungsi["bayi_tanpa_ibu"] = grpData["bayi_tanpa_ibu"]
-		dataPengungsi["difabel"] = grpData["difabel"]
-		dataPengungsi["komorbid"] = grpData["komorbid"]
-	}
-	location.DataPengungsi = dataPengungsi
-
-	// Build Fasilitas JSONB from grp_fasilitas
-	if grpFasilitas, ok := submission["grp_fasilitas"].(map[string]interface{}); ok {
-		location.Fasilitas = model.JSONB{
-			"posko_logistik":      grpFasilitas["posko_logistik"],
-			"posko_faskes":        grpFasilitas["posko_faskes"],
-			"dapur_umum":          grpFasilitas["dapur_umum"],
-			"kapasitas_dapur":     grpFasilitas["kapasitas_dapur"],
-			"ketersediaan_air":    grpFasilitas["ketersediaan_air"],
-			"saluran_limbah":      grpFasilitas["saluran_limbah"],
-			"sumber_air":          grpFasilitas["sumber_air"],
-			"toilet_perempuan":    grpFasilitas["toilet_perempuan"],
-			"toilet_laki":         grpFasilitas["toilet_laki"],
-			"toilet_campur":       grpFasilitas["toilet_campur"],
-			"tempat_sampah":       grpFasilitas["tempat_sampah"],
-			"sumber_listrik":      grpFasilitas["sumber_listrik"],
-			"kondisi_penerangan":  grpFasilitas["kondisi_penerangan"],
-			"titik_akses_listrik": grpFasilitas["titik_akses_listrik"],
-			"posko_tenaga_medis":  grpFasilitas["posko_kesehatan"],
-			"posko_obat":          grpFasilitas["posko_obat"],
-			"posko_psikososial":   grpFasilitas["posko_psikososial"],
-			"ruang_laktasi":       grpFasilitas["ruang_laktasi"],
-			"layanan_lansia":      grpFasilitas["layanan_lansia"],
-			"layanan_keluarga":    grpFasilitas["layanan_keluarga"],
-			"sekolah_darurat":     grpFasilitas["sekolah_darurat"],
-			"program_pengganti":   grpFasilitas["program_pengganti"],
-			"petugas_keamanan":    grpFasilitas["petugas_keamanan"],
-			"area_interaksi":      grpFasilitas["area_interaksi"],
-			"area_bermain":        grpFasilitas["area_bermain"],
-		}
-	}
-
-	// Build Komunikasi JSONB from grp_komunikasi
-	if grpKomunikasi, ok := submission["grp_komunikasi"].(map[string]interface{}); ok {
-		location.Komunikasi = model.JSONB{
-			"ketersediaan_sinyal":   grpKomunikasi["ketersediaan_sinyal"],
-			"jaringan_orari":        grpKomunikasi["jaringan_orari"],
-			"ketersediaan_internet": grpKomunikasi["ketersediaan_internet"],
-		}
-	}
-
-	// Build Akses JSONB from grp_akses
-	if grpAkses, ok := submission["grp_akses"].(map[string]interface{}); ok {
-		location.Akses = model.JSONB{
-			"jarak_pkm":            grpAkses["jarak_pkm"],
-			"jarak_posko_logistik": grpAkses["jarak_posko_logistik"],
-			"nama_faskes_terdekat": grpAkses["nama_faskes_terdekat"],
-			"terisolir":            grpAkses["terisolir"],
-			"akses_via":            grpAkses["akses_via"],
-		}
-	}
-
-	// Extract baseline_sumber from grp_baseline
-	if grpBaseline, ok := submission["grp_baseline"].(map[string]interface{}); ok {
-		if location.Identitas == nil {
-			location.Identitas = model.JSONB{}
-		}
-		location.Identitas["baseline_sumber"] = grpBaseline["baseline_sumber"]
+	// Build Akses JSONB - try final_* first, fallback to grp_akses
+	location.Akses = model.JSONB{
+		"jarak_pkm":            getWithFallback(submission, "final_jarak_pkm", grpAkses, "jarak_pkm"),
+		"jarak_posko_logistik": getWithFallback(submission, "final_jarak_posko_logistik", grpAkses, "jarak_posko_logistik"),
+		"nama_faskes_terdekat": getWithFallback(submission, "final_nama_faskes_terdekat", grpAkses, "nama_faskes_terdekat"),
+		"terisolir":            getWithFallback(submission, "final_terisolir", grpAkses, "terisolir"),
+		"akses_via":            getWithFallback(submission, "final_akses_via", grpAkses, "akses_via"),
 	}
 
 	// Store raw submission data
@@ -253,6 +263,18 @@ type PhotoInfo struct {
 }
 
 // Helper functions
+
+// getWithFallback tries to get value from primary map first, then falls back to secondary map
+func getWithFallback(primary map[string]interface{}, primaryKey string, fallback map[string]interface{}, fallbackKey string) interface{} {
+	if val := primary[primaryKey]; val != nil {
+		return val
+	}
+	if fallback != nil {
+		return fallback[fallbackKey]
+	}
+	return nil
+}
+
 func getStringValue(m map[string]interface{}, key string) string {
 	if v, ok := m[key].(string); ok {
 		return v

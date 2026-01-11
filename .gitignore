@@ -25,13 +25,16 @@ services/frontend/.vite/
 services/api/bin/
 services/api/storage/
 
+# Storage (photos cache)
+storage/
+
 # Docker volumes (local)
 data/
 
 # Temp files
 *.tmp
 *.temp
-.tsbuildinfo
+*.tsbuildinfo
 vite.config.js
 vite.config.d.ts
 docker-compose.override.yml

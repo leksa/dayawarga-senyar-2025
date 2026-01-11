@@ -169,10 +169,9 @@ func (s *FeedSyncService) processSubmission(submission map[string]interface{}, r
 			return fmt.Errorf("failed to update feed for %s: %w", odkID, err)
 		}
 
-		// Update photos (delete existing and re-create)
+		// Update photos (upsert - only add new photos, preserve existing cached ones)
 		if len(feedResult.Photos) > 0 {
-			s.db.Where("feed_id = ?", feed.ID).Delete(&model.FeedPhoto{})
-			if err := s.saveFeedPhotos(feed.ID, feedResult.Photos); err != nil {
+			if err := s.upsertFeedPhotos(feed.ID, feedResult.Photos); err != nil {
 				log.Printf("Warning: Failed to update photos for feed %s: %v", odkID, err)
 			}
 		}
@@ -200,6 +199,62 @@ func (s *FeedSyncService) saveFeedPhotos(feedID uuid.UUID, photos []FeedPhotoInf
 			return fmt.Errorf("failed to save photo %s: %w", photo.Filename, err)
 		}
 	}
+	return nil
+}
+
+// upsertFeedPhotos updates photos for a feed - only adds new photos, preserves existing cached ones
+func (s *FeedSyncService) upsertFeedPhotos(feedID uuid.UUID, photos []FeedPhotoInfo) error {
+	// Get existing photos for this feed
+	var existingPhotos []model.FeedPhoto
+	if err := s.db.Where("feed_id = ?", feedID).Find(&existingPhotos).Error; err != nil {
+		return fmt.Errorf("failed to fetch existing photos: %w", err)
+	}
+
+	// Create a map of existing photos by filename
+	existingByFilename := make(map[string]*model.FeedPhoto)
+	for i := range existingPhotos {
+		existingByFilename[existingPhotos[i].Filename] = &existingPhotos[i]
+	}
+
+	// Process each photo from ODK
+	odkFilenames := make(map[string]bool)
+	for _, photo := range photos {
+		odkFilenames[photo.Filename] = true
+
+		if existing, found := existingByFilename[photo.Filename]; found {
+			// Photo already exists - only update if not cached (preserve cached photos)
+			if !existing.IsCached {
+				existing.PhotoType = photo.PhotoType
+				if err := s.db.Save(existing).Error; err != nil {
+					log.Printf("Warning: failed to update photo %s: %v", photo.Filename, err)
+				}
+			}
+			// If cached, don't touch it at all
+		} else {
+			// New photo - create it
+			feedPhoto := model.FeedPhoto{
+				ID:        uuid.New(),
+				FeedID:    feedID,
+				PhotoType: photo.PhotoType,
+				Filename:  photo.Filename,
+				IsCached:  false,
+			}
+			if err := s.db.Create(&feedPhoto).Error; err != nil {
+				log.Printf("Warning: failed to create photo %s: %v", photo.Filename, err)
+			}
+		}
+	}
+
+	// Delete photos that no longer exist in ODK (but only if not cached)
+	for filename, existing := range existingByFilename {
+		if !odkFilenames[filename] && !existing.IsCached {
+			// Photo no longer in ODK and not cached - safe to delete
+			if err := s.db.Delete(existing).Error; err != nil {
+				log.Printf("Warning: failed to delete removed photo %s: %v", filename, err)
+			}
+		}
+	}
+
 	return nil
 }
 

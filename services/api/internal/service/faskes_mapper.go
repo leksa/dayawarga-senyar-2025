@@ -95,6 +95,24 @@ func MapSubmissionToFaskes(submission map[string]interface{}) (*model.Faskes, er
 		}
 	}
 
+	// Extract baseline_sumber - check multiple locations
+	var baselineSumber interface{}
+	if grpBaseline, ok := submission["grp_baseline"].(map[string]interface{}); ok {
+		baselineSumber = grpBaseline["baseline_sumber"]
+	}
+	if baselineSumber == nil {
+		baselineSumber = submission["baseline_sumber"]
+	}
+	if baselineSumber == nil {
+		baselineSumber = submission["final_baseline_sumber"]
+	}
+	if baselineSumber != nil {
+		if faskes.Identitas == nil {
+			faskes.Identitas = model.JSONB{}
+		}
+		faskes.Identitas["baseline_sumber"] = baselineSumber
+	}
+
 	// Extract from grp_terisolir
 	if grpTerisolir, ok := submission["grp_terisolir"].(map[string]interface{}); ok {
 		faskes.Isolasi = model.JSONB{

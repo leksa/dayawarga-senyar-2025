@@ -39,8 +39,13 @@ func (h *FeedHandler) GetFeeds(c *gin.Context) {
 		LocationName: c.Query("location_name"),
 		Search:       c.Query("search"),
 		Since:        c.Query("since"),
-		Page:         1,
-		Limit:        50,
+		// Region filters
+		Provinsi:  c.Query("provinsi"),
+		KotaKab:   c.Query("kota_kab"),
+		Kecamatan: c.Query("kecamatan"),
+		Desa:      c.Query("desa"),
+		Page:      1,
+		Limit:     50,
 	}
 
 	// Parse pagination
@@ -138,7 +143,7 @@ func (h *FeedHandler) GetFeeds(c *gin.Context) {
 func (h *FeedHandler) convertPhotosToResponse(photos []model.FeedPhoto, odkSubmissionID *string) []dto.FeedPhotoResponse {
 	result := make([]dto.FeedPhotoResponse, len(photos))
 	for i, photo := range photos {
-		// Build photo URL - use feed photo endpoint
+		// Build photo URL - use feed photo endpoint (cached group has no prefix)
 		url := fmt.Sprintf("/api/v1/feeds/photos/%s/file", photo.ID.String())
 
 		result[i] = dto.FeedPhotoResponse{

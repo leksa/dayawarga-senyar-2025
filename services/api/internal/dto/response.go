@@ -60,6 +60,10 @@ type LocationListProperties struct {
 	Type            string    `json:"type"`
 	Status          string    `json:"status"`
 	AlamatSingkat   string    `json:"alamat_singkat,omitempty"`
+	NamaProvinsi    string    `json:"nama_provinsi,omitempty"`
+	NamaKotaKab     string    `json:"nama_kota_kab,omitempty"`
+	NamaKecamatan   string    `json:"nama_kecamatan,omitempty"`
+	NamaDesa        string    `json:"nama_desa,omitempty"`
 	JumlahKK        int       `json:"jumlah_kk"`
 	TotalJiwa       int       `json:"total_jiwa"`
 	BaselineSumber  string    `json:"baseline_sumber,omitempty"`
@@ -156,6 +160,10 @@ type FaskesListProperties struct {
 	StatusFaskes    string    `json:"status_faskes"`
 	KondisiFaskes   string    `json:"kondisi_faskes,omitempty"`
 	AlamatSingkat   string    `json:"alamat_singkat,omitempty"`
+	NamaProvinsi    string    `json:"nama_provinsi,omitempty"`
+	NamaKotaKab     string    `json:"nama_kota_kab,omitempty"`
+	NamaKecamatan   string    `json:"nama_kecamatan,omitempty"`
+	NamaDesa        string    `json:"nama_desa,omitempty"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }
 

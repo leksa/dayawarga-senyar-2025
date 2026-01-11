@@ -277,3 +277,252 @@ func (c *Client) GetAttachmentForForm(formID, submissionID, filename string) ([]
 
 	return io.ReadAll(resp.Body)
 }
+
+// GetDatasets lists all datasets (entity lists) in the project
+func (c *Client) GetDatasets() ([]map[string]interface{}, error) {
+	if err := c.authenticate(); err != nil {
+		return nil, err
+	}
+
+	datasetsURL := fmt.Sprintf("%s/v1/projects/%d/datasets",
+		c.config.BaseURL, c.config.ProjectID)
+
+	req, err := http.NewRequest("GET", datasetsURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch datasets: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var datasets []map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&datasets); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return datasets, nil
+}
+
+// GetEntities lists all entities in a dataset
+func (c *Client) GetEntities(datasetName string) ([]map[string]interface{}, error) {
+	if err := c.authenticate(); err != nil {
+		return nil, err
+	}
+
+	entitiesURL := fmt.Sprintf("%s/v1/projects/%d/datasets/%s/entities",
+		c.config.BaseURL, c.config.ProjectID, datasetName)
+
+	req, err := http.NewRequest("GET", entitiesURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch entities: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var entities []map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&entities); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return entities, nil
+}
+
+// CreateEntity creates a single entity in a dataset
+func (c *Client) CreateEntity(datasetName string, entity EntityCreateRequest) (*map[string]interface{}, error) {
+	if err := c.authenticate(); err != nil {
+		return nil, err
+	}
+
+	entitiesURL := fmt.Sprintf("%s/v1/projects/%d/datasets/%s/entities",
+		c.config.BaseURL, c.config.ProjectID, datasetName)
+
+	payload, err := json.Marshal(entity)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal entity: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", entitiesURL, strings.NewReader(string(payload)))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create entity: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var result map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &result, nil
+}
+
+// CreateEntitiesBulk creates multiple entities in a dataset
+func (c *Client) CreateEntitiesBulk(datasetName string, entities []EntityCreateRequest, sourceName string) ([]map[string]interface{}, error) {
+	if err := c.authenticate(); err != nil {
+		return nil, err
+	}
+
+	entitiesURL := fmt.Sprintf("%s/v1/projects/%d/datasets/%s/entities",
+		c.config.BaseURL, c.config.ProjectID, datasetName)
+
+	bulkRequest := BulkEntityCreateRequest{
+		Entities: entities,
+		Source: EntitySource{
+			Name: sourceName,
+			Size: len(entities),
+		},
+	}
+
+	payload, err := json.Marshal(bulkRequest)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal entities: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", entitiesURL, strings.NewReader(string(payload)))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create entities: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var results []map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&results); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return results, nil
+}
+
+// GetEntitySubmissionMapping builds a mapping from entity UUID to submission instance ID
+// by fetching entity versions which contain the source submission info
+func (c *Client) GetEntitySubmissionMapping(datasetName string) (map[string]string, error) {
+	if err := c.authenticate(); err != nil {
+		return nil, err
+	}
+
+	// First, get all entities
+	entities, err := c.GetEntities(datasetName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get entities: %w", err)
+	}
+
+	mapping := make(map[string]string)
+
+	// For each entity, get its first version to find the source submission
+	for _, entity := range entities {
+		entityUUID, ok := entity["uuid"].(string)
+		if !ok || entityUUID == "" {
+			continue
+		}
+
+		// Get entity versions
+		versionsURL := fmt.Sprintf("%s/v1/projects/%d/datasets/%s/entities/%s/versions",
+			c.config.BaseURL, c.config.ProjectID, datasetName, entityUUID)
+
+		req, err := http.NewRequest("GET", versionsURL, nil)
+		if err != nil {
+			continue
+		}
+
+		req.Header.Set("Authorization", "Bearer "+c.token)
+		req.Header.Set("Accept", "application/json")
+
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			continue
+		}
+
+		var versions []map[string]interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&versions); err != nil {
+			resp.Body.Close()
+			continue
+		}
+		resp.Body.Close()
+
+		// Get submission ID from first version's source
+		if len(versions) > 0 {
+			if source, ok := versions[0]["source"].(map[string]interface{}); ok {
+				if submission, ok := source["submission"].(map[string]interface{}); ok {
+					if instanceID, ok := submission["instanceId"].(string); ok {
+						mapping[entityUUID] = instanceID
+					}
+				}
+			}
+		}
+	}
+
+	return mapping, nil
+}
+
+// EntityCreateRequest represents request to create an entity
+type EntityCreateRequest struct {
+	UUID  string            `json:"uuid,omitempty"`
+	Label string            `json:"label"`
+	Data  map[string]string `json:"data"`
+}
+
+// BulkEntityCreateRequest represents request to create multiple entities
+type BulkEntityCreateRequest struct {
+	Entities []EntityCreateRequest `json:"entities"`
+	Source   EntitySource          `json:"source"`
+}
+
+// EntitySource represents the source of bulk entity creation
+type EntitySource struct {
+	Name string `json:"name"`
+	Size int    `json:"size"`
+}

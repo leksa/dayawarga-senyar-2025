@@ -1,0 +1,366 @@
+JENIS FASYANKES,NAMA,LONGITUDE,LATITUDE,PROVINSI,KABUPATEN,STATUS OPERASIONAL,KECAMATAN,DESA,GEOCODE_STATUS
+Puskesmas,Lokop,"9,742,379","441,929",Aceh,Aceh Timur,Belum Beroperasi,,,invalid_coords
+Puskesmas,Peusangan,"9,678,749","519,671",Aceh,Bireuen,Belum Beroperasi,,,invalid_coords
+Puskesmas,Rusip Antara,"9,662,975","46,302",Aceh,Aceh Tengah,Belum Beroperasi,,,no_data
+Puskesmas,Jambur Lak-Lak,"9,769,628","364,224",Aceh,Aceh Tenggara,Belum Beroperasi,,,invalid_coords
+Rumah Sakit,RS Umum Daerah Dr. H. Yulidin Away,97.3665,3.00035,Aceh,Aceh Selatan,Beroperasi,,Pasielembang,ok
+Rumah Sakit,RS Umum Daerah H. Sahudin Kutacane,97.5891,3.76794,Aceh,Aceh Tenggara,Beroperasi,,Singahmulo,ok
+Rumah Sakit,RS Ibu dan Anak Keluarga Desa,97.82262,3.47056,Aceh,Aceh Tenggara,Beroperasi,,Perapattitipanjang,ok
+Rumah Sakit,RS Umum Nurul Hasanah,97.8085569,3.4957305,Aceh,Aceh Tenggara,Beroperasi,,Kampungmelayu Satu,ok
+Rumah Sakit,RS Umum Daerah dr. Zubir Mahmud,97.79774,4.91983,Aceh,Aceh Timur,Beroperasi,,Ketapangdua,ok
+Rumah Sakit,RS Umum Graha Bunda,97.76336,4.95734,Aceh,Aceh Timur,Beroperasi,,Teupinbatee,ok
+Rumah Sakit,RS Umum Daerah Sultan Abdul Aziz Syah Peureulak,97.893,4.80925,Aceh,Aceh Timur,Beroperasi,,Keudepeureulak,ok
+Rumah Sakit,RS Umum Fandika,96.84677,4.62438,Aceh,Aceh Tengah,Beroperasi,,Blangkolak Satu,ok
+Rumah Sakit,RS Umum Daerah Datu Beru Takengon,96.85176,4.63634,Aceh,Aceh Tengah,Beroperasi,,Mongal,ok
+Rumah Sakit,RS Umum Daerah Cut Nyak Dhien,96.12977,4.15626,Aceh,Aceh Barat,Beroperasi,,Rundeng,ok
+Rumah Sakit,RS Umum Montella,96.1191,4.17221,Aceh,Aceh Barat,Beroperasi,,Seuneubok,ok
+Rumah Sakit,RS Umum Harapan Sehat,96.13423,4.17014,Aceh,Aceh Barat,Beroperasi,,Leuhan,ok
+Rumah Sakit,RS Tk. IV IM 07.02,96.1327488,4.1317561,Aceh,Aceh Barat,Beroperasi,,Pasaraceh,ok
+Rumah Sakit,RS Umum Daerah TGK. Abdullah Syafii Beureuneun,97.10364,5.09359,Aceh,Pidie,Beroperasi,,Ietarek Dua,ok
+Rumah Sakit,RS Islam Ibnu Sina Sigli,95.95656,5.36957,Aceh,Pidie,Beroperasi,,Cot Teungoh,ok
+Rumah Sakit,RS Umum Mufid,95.9588,5.37565,Aceh,Pidie,Beroperasi,,,no_data
+Rumah Sakit,RS Umum Citra Husada,95.9598,5.36201,Aceh,Pidie,Beroperasi,,Mesjid Reuntoh,ok
+Rumah Sakit,RS Umum Daerah TGK Chik Ditiro Sigli,95.95979,5.36378,Aceh,Pidie,Beroperasi,,Mesjid Reuntoh,ok
+Rumah Sakit,RS Umum Harapan Ibu,96.0193466,5.2662247,Aceh,Pidie,Beroperasi,,Dayah Kampong Pisang,ok
+Rumah Sakit,RS Umum Cut Meutia Kab. Aceh Utara,97.149,5.1892,Aceh,Aceh Utara,Beroperasi,Banda Sakti,,ok
+Rumah Sakit,RS Umum Daerah dr. Muchtar Hasbi,97.35177,4.57415,Aceh,Aceh Utara,Beroperasi,,,no_data
+Rumah Sakit,RS Zahra,97.33977,5.06043,Aceh,Aceh Utara,Beroperasi,,Matangpanyang,ok
+Rumah Sakit,RS Umum Prima Inti Medika,97.02597,5.22152,Aceh,Aceh Utara,Beroperasi,,Tambonbaroh,ok
+Rumah Sakit,RS Umum Daerah Aceh Singkil,97.92711,2.3478,Aceh,Aceh Singkil,Beroperasi,,Sepingbaru,ok
+Rumah Sakit,RS Umum Malahayati,96.697,5.20945,Aceh,Bireuen,Beroperasi,,Baro,ok
+Rumah Sakit,RS Umum Telaga Bunda,96.6945,5.20152,Aceh,Bireuen,Beroperasi,,Bireuenmeunasahblang,ok
+Rumah Sakit,RS Umum Daerah Dr. Fauziah Bireun,96.69878,5.20411,Aceh,Bireuen,Beroperasi,,,no_data
+Rumah Sakit,RS Umum Avicenna,96.70085,5.24276,Aceh,Bireuen,Beroperasi,,Kruengjuli Timu,ok
+Rumah Sakit,RS Umum Bireuen Medical Center,96.6712,5.20599,Aceh,Bireuen,Beroperasi,,Geulumpangpayong,ok
+Rumah Sakit,RS Umum Jeumpa Hospital,96.7200425,5.2041026,Aceh,Bireuen,Beroperasi,,,no_data
+Rumah Sakit,RS Umum Muhammad Ali Kasim,97.36998,4.00606,Aceh,Gayo Lues,Beroperasi,,Pangur,ok
+Rumah Sakit,RS Umum Daerah Sultan Iskandar Muda Nagan Raya,96.4892,4.13144,Aceh,Nagan Raya,Beroperasi,,,no_data
+Rumah Sakit,RS Umum Pertamina Rantau,98.1061,4.34552,Aceh,Aceh Tamiang,Beroperasi,,Alurmanis,ok
+Rumah Sakit,RS Umum Daerah Muda Sedia Kabupaten Aceh Tamiang,98.0035,4.20804,Aceh,Aceh Tamiang,Beroperasi,,Sukamakmur,ok
+Rumah Sakit,RS Ibu dan Anak Azalia,96.85943,4.7169,Aceh,Bener Meriah,Beroperasi,,Tingkembenyer,ok
+Rumah Sakit,RS Umum Daerah Muyang Kute Redelong Bener Meriah,96.7494,4.69514,Aceh,Bener Meriah,Beroperasi,,Balik,ok
+Rumah Sakit,RS Umum Daerah Pidie Jaya,96.2801,4.98824,Aceh,Pidie Jaya,Beroperasi,,,no_data
+Rumah Sakit,RS Umum Az-Zuhra,97.1405218,5.1828949,Aceh,Kota Lhokseumawe,Beroperasi,Banda Sakti,,ok
+Rumah Sakit,RS Ibu dan Anak ABBY,97.14737,5.18279,Aceh,Kota Lhokseumawe,Beroperasi,Banda Sakti,,ok
+Rumah Sakit,RS Umum Bunda,97.14588,5.18345,Aceh,Kota Lhokseumawe,Beroperasi,Banda Sakti,,ok
+Rumah Sakit,RS Umum PMI Cabang Aceh Utara (RS Umum Marhamah PMI),97.1489,5.18127,Aceh,Kota Lhokseumawe,Beroperasi,Banda Sakti,,ok
+Rumah Sakit,RS Arun Lhokseumawe,97.0491,5.21701,Aceh,Kota Lhokseumawe,Beroperasi,Muara Satu,,ok
+Rumah Sakit,RS Umum Kasih Ibu Lhokseumawe,97.1379,5.18188,Aceh,Kota Lhokseumawe,Beroperasi,Banda Sakti,,ok
+Rumah Sakit,RS Umum Sakinah,97.14574,5.187,Aceh,Kota Lhokseumawe,Beroperasi,Banda Sakti,,ok
+Rumah Sakit,RS Umum Bunga Melati,97.14655,5.17536,Aceh,Kota Lhokseumawe,Beroperasi,Banda Sakti,,ok
+Rumah Sakit,RS Tk. IV Lhokseumawe Aceh Utara,97.1498012,5.1825118,Aceh,Kota Lhokseumawe,Beroperasi,Banda Sakti,,ok
+Rumah Sakit,RS Umum Metro Medical Center,97.1334064,5.1799014,Aceh,Kota Lhokseumawe,Beroperasi,Banda Sakti,,ok
+Rumah Sakit,RS Umum Daerah Langsa,97.9704,4.4692,Aceh,Kota Langsa,Beroperasi,Langsa Kota,,ok
+Rumah Sakit,RS Cut Nyak Dhien Langsa,97.9475,4.48793,Aceh,Kota Langsa,Beroperasi,Langsa Baro,,ok
+Rumah Sakit,RS Umum Cut Meutia,97.9474,4.48803,Aceh,Kota Langsa,Beroperasi,Langsa Baro,,ok
+Rumah Sakit,RS Umum Ummi Langsa,97.9883,4.46853,Aceh,Kota Langsa,Beroperasi,Langsa Kota,,ok
+Rumah Sakit,RS Ibu dan Anak Ummi Langsa,97.9552273,4.4974749,Aceh,Kota Langsa,Beroperasi,Langsa Baro,,ok
+Rumah Sakit,RS Umum Daerah Kota Subulussalam,98.0099,2.63953,Aceh,Kota Subulussalam,Beroperasi,Simpang Kiri,,ok
+Rumah Sakit,RS Cahaya Sehat,97.1731982,3.2548345,Aceh,Aceh Selatan,Beroperasi,,Lhokkeutapang,ok
+Rumah Sakit,RS Tanoh Gayo,98.66117,3.56188,Aceh,Gayo Lues,Beroperasi,Medan Baru,Padang Bulan,ok
+Rumah Sakit,RS Gayo Medical Centre,96.83437,4.65092,Aceh,Aceh Tengah,Beroperasi,,Payatumpi Satu,ok
+Rumah Sakit,RS Hermina Aceh,95.3441,5.51168,Aceh,Aceh Besar,Beroperasi,,Meunasahmanyet,ok
+Puskesmas,Blang Mangat,"9,716,711","511,345",Aceh,Kota Lhokseumawe,Beroperasi,,,invalid_coords
+Puskesmas,Mila,"959,184","530,221",Aceh,Pidie,Beroperasi,,,invalid_coords
+Puskesmas,Simpang Kanan,"9,802,234","423,484",Aceh,Aceh Singkil,Beroperasi,,,invalid_coords
+Puskesmas,Beutong,"9,640,755","425,085",Aceh,Nagan Raya,Beroperasi,,,invalid_coords
+Puskesmas,Bendahara,"9,816,802","439,695",Aceh,Aceh Tamiang,Beroperasi,,,invalid_coords
+Puskesmas,Simpang Kiri,"9,801,384","264,547",Aceh,Kota Subulussalam,Beroperasi,,,invalid_coords
+Puskesmas,Blangkejeren,"9,697,425","357,651",Aceh,Aceh Selatan,Beroperasi,,,invalid_coords
+Puskesmas,Singkil,"9,778,888","226,176",Aceh,Aceh Singkil,Beroperasi,,,invalid_coords
+Puskesmas,Bebesen,"9,683,881","463,691",Aceh,Aceh Tengah,Beroperasi,,,invalid_coords
+Puskesmas,Nurussalam,"9,766,364","49,771",Aceh,Aceh Timur,Beroperasi,,,no_data
+Puskesmas,Kluet Utara,"9,734,187","308,666",Aceh,Aceh Selatan,Beroperasi,,,invalid_coords
+Puskesmas,Langkahan,"9,747,006","495,497",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Samalanga,"9,637,624","520,572",Aceh,Bireuen,Beroperasi,,,invalid_coords
+Puskesmas,Mamas,"977,644","355,585",Aceh,Aceh Tenggara,Beroperasi,,,invalid_coords
+Puskesmas,Baitussalam,"9,536,013","559,198",Aceh,Aceh Besar,Beroperasi,,,invalid_coords
+Puskesmas,Makmur,"9,669,225","460,394",Aceh,Bireuen,Beroperasi,,,invalid_coords
+Puskesmas,Langsa Baro,"9,799,123","449,397",Aceh,Kota Langsa,Beroperasi,,,invalid_coords
+Puskesmas,Kenyaran,"9,720,079","414,809",Aceh,Gayo Lues,Beroperasi,,,invalid_coords
+Puskesmas,Suro,"9,802,792","250,648",Aceh,Aceh Singkil,Beroperasi,,,invalid_coords
+Puskesmas,Kota Jantho,"9,558,605","53,013",Aceh,Aceh Besar,Beroperasi,,,no_data
+Puskesmas,Sultan Daulat,"9,794,258","287,036",Aceh,Kota Subulussalam,Beroperasi,,,invalid_coords
+Puskesmas,Peunaron,"9,767,724","458,414",Aceh,Aceh Timur,Beroperasi,,,invalid_coords
+Puskesmas,Blang Cut,"971,623","513,647",Aceh,Kota Lhokseumawe,Beroperasi,,,invalid_coords
+Puskesmas,Glumpang Tiga,"9,604,229","526,808",Aceh,Pidie,Beroperasi,,,invalid_coords
+Puskesmas,Indrapuri,"954,482","541,859",Aceh,Aceh Besar,Beroperasi,,,invalid_coords
+Puskesmas,Dewantara,"9,700,086","524,831",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Menggamat,"97,374","3,22",Aceh,Aceh Selatan,Beroperasi,,Koto,ok
+Puskesmas,Padang Tiji,"958,736","541,105",Aceh,Pidie,Beroperasi,,,invalid_coords
+Puskesmas,Natam,"9,777,015","356,335",Aceh,Aceh Tenggara,Beroperasi,,,invalid_coords
+Puskesmas,Syamtalira Aron,"9,725,556","510,589",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Kota Sigli,"959,408","536,098",Aceh,Pidie,Beroperasi,,,invalid_coords
+Puskesmas,Lampahan,"9,677,387","476,217",Aceh,Bener Meriah,Beroperasi,,,invalid_coords
+Puskesmas,Bandar,"9,691,666","475,875",Aceh,Bener Meriah,Beroperasi,,,invalid_coords
+Puskesmas,Lueng Kebeu Jagad,"964,127","391,432",Aceh,Nagan Raya,Beroperasi,,,invalid_coords
+Puskesmas,Glumpang Baro,"9,602,276","527,147",Aceh,Pidie,Beroperasi,,,invalid_coords
+Puskesmas,Seubadeh,"9,755,364","289,884",Aceh,Aceh Selatan,Beroperasi,,,invalid_coords
+Puskesmas,Tangse,"9,591,621","501,726",Aceh,Pidie,Beroperasi,,,invalid_coords
+Puskesmas,Meurah Dua,"9,625,805","523,145",Aceh,Pidie Jaya,Beroperasi,,,invalid_coords
+Puskesmas,Peureulak,"9,789,109","478,471",Aceh,Aceh Timur,Beroperasi,,,invalid_coords
+Puskesmas,Matang Pudeng,"9,749,214","508,922",Aceh,Aceh Timur,Beroperasi,,,invalid_coords
+Puskesmas,Seleleh,"9,799,602","434,689",Aceh,Aceh Tamiang,Beroperasi,,,invalid_coords
+Puskesmas,Simpang Jernih,"9,776,225","435,108",Aceh,Aceh Timur,Beroperasi,,,invalid_coords
+Puskesmas,Tangkeh,"96,061","4,438",Aceh,Aceh Barat,Beroperasi,,Tangkeh,ok
+Puskesmas,Lawe Sumur,"9,789,904","332,571",Aceh,Aceh Tenggara,Beroperasi,,,invalid_coords
+Puskesmas,Mane,"9,607,201","487,028",Aceh,Pidie,Beroperasi,,,invalid_coords
+Puskesmas,Pante Ceureumen,"96,299","4,415",Aceh,Aceh Barat,Beroperasi,,Panteceureumen,ok
+Puskesmas,Tiro,"9,599,111","513,468",Aceh,Pidie,Beroperasi,,,invalid_coords
+Puskesmas,Peureulak Barat,"978,758","48,649",Aceh,Aceh Timur,Beroperasi,,,invalid_coords
+Puskesmas,Kuala Tadu,"9,630,742","397,134",Aceh,Nagan Raya,Beroperasi,,,invalid_coords
+Puskesmas,Kuala Baru,"9,620,564","257,967",Aceh,Aceh Singkil,Beroperasi,,,invalid_coords
+Puskesmas,Cubo,"9,611,454","522,286",Aceh,Pidie Jaya,Beroperasi,,,invalid_coords
+Puskesmas,Cot Girek,"9,736,647","476,853",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Pegasing,"9,683,717","459,313",Aceh,Aceh Tengah,Beroperasi,,,invalid_coords
+Puskesmas,Mon Geudong,"9,713,884","51,749",Aceh,Kota Lhokseumawe,Beroperasi,,,no_data
+Puskesmas,Simpang Tiga,"9,749,035","503,287",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Nisam,"9,702,172","516,819",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Singkil Utara,"9,792,352","227,997",Aceh,Aceh Singkil,Beroperasi,,,invalid_coords
+Puskesmas,Ketol,"9,674,026","468,362",Aceh,Aceh Tengah,Beroperasi,,,invalid_coords
+Puskesmas,Mesjid Raya,"955,168","559,369",Aceh,Aceh Besar,Beroperasi,,,invalid_coords
+Puskesmas,Delima,"959,999","528,396",Aceh,Pidie,Beroperasi,,,invalid_coords
+Puskesmas,Kuala,"9,671,083","523,612",Aceh,Bireuen,Beroperasi,,,invalid_coords
+Puskesmas,Baktiya,"9,704,425","514,331",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Pandrah,"9,646,176","518,254",Aceh,Bireuen,Beroperasi,,,invalid_coords
+Puskesmas,Cot Seumereung,"96,069","4,228",Aceh,Aceh Barat,Beroperasi,,Cotseumeureung,ok
+Puskesmas,Tapaktuan,"97,374","327,541",Aceh,Aceh Selatan,Beroperasi,,,invalid_coords
+Puskesmas,Lawe Perbunga,"9,795,735","329,832",Aceh,Aceh Tenggara,Beroperasi,,,invalid_coords
+Puskesmas,Lhoksukon,"9,732,808","504,544",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Ladang Rimba,"9,765,273","289,261",Aceh,Aceh Selatan,Beroperasi,,,invalid_coords
+Puskesmas,Darul Falah,"9,763,388","501,222",Aceh,Aceh Timur,Beroperasi,,,invalid_coords
+Puskesmas,Piyeung,"9,526,317","527,026",Aceh,Aceh Besar,Beroperasi,,,invalid_coords
+Puskesmas,Lhok Beuringen,"9,747,422","506,761",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Buloh Seuma,"9,766,072","254,864",Aceh,Aceh Selatan,Beroperasi,,,invalid_coords
+Puskesmas,Peureulak Timur,"9,790,005","471,176",Aceh,Aceh Timur,Beroperasi,,,invalid_coords
+Puskesmas,Terangun,"9,706,524","407,679",Aceh,Gayo Lues,Beroperasi,,,invalid_coords
+Puskesmas,Sukamakmur,"9,538,333","546,588",Aceh,Aceh Besar,Beroperasi,,,invalid_coords
+Puskesmas,Seulimeum,"9,557,539","5,365",Aceh,Aceh Besar,Beroperasi,,Seulimeum,ok
+Puskesmas,Simpang Teritit,"9,683,456","468,379",Aceh,Bener Meriah,Beroperasi,,,invalid_coords
+Puskesmas,Gunung Meriah,"979,323","235,217",Aceh,Aceh Singkil,Beroperasi,,,invalid_coords
+Puskesmas,Meukek,"970,582","345,867",Aceh,Aceh Selatan,Beroperasi,,,invalid_coords
+Puskesmas,Ramung,"9,694,831","480,958",Aceh,Bener Meriah,Beroperasi,,,invalid_coords
+Puskesmas,Muara Dua,"9,711,766","517,077",Aceh,Kota Lhokseumawe,Beroperasi,,,invalid_coords
+Puskesmas,Nisam Antara,"9,699,072","508,542",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Uteun Pulo,"9,635,174","427,073",Aceh,Nagan Raya,Beroperasi,,,invalid_coords
+Puskesmas,Kuala Ba'U,"9,731,488","308,427",Aceh,Aceh Selatan,Beroperasi,,,invalid_coords
+Puskesmas,Matangkuli,"9,728,589","504,239",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Peureumeu,"96,174","4,229",Aceh,Aceh Barat,Beroperasi,,Aluetampak,ok
+Puskesmas,Gurgur Pardomuan,"9,793,854","329,867",Aceh,Aceh Tenggara,Beroperasi,,,invalid_coords
+Puskesmas,Muara Tiga,"9,582,238","54,536",Aceh,Pidie,Beroperasi,,,no_data
+Puskesmas,Kandang,"9,713,149","516,468",Aceh,Kota Lhokseumawe,Beroperasi,,,invalid_coords
+Puskesmas,Madat,"9,751,558","510,722",Aceh,Aceh Timur,Beroperasi,,,invalid_coords
+Puskesmas,Ketapang Nusantara,"9,712,469","4,37",Aceh,Aceh Tengah,Beroperasi,,Belanglane,ok
+Puskesmas,Ganda Pura,"9,688,175","523,757",Aceh,Bireuen,Beroperasi,,,invalid_coords
+Puskesmas,Sawang,"9,709,556","339,808",Aceh,Aceh Selatan,Beroperasi,,,invalid_coords
+Puskesmas,Kuta Padang Layung,"96,086","4,295",Aceh,Aceh Barat,Beroperasi,,Kutapadang,ok
+Puskesmas,Sekerak,"97,852","42,679",Aceh,Aceh Tamiang,Beroperasi,额济纳旗 ᠡᠵᠡᠨ᠎ᠡ ᠬᠣᠰᠢᠭᠤ,,ok
+Puskesmas,Bandar Pusaka,"9,788,171","428,422",Aceh,Aceh Tamiang,Beroperasi,,,invalid_coords
+Puskesmas,Krueng Barona Jaya,"9,536,328","555,726",Aceh,Aceh Besar,Beroperasi,,,invalid_coords
+Puskesmas,Sungai Raya,"9,792,323","466,751",Aceh,Aceh Timur,Beroperasi,,,invalid_coords
+Puskesmas,Julok,"9,759,485","506,721",Aceh,Aceh Timur,Beroperasi,,,invalid_coords
+Puskesmas,Kuta Baro,"9,539,855","553,174",Aceh,Aceh Besar,Beroperasi,,,invalid_coords
+Puskesmas,Batee,"959,031","538,971",Aceh,Pidie,Beroperasi,,,invalid_coords
+Puskesmas,Karang Baru,"9,806,912","433,249",Aceh,Aceh Tamiang,Beroperasi,,,invalid_coords
+Puskesmas,Darul Aman,"9,771,611","498,694",Aceh,Aceh Timur,Beroperasi,,,invalid_coords
+Puskesmas,Blang Rakal,"9,674,455","485,106",Aceh,Bener Meriah,Beroperasi,,,invalid_coords
+Puskesmas,Ulim,"9,628,406","52,276",Aceh,Pidie Jaya,Beroperasi,,,no_data
+Puskesmas,Lawe Sigala-Gala,"9,791,767","335,033",Aceh,Aceh Tenggara,Beroperasi,,,invalid_coords
+Puskesmas,Paya Bakong,"9,724,228","499,822",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Langsa Lama,"9,797,354","444,805",Aceh,Kota Langsa,Beroperasi,,,invalid_coords
+Puskesmas,Titeue,"9,589,894","524,203",Aceh,Pidie,Beroperasi,,,invalid_coords
+Puskesmas,Durian Kawan,"9,737,382","308,456",Aceh,Aceh Selatan,Beroperasi,,,invalid_coords
+Puskesmas,Buket Hagu,"9,734,175","477,653",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Bies,"9,679,768","460,156",Aceh,Aceh Tengah,Beroperasi,,,invalid_coords
+Puskesmas,Nibong,"9,724,078","506,311",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Mutiara Barat,"9,594,289","527,137",Aceh,Pidie,Beroperasi,,,invalid_coords
+Puskesmas,Rantau Selamat,"9,790,833","45,886",Aceh,Aceh Timur,Beroperasi,,,no_data
+Puskesmas,Geureudong Pase,"9,712,442","499,731",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Seunudon,"9,743,714","517,483",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Kuta Krueng,"9,633,216","520,431",Aceh,Pidie Jaya,Beroperasi,,,invalid_coords
+Puskesmas,Krueng Luas,"9,774,622","2,866",Aceh,Aceh Selatan,Beroperasi,,Kruengluas,ok
+Puskesmas,Rantau,"9,809,859","433,747",Aceh,Aceh Tamiang,Beroperasi,,,invalid_coords
+Puskesmas,Leubok Pempeng,"9,789,113","480,366",Aceh,Aceh Timur,Beroperasi,,,invalid_coords
+Puskesmas,Simpang Tiga,"9,535,065","54,712",Aceh,Aceh Besar,Beroperasi,,,no_data
+Puskesmas,Tanah Pasir,"9,725,711","513,864",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Bandar Dua,"9,631,715","519,995",Aceh,Pidie Jaya,Beroperasi,,,invalid_coords
+Puskesmas,Banda Sakti,"9,713,416","519,777",Aceh,Kota Lhokseumawe,Beroperasi,,,invalid_coords
+Puskesmas,Longkib,"9,783,519","2,544",Aceh,Kota Subulussalam,Beroperasi,,Longkip,ok
+Puskesmas,Reubee,"9,588,274","535,045",Aceh,Pidie,Beroperasi,,,invalid_coords
+Puskesmas,Blang Geulumpang,"9,737,181","519,147",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Biak Muli,"9,783,617","344,316",Aceh,Aceh Tenggara,Beroperasi,,,invalid_coords
+Puskesmas,Keumala,"9,588,245","522,907",Aceh,Pidie,Beroperasi,,,invalid_coords
+Puskesmas,Bakongan,"974,716","292,691",Aceh,Aceh Selatan,Beroperasi,,,invalid_coords
+Puskesmas,Juli,"9,671,842","516,683",Aceh,Bireuen,Beroperasi,,,invalid_coords
+Puskesmas,Alue Bilie,"9,648,583","403,788",Aceh,Nagan Raya,Beroperasi,,,invalid_coords
+Puskesmas,Darul Kamal,"9,533,838","547,775",Aceh,Aceh Besar,Beroperasi,,,invalid_coords
+Puskesmas,Pining,"9,746,321","405,943",Aceh,Gayo Lues,Beroperasi,,,invalid_coords
+Puskesmas,Indrajaya,"9,594,523","532,014",Aceh,Pidie,Beroperasi,,,invalid_coords
+Puskesmas,Labuhan Haji,"9,700,243","354,925",Aceh,Aceh Selatan,Beroperasi,,,invalid_coords
+Puskesmas,Idi Tunong,"9,772,494","492,167",Aceh,Aceh Timur,Beroperasi,,,invalid_coords
+Puskesmas,Rundeng,"9,785,344","266,065",Aceh,Kota Subulussalam,Beroperasi,,,invalid_coords
+Puskesmas,Meureudu,"9,624,665","525,147",Aceh,Pidie Jaya,Beroperasi,,,invalid_coords
+Puskesmas,Bener Kelipah,"9,692,503","477,442",Aceh,Bener Meriah,Beroperasi,,,invalid_coords
+Puskesmas,Kebayakan,"9,684,901","463,954",Aceh,Aceh Tengah,Beroperasi,,,invalid_coords
+Puskesmas,Kuta Makmur,"9,708,553","512,094",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Ronga Ronga,"9,674,138","482,045",Aceh,Bener Meriah,Beroperasi,,,invalid_coords
+Puskesmas,Jeuram,"9,630,688","423,237",Aceh,Nagan Raya,Beroperasi,,,invalid_coords
+Puskesmas,Rerebe,"970,325","41,316",Aceh,Gayo Lues,Beroperasi,,,invalid_coords
+Puskesmas,Mesidah,"9,707,835","475,482",Aceh,Bener Meriah,Beroperasi,,,invalid_coords
+Puskesmas,Simpang 4 Nyong,"9,604,653","525,689",Aceh,Pidie Jaya,Beroperasi,,,invalid_coords
+Puskesmas,Linge,"9,685,218","448,989",Aceh,Aceh Tengah,Beroperasi,,,invalid_coords
+Puskesmas,Sungai Iyu,"9,809,522","437,262",Aceh,Aceh Tamiang,Beroperasi,,,invalid_coords
+Puskesmas,Lhoong,"9,524,772","525,719",Aceh,Aceh Besar,Beroperasi,,,invalid_coords
+Puskesmas,Jangka,"9,678,011","525,606",Aceh,Bireuen,Beroperasi,,,invalid_coords
+Puskesmas,Ingin Jaya,"9,535,674","551,562",Aceh,Aceh Besar,Beroperasi,,,invalid_coords
+Puskesmas,Samudera,"9,720,417","512,689",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Muara Satu,"9,707,706","51,957",Aceh,Kota Lhokseumawe,Beroperasi,,,no_data
+Puskesmas,Mentulang,"96,208","4,402",Aceh,Aceh Barat,Beroperasi,,Meutulang,ok
+Puskesmas,Simpang Jaya,"9,637,632","414,301",Aceh,Nagan Raya,Beroperasi,,,invalid_coords
+Puskesmas,Kekuyang,"9,692,535","459,468",Aceh,Aceh Tengah,Beroperasi,,,invalid_coords
+Puskesmas,Cot Kuta,"9,630,653","423,152",Aceh,Nagan Raya,Beroperasi,,,invalid_coords
+Puskesmas,Pante Raya,"9,681,152","473,634",Aceh,Bener Meriah,Beroperasi,,,invalid_coords
+Puskesmas,Cinta Maju,"9,731,612","397,385",Aceh,Gayo Lues,Beroperasi,,,invalid_coords
+Puskesmas,Batu-Batu,"979,606,012","27,174,812",Aceh,Kota Subulussalam,Beroperasi,,,invalid_coords
+Puskesmas,Peukan Baro,"9,713,778","516,163",Aceh,Pidie,Beroperasi,,,invalid_coords
+Puskesmas,Celala,"9,668,768","460,124",Aceh,Aceh Tengah,Beroperasi,,,invalid_coords
+Puskesmas,Kute Panang,"9,679,994","467,925",Aceh,Aceh Tengah,Beroperasi,,,invalid_coords
+Puskesmas,Alue Ie Mirah,"9,759,097","492,091",Aceh,Aceh Timur,Beroperasi,,,invalid_coords
+Puskesmas,Bintang,"9,701,846","460,532",Aceh,Aceh Tengah,Beroperasi,,,invalid_coords
+Puskesmas,Leuser,"9,796,338","311,995",Aceh,Aceh Tenggara,Beroperasi,,,invalid_coords
+Puskesmas,Drien Rampak,"95,968","4,312",Aceh,Aceh Barat,Beroperasi,,Drienrampak,ok
+Puskesmas,Simpang Kramat,"9,712,542","50,895",Aceh,Aceh Utara,Beroperasi,,,no_data
+Puskesmas,Padang Rubek,"9,622,381","407,581",Aceh,Nagan Raya,Beroperasi,,,invalid_coords
+Puskesmas,Kuala Bhee,"96,047","4,385",Aceh,Aceh Barat,Beroperasi,,Tingkeumpanyang,ok
+Puskesmas,Lhoknga,"9,527,773","543,518",Aceh,Aceh Besar,Beroperasi,,,invalid_coords
+Puskesmas,Naga Timbul,"9,796,914","310,161",Aceh,Aceh Tenggara,Beroperasi,,,invalid_coords
+Puskesmas,Simpang Ulim,"9,753,301","510,581",Aceh,Aceh Timur,Beroperasi,,,invalid_coords
+Puskesmas,Perkebunan Inti Alue Ie Itam,"9,759,097","492,091",Aceh,Aceh Timur,Beroperasi,,,invalid_coords
+Puskesmas,Lamteuba,"9,560,159","544,204",Aceh,Aceh Besar,Beroperasi,,,invalid_coords
+Puskesmas,Peusangan Selatan,"9,677,902","50,024",Aceh,Bireuen,Beroperasi,,,no_data
+Puskesmas,Babah Buloh,"968,931","512,545",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Geumpang,"9,612,571","484,441",Aceh,Pidie,Beroperasi,,,invalid_coords
+Puskesmas,Montasik,"9,542,413","546,057",Aceh,Aceh Besar,Beroperasi,,,invalid_coords
+Puskesmas,Suka Mulia,"9,653,143","394,965",Aceh,Nagan Raya,Beroperasi,,,invalid_coords
+Puskesmas,Kejuruan Muda,"9,806,385","423,694",Aceh,Aceh Tamiang,Beroperasi,,,invalid_coords
+Puskesmas,Padang Panyang,"9,629,306","403,446",Aceh,Nagan Raya,Beroperasi,,,invalid_coords
+Puskesmas,Kuta Blang,"9,683,043","52,108",Aceh,Bireuen,Beroperasi,,,no_data
+Puskesmas,Cot Ie Jue,"9,675,521","520,433",Aceh,Bireuen,Beroperasi,,,invalid_coords
+Puskesmas,Gumpang,"9,752,626","383,942",Aceh,Gayo Lues,Beroperasi,,,invalid_coords
+Puskesmas,Tanah Jambo Aye,"9,705,969","500,539",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Beutong Ateuh,"9,651,054","447,066",Aceh,Nagan Raya,Beroperasi,,,invalid_coords
+Puskesmas,Darul Ihsan,"9,775,853","492,955",Aceh,Aceh Timur,Beroperasi,,,invalid_coords
+Puskesmas,Deleng Pokhkisen,"9,781,813","351,201",Aceh,Aceh Tenggara,Beroperasi,,,invalid_coords
+Puskesmas,Kuta Malaka,"9,548,121","534,644",Aceh,Aceh Besar,Beroperasi,,,invalid_coords
+Puskesmas,Banda Mulia,"979,915","435,494",Aceh,Aceh Tamiang,Beroperasi,,,invalid_coords
+Puskesmas,Meurah Mulia,"9,720,586","506,061",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Bukit Gadeng,"975,088","297,898",Aceh,Aceh Selatan,Beroperasi,,,invalid_coords
+Puskesmas,Jagong,"9,677,367","436,116",Aceh,Aceh Tengah,Beroperasi,,,invalid_coords
+Puskesmas,Lembah Seulawah,"9,571,471","547,241",Aceh,Aceh Besar,Beroperasi,,,invalid_coords
+Puskesmas,Jontor,"9,807,813","26,072",Aceh,Kota Subulussalam,Beroperasi,,ဂါတ်ရိုင်ယန်,ok
+Puskesmas,Banda Baro,"9,698,636","521,292",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Sawang,"9,689,842","514,306",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Pirak Timu,"9,728,103","500,531",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Lapang,"9,730,328","516,919",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Kuta Cot Glie,"9,551,804","540,056",Aceh,Aceh Besar,Beroperasi,,,invalid_coords
+Puskesmas,Bandar Baru,"9,605,995","525,452",Aceh,Pidie Jaya,Beroperasi,,,invalid_coords
+Puskesmas,Buntul Keumumu,"9,691,782","482,897",Aceh,Bener Meriah,Beroperasi,,,invalid_coords
+Puskesmas,Kluet Timur,"97,374","3,085",Aceh,Aceh Selatan,Beroperasi,,Payadapur,ok
+Puskesmas,Birem Bayeun,"9,794,074","453,267",Aceh,Aceh Timur,Beroperasi,,,invalid_coords
+Puskesmas,Ujong Fatihah,"9,632,163","412,177",Aceh,Nagan Raya,Beroperasi,,,invalid_coords
+Puskesmas,Baktiya Barat,"9,737,319","512,033",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Sakti,"9,594,029","525,419",Aceh,Pidie,Beroperasi,,,invalid_coords
+Puskesmas,Kembang Tanjong,"9,601,688","530,411",Aceh,Pidie,Beroperasi,,,invalid_coords
+Puskesmas,Pintu Rime,"9,758,992","410,974",Aceh,Gayo Lues,Beroperasi,,,invalid_coords
+Puskesmas,Penanggalan,"9,802,686","261,824",Aceh,Kota Subulussalam,Beroperasi,,,invalid_coords
+Puskesmas,Idi Timur,"9,780,028","491,278",Aceh,Aceh Timur,Beroperasi,,,invalid_coords
+Puskesmas,Muara Batu,"9,692,533","525,367",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Seruway,"9,817,783","435,744",Aceh,Aceh Tamiang,Beroperasi,,,invalid_coords
+Puskesmas,Peusangan Siblah Krueng,"9,677,902","50,024",Aceh,Bireuen,Beroperasi,,,no_data
+Puskesmas,Idi Rayeuk,"9,778,202","494,441",Aceh,Aceh Timur,Beroperasi,,,invalid_coords
+Puskesmas,Jeunieb,"9,650,631","518,941",Aceh,Bireuen,Beroperasi,,,invalid_coords
+Puskesmas,Blangkejeren,"9,733,863","396,617",Aceh,Gayo Lues,Beroperasi,,,invalid_coords
+Puskesmas,Lut Tawar,"9,684,898","462,483",Aceh,Aceh Tengah,Beroperasi,,,invalid_coords
+Puskesmas,Kuala Simpang,"9,806,003","42,918",Aceh,Aceh Tamiang,Beroperasi,,,no_data
+Puskesmas,Keude Geurobak,"9,769,653","490,754",Aceh,Aceh Timur,Beroperasi,,,invalid_coords
+Puskesmas,Rikit Gaib,"9,725,538","410,974",Aceh,Gayo Lues,Beroperasi,,,invalid_coords
+Puskesmas,Peudada,"9,659,189","51,998",Aceh,Bireuen,Beroperasi,,,no_data
+Puskesmas,Kajeung,"96,099","4,516",Aceh,Aceh Barat,Beroperasi,,Tuwisaya,ok
+Puskesmas,Tanah Luas,"9,727,472","506,744",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Jangka Buya,"9,632,128","522,231",Aceh,Pidie Jaya,Beroperasi,,,invalid_coords
+Puskesmas,Teupien Raya,"9,604,539","525,464",Aceh,Pidie,Beroperasi,,,invalid_coords
+Puskesmas,Ujong Padang Rasian,"973,044","31,554",Aceh,Aceh Selatan,Beroperasi,,,invalid_coords
+Puskesmas,Pulo Teungoh,"9,655,982","398,205",Aceh,Nagan Raya,Beroperasi,,,invalid_coords
+Puskesmas,Pulo Aceh,"9,512,071","568,026",Aceh,Aceh Besar,Beroperasi,,,invalid_coords
+Puskesmas,Pidie,"9,593,631","538,361",Aceh,Pidie,Beroperasi,,,invalid_coords
+Puskesmas,Pasi Mali,"96,015","4,346",Aceh,Aceh Barat,Beroperasi,,Cotlagan,ok
+Puskesmas,Atu Lintang,"967,925","446,414",Aceh,Aceh Tengah,Beroperasi,,,invalid_coords
+Puskesmas,Meureubo,"96,153","4,15",Aceh,Aceh Barat,Beroperasi,,Meureubo,ok
+Puskesmas,Kuta Tinggi,"9,807,122","244,681",Aceh,Aceh Singkil,Beroperasi,,,invalid_coords
+Puskesmas,Pulau Banyak,"9,739,932","230,692",Aceh,Aceh Singkil,Beroperasi,,,invalid_coords
+Puskesmas,Peukan Bada,"952,527","552,894",Aceh,Aceh Besar,Beroperasi,,,invalid_coords
+Puskesmas,Jeumpa,"9,664,445","520,232",Aceh,Bireuen,Beroperasi,,,invalid_coords
+Puskesmas,Trienggadeng,"9,618,751","525,397",Aceh,Pidie Jaya,Beroperasi,,,invalid_coords
+Puskesmas,Dabun Gelang,"973,544","401,792",Aceh,Gayo Lues,Beroperasi,,,invalid_coords
+Puskesmas,Blang Bintang,"9,541,341","551,709",Aceh,Aceh Besar,Beroperasi,,,invalid_coords
+Puskesmas,Peulimbang,"9,653,182","518,648",Aceh,Bireuen,Beroperasi,,,invalid_coords
+Puskesmas,Drien Jalo,"970,724","348,959",Aceh,Aceh Selatan,Beroperasi,,,invalid_coords
+Puskesmas,Babussalam,"974,924","32,803",Aceh,Aceh Tenggara,Beroperasi,,,invalid_coords
+Puskesmas,Kuta Baharu,"9,787,802","245,409",Aceh,Aceh Singkil,Beroperasi,,,invalid_coords
+Puskesmas,Blangjerango,"9,728,057","402,103",Aceh,Gayo Lues,Beroperasi,,,invalid_coords
+Puskesmas,Trumon,"9,762,468","282,815",Aceh,Aceh Selatan,Beroperasi,,,invalid_coords
+Puskesmas,Kota Kutacane,"9,781,007","348,629",Aceh,Aceh Tenggara,Beroperasi,,,invalid_coords
+Puskesmas,Peudawa,"9,780,758","488,303",Aceh,Aceh Timur,Beroperasi,,,invalid_coords
+Puskesmas,Suak Ribee,"96,117","4,154",Aceh,Aceh Barat,Beroperasi,,Suakribee,ok
+Puskesmas,Mutiara,"95,992","528,554",Aceh,Pidie,Beroperasi,,,invalid_coords
+Puskesmas,Ngkeran,"9,782,549","342,574",Aceh,Aceh Tenggara,Beroperasi,,,invalid_coords
+Puskesmas,Simpang Tiga,"9,688,189","473,458",Aceh,Bener Meriah,Beroperasi,,,invalid_coords
+Puskesmas,Syamtalira Bayu,"97,186","511,764",Aceh,Aceh Utara,Beroperasi,,,invalid_coords
+Puskesmas,Lawe Dua,"9,788,005","342,632",Aceh,Aceh Tenggara,Beroperasi,,,invalid_coords
+Puskesmas,Pamar,"9,636,483","467,063",Aceh,Aceh Tengah,Beroperasi,,,invalid_coords
+Puskesmas,Pante Bidari,"9,752,061","50,614",Aceh,Aceh Timur,Beroperasi,,,no_data
+Puskesmas,Bakal Buah,"9,793,214","267,982",Aceh,Kota Subulussalam,Beroperasi,,,invalid_coords
+Puskesmas,Silih Nara,"9,672,393","462,357",Aceh,Aceh Tengah,Beroperasi,,,invalid_coords
+Puskesmas,Alue Rambot,"9,668,372","402,769",Aceh,Nagan Raya,Beroperasi,,,invalid_coords
+Puskesmas,Sapta Jaya,"9,812,481","426,373",Aceh,Aceh Tamiang,Beroperasi,,,invalid_coords
+Puskesmas,Langsa Barat,"9,797,083","452,187",Aceh,Kota Langsa,Beroperasi,,,invalid_coords
+Puskesmas,Kuta Panjang,"9,728,057","402,103",Aceh,Gayo Lues,Beroperasi,,,invalid_coords
+Puskesmas,Samar Kilang,"9,727,499","467,654",Aceh,Bener Meriah,Beroperasi,,,invalid_coords
+Puskesmas,Pante Raja,"9,613,492","527,368",Aceh,Pidie Jaya,Beroperasi,,,invalid_coords
+Puskesmas,Langsa Kota,"9,795,023","447,573",Aceh,Kota Langsa,Beroperasi,,,invalid_coords
+Puskesmas,Kutambaru,"9,783,561","348,513",Aceh,Aceh Tenggara,Beroperasi,,,invalid_coords
+Puskesmas,Ie Alang,"9,549,533","541,032",Aceh,Aceh Besar,Beroperasi,,,invalid_coords
+Puskesmas,Lampupok,"954,421","543,691",Aceh,Aceh Besar,Beroperasi,,,invalid_coords
+Puskesmas,Ujong Rimba,"956,417","492,965",Aceh,Pidie,Beroperasi,,,invalid_coords
+Puskesmas,Darussalam,"9,539,761","558,893",Aceh,Aceh Besar,Beroperasi,,,invalid_coords
+Puskesmas,Lampisang,"9,527,244","55,143",Aceh,Aceh Besar,Beroperasi,,Тугач,ok
+Puskesmas,Tamiang Hulu,"97,859","416,846",Aceh,Aceh Tamiang,Beroperasi,,,invalid_coords
+Puskesmas,Tanoh Alas,"9,797,339","328,405",Aceh,Aceh Tenggara,Beroperasi,,,invalid_coords
+Puskesmas,Singkohor,"9,795,854","252,812",Aceh,Aceh Singkil,Beroperasi,,,invalid_coords
+Puskesmas,Juli-2,"9,667,098","514,378",Aceh,Bireuen,Beroperasi,,,invalid_coords
+Puskesmas,Kluet Selatan,"9,732,345","305,696",Aceh,Aceh Selatan,Beroperasi,,,invalid_coords
+Puskesmas,Ladang Tuha,"9,728,007","319,417",Aceh,Aceh Selatan,Beroperasi,,,invalid_coords
+Puskesmas,Lhok Bengkuang,"9,719,714","325,868",Aceh,Aceh Selatan,Beroperasi,,,invalid_coords
+Puskesmas,Johan Pahlawan,"96,133","4,147",Aceh,Aceh Barat,Beroperasi,,,no_data
+Puskesmas,Darul Imarah,"9,532,692","53,046",Aceh,Aceh Besar,Beroperasi,,,no_data
+Puskesmas,Mon Keulayu,"9,636,483","522,753",Aceh,Bireuen,Beroperasi,,,invalid_coords
+Puskesmas,Simpang Kiri,"97,984","41,112",Aceh,Aceh Tamiang,Beroperasi,额济纳旗 ᠡᠵᠡᠨ᠎ᠡ ᠬᠣᠰᠢᠭᠤ,,ok
+Puskesmas,Langsa Timur,"9,801,754","445,561",Aceh,Kota Langsa,Beroperasi,,,invalid_coords
+Puskesmas,Ranto Peureulak,"9,782,304","480,555",Aceh,Aceh Timur,Beroperasi,,,invalid_coords
+Puskesmas,Danau Paris,"9,813,297","223,924",Aceh,Aceh Singkil,Beroperasi,,,invalid_coords
+Puskesmas,Blang Kuta,"9,627,843","518,216",Aceh,Pidie Jaya,Beroperasi,,,invalid_coords
+Puskesmas,Pulau Banyak Barat,"9,729,405","21,347",Aceh,Aceh Singkil,Beroperasi,,,no_data
+Puskesmas,Uning Sigur-Gur,"9,789,634","3,333",Aceh,Aceh Tenggara,Beroperasi,,Uningsigugur,ok
+Puskesmas,Simpang Mamplam,"964,192","517,615",Aceh,Bireuen,Beroperasi,,,invalid_coords
+Puskesmas,Grong-Grong,"9,771,062","499,212",Aceh,Pidie,Beroperasi,,,invalid_coords
+Puskesmas,Suka Makmur,"9,770,646","339,152",Aceh,Aceh Tenggara,Beroperasi,,,invalid_coords
+Puskesmas,Leupung,"9,524,382","534,317",Aceh,Aceh Besar,Beroperasi,,,invalid_coords
+Puskesmas,Manyak Payed,"9,807,554","439,921",Aceh,Aceh Tamiang,Beroperasi,,,invalid_coords
+Puskesmas,Kota Juang,"9,672,611","519,641",Aceh,Bireuen,Beroperasi,,,invalid_coords
+Puskesmas,Samadua,"971,478","330,856",Aceh,Aceh Selatan,Beroperasi,,,invalid_coords
+Puskesmas,Peulumat,"9,703,249","35,038",Aceh,Aceh Selatan,Beroperasi,,,no_data
+Puskesmas,Singah Mulo,"9,673,417","490,973",Aceh,Bener Meriah,Beroperasi,,,invalid_coords
+Puskesmas,Kampung Paya,"9,736,872","311,173",Aceh,Aceh Selatan,Beroperasi,,,invalid_coords
+Puskesmas,Darussalam,"953,975,525","55,888,732",Aceh,Aceh Selatan,Beroperasi,,,invalid_coords
+Puskesmas,Sedar,"971,295,617","33,216,884",Aceh,Aceh Selatan,Beroperasi,,,invalid_coords
+Puskesmas,Simpang Tiga,"95,990,453","53,515,085",Aceh,Pidie,Beroperasi,,,invalid_coords

@@ -13,6 +13,10 @@ export interface LocationFeature {
     type: string
     status: string
     alamat_singkat?: string
+    nama_provinsi?: string
+    nama_kota_kab?: string
+    nama_kecamatan?: string
+    nama_desa?: string
     jumlah_kk: number
     total_jiwa: number
     updated_at: string
@@ -126,6 +130,11 @@ export interface FeedFilter {
   location_name?: string
   search?: string
   since?: string // ISO date string for filtering feeds since a date
+  // Region filters
+  provinsi?: string
+  kota_kab?: string
+  kecamatan?: string
+  desa?: string
   page?: number
   limit?: number
 }
@@ -177,6 +186,10 @@ export interface FaskesFeature {
     status_faskes: string
     kondisi_faskes?: string
     alamat_singkat?: string
+    nama_provinsi?: string
+    nama_kota_kab?: string
+    nama_kecamatan?: string
+    nama_desa?: string
     updated_at: string
   }
 }
@@ -254,6 +267,11 @@ export const api = {
     if (filter?.location_name) params.append('location_name', filter.location_name)
     if (filter?.search) params.append('search', filter.search)
     if (filter?.since) params.append('since', filter.since)
+    // Region filters
+    if (filter?.provinsi) params.append('provinsi', filter.provinsi)
+    if (filter?.kota_kab) params.append('kota_kab', filter.kota_kab)
+    if (filter?.kecamatan) params.append('kecamatan', filter.kecamatan)
+    if (filter?.desa) params.append('desa', filter.desa)
     if (filter?.page) params.append('page', filter.page.toString())
     if (filter?.limit) params.append('limit', filter.limit.toString())
 

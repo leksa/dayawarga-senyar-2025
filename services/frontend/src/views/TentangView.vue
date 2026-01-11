@@ -115,7 +115,7 @@ import { MapPin, BookOpen, Users, Heart, Instagram, Twitter, Code } from 'lucide
             <!-- Fakhrizal -->
             <div class="bg-gray-50 rounded-lg p-4">
               <div class="font-semibold text-gray-900">Fakhrizal</div>
-              <div class="text-sm text-gray-500 mb-2">Developer Platform (Jakarta)</div>
+              <div class="text-sm text-gray-500 mb-2">Pemerhati kebencanaan/Tech Developer (Jakarta)</div>
               <div class="flex gap-4">
                 <a href="https://instagram.com/leksagram" target="_blank" class="flex items-center gap-1.5 text-sm text-gray-600 hover:text-pink-600 transition-colors">
                   <Instagram class="w-4 h-4" />
@@ -147,7 +147,7 @@ import { MapPin, BookOpen, Users, Heart, Instagram, Twitter, Code } from 'lucide
             <!-- Ali -->
             <div class="bg-gray-50 rounded-lg p-4">
               <div class="font-semibold text-gray-900">Ali Mulyagusdin</div>
-              <div class="text-sm text-gray-500 mb-2">Senior Advisor (Aceh)</div>
+              <div class="text-sm text-gray-500 mb-2">Senior Advisor Program Kebencanaan (Aceh)</div>
               <div class="flex gap-4">
                 <a href="https://instagram.com/mulyagusdin" target="_blank" class="flex items-center gap-1.5 text-sm text-gray-600 hover:text-pink-600 transition-colors">
                   <Instagram class="w-4 h-4" />
@@ -240,7 +240,7 @@ import { MapPin, BookOpen, Users, Heart, Instagram, Twitter, Code } from 'lucide
         <section class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-8 text-center text-white">
           <Heart class="w-10 h-10 mx-auto mb-4 opacity-80" />
           <p class="text-lg mb-2">
-            Jika kamu warga, relawan, peneliti, jurnalis, atau bagian dari institusi yang ingin berkontribusi—
+            Jika kamu warga, relawan, tech developer, peneliti, jurnalis, atau bagian dari institusi yang ingin berkontribusi—
           </p>
           <p class="text-2xl font-bold">
             Dayawarga adalah ruangmu juga.

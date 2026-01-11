@@ -33,23 +33,33 @@ func NewPhotoService(db *gorm.DB, odkClient *odk.Client, storagePath string) *Ph
 		log.Printf("Warning: failed to create storage directory: %v", err)
 	}
 
-	return &PhotoService{
+	svc := &PhotoService{
 		db:          db,
 		odkClient:   odkClient,
 		storagePath: storagePath,
 		useS3:       false,
 	}
+
+	// Validate cache on startup - verify files exist for cached photos
+	svc.ValidateCacheOnStartup()
+
+	return svc
 }
 
 // NewPhotoServiceWithS3 creates a new photo service with S3 storage
 func NewPhotoServiceWithS3(db *gorm.DB, odkClient *odk.Client, storagePath string, s3Storage *storage.S3Storage) *PhotoService {
-	return &PhotoService{
+	svc := &PhotoService{
 		db:          db,
 		odkClient:   odkClient,
 		storagePath: storagePath,
 		s3Storage:   s3Storage,
 		useS3:       s3Storage != nil,
 	}
+
+	// Validate cache on startup - verify files exist for cached photos
+	svc.ValidateCacheOnStartup()
+
+	return svc
 }
 
 // DownloadAndSavePhoto downloads a photo from ODK Central and saves it to storage (S3 or local)
@@ -637,6 +647,129 @@ func (s *PhotoService) GetFaskesPhotosByFaskesID(faskesID uuid.UUID) ([]model.Fa
 		return nil, err
 	}
 	return photos, nil
+}
+
+// ========================================
+// CACHE VALIDATION ON STARTUP
+// ========================================
+
+// ValidateCacheOnStartup checks all photos marked as cached and verifies files exist
+// For photos where files exist but is_cached=false, it updates the database
+// For photos where is_cached=true but files are missing, it resets the cache status
+func (s *PhotoService) ValidateCacheOnStartup() {
+	log.Println("Validating photo cache on startup...")
+
+	// Validate location photos
+	locFixed, locReset := s.validateLocationPhotosCache()
+
+	// Validate feed photos
+	feedFixed, feedReset := s.validateFeedPhotosCache()
+
+	// Validate faskes photos
+	faskesFixed, faskesReset := s.validateFaskesPhotosCache()
+
+	log.Printf("Photo cache validation complete: fixed %d, reset %d (location: %d/%d, feed: %d/%d, faskes: %d/%d)",
+		locFixed+feedFixed+faskesFixed,
+		locReset+feedReset+faskesReset,
+		locFixed, locReset,
+		feedFixed, feedReset,
+		faskesFixed, faskesReset)
+}
+
+func (s *PhotoService) validateLocationPhotosCache() (fixed, reset int) {
+	var photos []model.LocationPhoto
+	// Get all photos with storage_path set (both cached and not cached, local files only)
+	if err := s.db.Where("storage_path IS NOT NULL AND storage_path NOT LIKE 'http%'").Find(&photos).Error; err != nil {
+		log.Printf("Warning: failed to fetch location photos for validation: %v", err)
+		return 0, 0
+	}
+
+	for _, photo := range photos {
+		if photo.StoragePath == nil {
+			continue
+		}
+		_, err := os.Stat(*photo.StoragePath)
+		fileExists := err == nil
+
+		if fileExists && !photo.IsCached {
+			// File exists but is_cached is false - fix it
+			photo.IsCached = true
+			if err := s.db.Save(&photo).Error; err == nil {
+				fixed++
+			}
+		} else if !fileExists && photo.IsCached {
+			// File missing but is_cached is true - reset it
+			photo.IsCached = false
+			photo.StoragePath = nil
+			photo.FileSize = nil
+			if err := s.db.Save(&photo).Error; err == nil {
+				reset++
+			}
+		}
+	}
+	return fixed, reset
+}
+
+func (s *PhotoService) validateFeedPhotosCache() (fixed, reset int) {
+	var photos []model.FeedPhoto
+	if err := s.db.Where("storage_path IS NOT NULL AND storage_path NOT LIKE 'http%'").Find(&photos).Error; err != nil {
+		log.Printf("Warning: failed to fetch feed photos for validation: %v", err)
+		return 0, 0
+	}
+
+	for _, photo := range photos {
+		if photo.StoragePath == nil {
+			continue
+		}
+		_, err := os.Stat(*photo.StoragePath)
+		fileExists := err == nil
+
+		if fileExists && !photo.IsCached {
+			photo.IsCached = true
+			if err := s.db.Save(&photo).Error; err == nil {
+				fixed++
+			}
+		} else if !fileExists && photo.IsCached {
+			photo.IsCached = false
+			photo.StoragePath = nil
+			photo.FileSize = nil
+			if err := s.db.Save(&photo).Error; err == nil {
+				reset++
+			}
+		}
+	}
+	return fixed, reset
+}
+
+func (s *PhotoService) validateFaskesPhotosCache() (fixed, reset int) {
+	var photos []model.FaskesPhoto
+	if err := s.db.Where("storage_path IS NOT NULL AND storage_path NOT LIKE 'http%'").Find(&photos).Error; err != nil {
+		log.Printf("Warning: failed to fetch faskes photos for validation: %v", err)
+		return 0, 0
+	}
+
+	for _, photo := range photos {
+		if photo.StoragePath == nil {
+			continue
+		}
+		_, err := os.Stat(*photo.StoragePath)
+		fileExists := err == nil
+
+		if fileExists && !photo.IsCached {
+			photo.IsCached = true
+			if err := s.db.Save(&photo).Error; err == nil {
+				fixed++
+			}
+		} else if !fileExists && photo.IsCached {
+			photo.IsCached = false
+			photo.StoragePath = nil
+			photo.FileSize = nil
+			if err := s.db.Save(&photo).Error; err == nil {
+				reset++
+			}
+		}
+	}
+	return fixed, reset
 }
 
 // ========================================

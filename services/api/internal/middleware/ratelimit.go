@@ -131,9 +131,9 @@ func (rl *RateLimiter) Middleware() gin.HandlerFunc {
 }
 
 // DefaultRateLimiter returns a rate limiter with default settings
-// 100 requests per minute
+// 500 requests per minute (increased for SPA frontend with multiple components)
 func DefaultRateLimiter() *RateLimiter {
-	return NewRateLimiter(100, time.Minute)
+	return NewRateLimiter(500, time.Minute)
 }
 
 // StrictRateLimiter returns a stricter rate limiter

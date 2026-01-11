@@ -34,7 +34,7 @@ const checkQueryParams = async () => {
   if (lat && lng && mapViewRef.value) {
     const latitude = parseFloat(lat as string)
     const longitude = parseFloat(lng as string)
-    const zoomLevel = zoom ? parseInt(zoom as string) : 15
+    const zoomLevel = zoom ? parseInt(zoom as string) : 17
     if (!isNaN(latitude) && !isNaN(longitude)) {
       mapViewRef.value.flyTo(latitude, longitude, zoomLevel)
 
@@ -42,7 +42,7 @@ const checkQueryParams = async () => {
       if (feed) {
         setTimeout(() => {
           mapViewRef.value?.showFeedPopup(feed as string, latitude, longitude)
-        }, 500)
+        }, 1600)
       }
     }
   }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Search, MapPin, Download, Filter, Image, Navigation, Megaphone } from 'lucide-vue-next'
+import { Search, MapPin, Download, Filter, Image, Navigation, Megaphone, ChevronDown, X } from 'lucide-vue-next'
 import DataLayersSidebar from '@/components/DataLayersSidebar.vue'
 import Input from '@/components/ui/Input.vue'
 import Badge from '@/components/ui/Badge.vue'
@@ -23,6 +23,158 @@ const limit = 20
 const searchQuery = ref('')
 const selectedCategory = ref('')
 const selectedTag = ref('')
+
+// Region cascade filter state
+const showRegionFilter = ref(false)
+const filterLevel = ref<'provinsi' | 'kotakab' | 'kecamatan' | 'desa'>('provinsi')
+
+// Pending filter values (before clicking Apply)
+const pendingProvinsi = ref<string>('')
+const pendingKotaKab = ref<string>('')
+const pendingKecamatan = ref<string>('')
+const pendingDesa = ref<string>('')
+
+// Applied filter values (after clicking Apply)
+const appliedProvinsi = ref<string>('')
+const appliedKotaKab = ref<string>('')
+const appliedKecamatan = ref<string>('')
+const appliedDesa = ref<string>('')
+
+// Available options for each level (dynamically populated from data)
+const availableKotaKab = ref<string[]>([])
+const availableKecamatan = ref<string[]>([])
+const availableDesa = ref<string[]>([])
+
+// Collect unique region values from feeds
+const collectRegionData = () => {
+  const kotaKabSet = new Set<string>()
+  const kecamatanMap = new Map<string, Set<string>>()
+  const desaMap = new Map<string, Set<string>>()
+
+  feeds.value.forEach(f => {
+    if (f.region?.kota_kab) kotaKabSet.add(f.region.kota_kab)
+    if (f.region?.kota_kab && f.region?.kecamatan) {
+      if (!kecamatanMap.has(f.region.kota_kab)) kecamatanMap.set(f.region.kota_kab, new Set())
+      kecamatanMap.get(f.region.kota_kab)!.add(f.region.kecamatan)
+    }
+    if (f.region?.kecamatan && f.region?.desa) {
+      if (!desaMap.has(f.region.kecamatan)) desaMap.set(f.region.kecamatan, new Set())
+      desaMap.get(f.region.kecamatan)!.add(f.region.desa)
+    }
+  })
+
+  return { kotaKabSet, kecamatanMap, desaMap }
+}
+
+// Update available kota/kab when provinsi selected
+const updateAvailableKotaKab = () => {
+  const { kotaKabSet } = collectRegionData()
+  availableKotaKab.value = Array.from(kotaKabSet).sort()
+}
+
+// Update available kecamatan when kota/kab selected
+const updateAvailableKecamatan = (kotaKab: string) => {
+  const { kecamatanMap } = collectRegionData()
+  const kecSet = kecamatanMap.get(kotaKab)
+  availableKecamatan.value = kecSet ? Array.from(kecSet).sort() : []
+}
+
+// Update available desa when kecamatan selected
+const updateAvailableDesa = (kecamatan: string) => {
+  const { desaMap } = collectRegionData()
+  const desaSet = desaMap.get(kecamatan)
+  availableDesa.value = desaSet ? Array.from(desaSet).sort() : []
+}
+
+// Filter label for display (shows applied filter)
+const regionFilterLabel = computed(() => {
+  if (appliedDesa.value) return appliedDesa.value
+  if (appliedKecamatan.value) return appliedKecamatan.value
+  if (appliedKotaKab.value) return appliedKotaKab.value
+  if (appliedProvinsi.value) return appliedProvinsi.value
+  return 'Lokasi'
+})
+
+// Check if any region filter is active
+const hasActiveRegionFilter = computed(() => {
+  return !!(appliedProvinsi.value || appliedKotaKab.value || appliedKecamatan.value || appliedDesa.value)
+})
+
+// Handle provinsi selection
+const selectProvinsi = (provinsi: string) => {
+  pendingProvinsi.value = provinsi
+  pendingKotaKab.value = ''
+  pendingKecamatan.value = ''
+  pendingDesa.value = ''
+  if (provinsi === 'Aceh') {
+    updateAvailableKotaKab()
+    filterLevel.value = 'kotakab'
+  }
+}
+
+// Handle kota/kab selection
+const selectKotaKab = (kotaKab: string) => {
+  pendingKotaKab.value = kotaKab
+  pendingKecamatan.value = ''
+  pendingDesa.value = ''
+  if (kotaKab) {
+    updateAvailableKecamatan(kotaKab)
+    filterLevel.value = 'kecamatan'
+  }
+}
+
+// Handle kecamatan selection
+const selectKecamatan = (kecamatan: string) => {
+  pendingKecamatan.value = kecamatan
+  pendingDesa.value = ''
+  if (kecamatan) {
+    updateAvailableDesa(kecamatan)
+    filterLevel.value = 'desa'
+  }
+}
+
+// Handle desa selection
+const selectDesa = (desa: string) => {
+  pendingDesa.value = desa
+}
+
+// Apply the filter
+const applyRegionFilter = () => {
+  appliedProvinsi.value = pendingProvinsi.value
+  appliedKotaKab.value = pendingKotaKab.value
+  appliedKecamatan.value = pendingKecamatan.value
+  appliedDesa.value = pendingDesa.value
+  showRegionFilter.value = false
+  fetchFeeds()
+}
+
+// Clear region filter
+const clearRegionFilter = () => {
+  pendingProvinsi.value = ''
+  pendingKotaKab.value = ''
+  pendingKecamatan.value = ''
+  pendingDesa.value = ''
+  appliedProvinsi.value = ''
+  appliedKotaKab.value = ''
+  appliedKecamatan.value = ''
+  appliedDesa.value = ''
+  filterLevel.value = 'provinsi'
+  fetchFeeds()
+}
+
+// Go back one level in cascade filter
+const goBackLevel = () => {
+  if (filterLevel.value === 'desa') {
+    filterLevel.value = 'kecamatan'
+    pendingDesa.value = ''
+  } else if (filterLevel.value === 'kecamatan') {
+    filterLevel.value = 'kotakab'
+    pendingKecamatan.value = ''
+  } else if (filterLevel.value === 'kotakab') {
+    filterLevel.value = 'provinsi'
+    pendingKotaKab.value = ''
+  }
+}
 
 // Calculate 30 days ago date
 const getThirtyDaysAgo = (): string => {
@@ -106,15 +258,10 @@ const formattedFeeds = computed(() => {
   }))
 })
 
-// Get photo URL helper
+// Get photo URL helper - use direct photo ID approach like MapView
 const getPhotoUrl = (photo: FeedPhoto) => {
-  if (photo.url && photo.url.startsWith('/api')) {
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1'
-    // Remove /api/v1 prefix if present in photo.url since baseUrl already has it
-    const photoPath = photo.url.replace('/api/v1', '')
-    return baseUrl + photoPath
-  }
-  return api.getFeedPhotoUrl(photo.id)
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1'
+  return `${baseUrl}/feeds/photos/${photo.id}/file`
 }
 
 // Navigate to map with coordinates and show popup
@@ -126,7 +273,7 @@ const goToMapWithFeed = (feed: { id: string, coordinates?: [number, number], loc
       query: {
         lat: feed.coordinates[1].toString(),
         lng: feed.coordinates[0].toString(),
-        zoom: '16',
+        zoom: '18',
         feed: feed.id
       }
     })
@@ -171,6 +318,19 @@ const fetchFeeds = async (reset = true) => {
     }
     if (selectedTag.value) {
       filter.type = selectedTag.value
+    }
+    // Region filters
+    if (appliedProvinsi.value) {
+      filter.provinsi = appliedProvinsi.value
+    }
+    if (appliedKotaKab.value) {
+      filter.kota_kab = appliedKotaKab.value
+    }
+    if (appliedKecamatan.value) {
+      filter.kecamatan = appliedKecamatan.value
+    }
+    if (appliedDesa.value) {
+      filter.desa = appliedDesa.value
     }
 
     const response = await api.getFeeds(filter)
@@ -313,11 +473,168 @@ const allCategories = [
                   </option>
                 </select>
               </div>
+
+              <!-- Region Cascade Filter -->
+              <div class="relative flex-1 md:w-48 md:flex-initial">
+                <button
+                  class="w-full h-10 text-sm border border-gray-200 rounded-lg px-2 md:px-3 bg-white flex items-center justify-between hover:bg-gray-50"
+                  :class="{ 'ring-2 ring-blue-500 border-transparent': showRegionFilter, 'text-blue-600': hasActiveRegionFilter }"
+                  @click="showRegionFilter = !showRegionFilter"
+                >
+                  <span class="flex items-center gap-1.5 truncate">
+                    <MapPin class="w-4 h-4 flex-shrink-0" />
+                    <span class="truncate">{{ regionFilterLabel }}</span>
+                  </span>
+                  <div class="flex items-center gap-1">
+                    <button
+                      v-if="hasActiveRegionFilter"
+                      class="p-0.5 hover:bg-gray-200 rounded"
+                      @click.stop="clearRegionFilter"
+                    >
+                      <X class="w-3 h-3 text-gray-500" />
+                    </button>
+                    <ChevronDown class="w-4 h-4 text-gray-400" />
+                  </div>
+                </button>
+
+                <!-- Dropdown Menu -->
+                <div
+                  v-if="showRegionFilter"
+                  class="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 min-w-[250px] max-h-[400px] overflow-hidden flex flex-col z-50"
+                >
+                  <!-- Breadcrumb -->
+                  <div v-if="filterLevel !== 'provinsi'" class="px-3 py-2 bg-gray-50 border-b border-gray-200">
+                    <div class="flex items-center gap-1 text-xs text-gray-500 flex-wrap">
+                      <button class="hover:text-blue-600" @click="filterLevel = 'provinsi'; pendingKotaKab = ''; pendingKecamatan = ''; pendingDesa = ''">
+                        {{ pendingProvinsi || 'Provinsi' }}
+                      </button>
+                      <span v-if="pendingKotaKab">›</span>
+                      <button v-if="pendingKotaKab" class="hover:text-blue-600" @click="filterLevel = 'kecamatan'; pendingKecamatan = ''; pendingDesa = ''">
+                        {{ pendingKotaKab }}
+                      </button>
+                      <span v-if="pendingKecamatan">›</span>
+                      <button v-if="pendingKecamatan" class="hover:text-blue-600" @click="filterLevel = 'desa'; pendingDesa = ''">
+                        {{ pendingKecamatan }}
+                      </button>
+                      <span v-if="pendingDesa">›</span>
+                      <span v-if="pendingDesa" class="font-medium text-gray-700">{{ pendingDesa }}</span>
+                    </div>
+                  </div>
+
+                  <!-- Header with Back button -->
+                  <div class="px-3 py-2 border-b border-gray-200 flex items-center justify-between">
+                    <span class="text-xs font-medium text-gray-500 uppercase">
+                      {{ filterLevel === 'provinsi' ? 'Provinsi' : filterLevel === 'kotakab' ? 'Kota/Kabupaten' : filterLevel === 'kecamatan' ? 'Kecamatan' : 'Desa' }}
+                    </span>
+                    <button
+                      v-if="filterLevel !== 'provinsi'"
+                      class="text-blue-500 hover:text-blue-700 text-xs"
+                      @click="goBackLevel"
+                    >
+                      ← Kembali
+                    </button>
+                  </div>
+
+                  <!-- List Content -->
+                  <div class="max-h-[250px] overflow-y-auto flex-1">
+                    <!-- Provinsi Selection -->
+                    <template v-if="filterLevel === 'provinsi'">
+                      <button
+                        class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2"
+                        :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingProvinsi === 'Aceh' }"
+                        @click="selectProvinsi('Aceh')"
+                      >
+                        <MapPin class="w-4 h-4" />
+                        Aceh
+                      </button>
+                    </template>
+
+                    <!-- Kota/Kab Selection -->
+                    <template v-else-if="filterLevel === 'kotakab'">
+                      <button
+                        class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600"
+                        :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingKotaKab === '' }"
+                        @click="pendingKotaKab = ''; pendingKecamatan = ''; pendingDesa = ''"
+                      >
+                        Semua Kota/Kabupaten
+                      </button>
+                      <button
+                        v-for="kota in availableKotaKab"
+                        :key="kota"
+                        class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600"
+                        :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingKotaKab === kota }"
+                        @click="selectKotaKab(kota)"
+                      >
+                        {{ kota }}
+                      </button>
+                      <div v-if="availableKotaKab.length === 0" class="px-3 py-4 text-sm text-gray-400 text-center">
+                        Tidak ada data
+                      </div>
+                    </template>
+
+                    <!-- Kecamatan Selection -->
+                    <template v-else-if="filterLevel === 'kecamatan'">
+                      <button
+                        class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600"
+                        :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingKecamatan === '' }"
+                        @click="pendingKecamatan = ''; pendingDesa = ''"
+                      >
+                        Semua Kecamatan
+                      </button>
+                      <button
+                        v-for="kec in availableKecamatan"
+                        :key="kec"
+                        class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600"
+                        :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingKecamatan === kec }"
+                        @click="selectKecamatan(kec)"
+                      >
+                        {{ kec }}
+                      </button>
+                      <div v-if="availableKecamatan.length === 0" class="px-3 py-4 text-sm text-gray-400 text-center">
+                        Tidak ada data kecamatan
+                      </div>
+                    </template>
+
+                    <!-- Desa Selection -->
+                    <template v-else-if="filterLevel === 'desa'">
+                      <button
+                        class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600"
+                        :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingDesa === '' }"
+                        @click="pendingDesa = ''"
+                      >
+                        Semua Desa
+                      </button>
+                      <button
+                        v-for="desa in availableDesa"
+                        :key="desa"
+                        class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600"
+                        :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingDesa === desa }"
+                        @click="selectDesa(desa)"
+                      >
+                        {{ desa }}
+                      </button>
+                      <div v-if="availableDesa.length === 0" class="px-3 py-4 text-sm text-gray-400 text-center">
+                        Tidak ada data desa
+                      </div>
+                    </template>
+                  </div>
+
+                  <!-- Apply Button -->
+                  <div class="px-3 py-2 border-t border-gray-200 bg-gray-50">
+                    <button
+                      class="w-full px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                      @click="applyRegionFilter"
+                    >
+                      Terapkan Filter
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
           <!-- Active Filters Display -->
-          <div v-if="searchQuery || selectedCategory || selectedTag" class="flex flex-wrap gap-2 mt-3">
+          <div v-if="searchQuery || selectedCategory || selectedTag || hasActiveRegionFilter" class="flex flex-wrap gap-2 mt-3">
             <Badge
               v-if="searchQuery"
               variant="default"
@@ -343,6 +660,15 @@ const allCategories = [
               @click="selectedTag = ''"
             >
               Tag: {{ formatTagDisplay(selectedTag) }}
+              <span class="ml-1">&times;</span>
+            </Badge>
+            <Badge
+              v-if="hasActiveRegionFilter"
+              variant="default"
+              class="cursor-pointer hover:bg-gray-200"
+              @click="clearRegionFilter"
+            >
+              Wilayah: {{ regionFilterLabel }}
               <span class="ml-1">&times;</span>
             </Badge>
           </div>
@@ -372,79 +698,77 @@ const allCategories = [
               class="bg-white rounded-lg border border-gray-200 p-3 md:p-4 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer"
               @click="goToMapWithFeed({ id: update.id, coordinates: update.coordinates, locationId: update.locationId, faskesId: update.faskesId })"
             >
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-xs text-gray-500">{{ update.timestamp }}</span>
-                <!-- Navigate to map indicator -->
-                <div
-                  v-if="update.coordinates || update.locationId || update.faskesId"
-                  class="flex items-center gap-1 text-xs text-blue-500"
-                  title="Klik untuk lihat di peta"
-                >
-                  <Navigation class="w-3.5 h-3.5" />
-                  <span class="hidden sm:inline">Peta</span>
-                </div>
-              </div>
-              <div class="text-xs text-blue-600 font-medium mb-2">
-                {{ update.username }}{{ update.organization ? ` - ${update.organization}` : '' }}
-              </div>
-              <div class="flex items-center gap-1.5 mb-2">
-                <!-- Show different icon based on whether it's related to a location/faskes -->
-                <template v-if="update.locationId">
-                  <MapPin class="w-4 h-4 text-blue-500 flex-shrink-0" />
-                  <span class="text-sm font-medium text-blue-600">{{ update.location }}</span>
-                </template>
-                <template v-else-if="update.faskesId">
-                  <MapPin class="w-4 h-4 text-green-500 flex-shrink-0" />
-                  <span class="text-sm font-medium text-green-600">{{ update.faskesName }}</span>
-                  <Badge variant="success" class="ml-1 text-xs">Faskes</Badge>
-                </template>
-                <template v-else-if="update.coordinates">
-                  <Megaphone class="w-4 h-4 text-orange-500 flex-shrink-0" />
-                  <span class="text-sm font-medium text-orange-600">Laporan Situasi</span>
-                </template>
-              </div>
-
-              <!-- Photo thumbnail -->
-              <div v-if="update.photos.length > 0" class="mb-3">
-                <div class="flex gap-2 overflow-x-auto">
-                  <div
-                    v-for="photo in update.photos.slice(0, 3)"
-                    :key="photo.id"
-                    class="relative flex-shrink-0"
-                  >
+              <div class="flex gap-3">
+                <!-- Photo on the left -->
+                <div v-if="update.photos.length > 0" class="flex-shrink-0">
+                  <div class="relative">
                     <img
-                      :src="getPhotoUrl(photo)"
-                      :alt="photo.filename"
-                      class="w-20 h-20 md:w-24 md:h-24 object-cover rounded-lg border border-gray-200"
+                      :src="getPhotoUrl(update.photos[0])"
+                      :alt="update.photos[0].filename"
+                      class="w-24 h-24 md:w-32 md:h-32 object-cover rounded-lg border border-gray-200"
                       loading="lazy"
                     />
-                  </div>
-                  <div
-                    v-if="update.photos.length > 3"
-                    class="w-20 h-20 md:w-24 md:h-24 flex-shrink-0 bg-gray-100 rounded-lg flex items-center justify-center"
-                  >
-                    <div class="text-center">
-                      <Image class="w-5 h-5 text-gray-400 mx-auto" />
-                      <span class="text-xs text-gray-500">+{{ update.photos.length - 3 }}</span>
+                    <div
+                      v-if="update.photos.length > 1"
+                      class="absolute bottom-1 right-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded flex items-center gap-1"
+                    >
+                      <Image class="w-3 h-3" />
+                      <span>+{{ update.photos.length - 1 }}</span>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <p class="text-sm text-gray-600 mb-3 leading-relaxed">{{ update.content }}</p>
-              <div class="flex flex-wrap gap-2">
-                <Badge :variant="categoryColors[update.category] || 'outline'">
-                  {{ update.category }}
-                </Badge>
-                <template v-if="update.type">
-                  <Badge
-                    v-for="t in update.type.split(',')"
-                    :key="t"
-                    :variant="typeColors[t.trim()] || 'outline'"
-                  >
-                    {{ formatTagDisplay(t.trim()) }}
-                  </Badge>
-                </template>
+                <!-- Content on the right -->
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="text-xs text-gray-500">{{ update.timestamp }}</span>
+                    <!-- Navigate to map indicator -->
+                    <div
+                      v-if="update.coordinates || update.locationId || update.faskesId"
+                      class="flex items-center gap-1 text-xs text-blue-500"
+                      title="Klik untuk lihat di peta"
+                    >
+                      <Navigation class="w-3.5 h-3.5" />
+                      <span class="hidden sm:inline">Peta</span>
+                    </div>
+                  </div>
+                  <div class="text-xs text-blue-600 font-medium mb-1">
+                    {{ update.username }}{{ update.organization ? ` - ${update.organization}` : '' }}
+                  </div>
+                  <div class="flex items-center gap-1.5 mb-1">
+                    <!-- Show different icon based on whether it's related to a location/faskes -->
+                    <template v-if="update.locationId">
+                      <MapPin class="w-4 h-4 text-blue-500 flex-shrink-0" />
+                      <span class="text-sm font-medium text-blue-600 truncate">{{ update.location }}</span>
+                    </template>
+                    <template v-else-if="update.faskesId">
+                      <MapPin class="w-4 h-4 text-green-500 flex-shrink-0" />
+                      <span class="text-sm font-medium text-green-600 truncate">{{ update.faskesName }}</span>
+                      <Badge variant="success" class="ml-1 text-xs">Faskes</Badge>
+                    </template>
+                    <template v-else-if="update.coordinates">
+                      <Megaphone class="w-4 h-4 text-orange-500 flex-shrink-0" />
+                      <span class="text-sm font-medium text-orange-600">Laporan Situasi</span>
+                    </template>
+                  </div>
+
+                  <p class="text-sm text-gray-600 mb-2 leading-relaxed line-clamp-2">{{ update.content }}</p>
+                  <div class="flex flex-wrap gap-1.5">
+                    <Badge :variant="categoryColors[update.category] || 'outline'" class="text-xs">
+                      {{ update.category }}
+                    </Badge>
+                    <template v-if="update.type">
+                      <Badge
+                        v-for="t in update.type.split(',')"
+                        :key="t"
+                        :variant="typeColors[t.trim()] || 'outline'"
+                        class="text-xs"
+                      >
+                        {{ formatTagDisplay(t.trim()) }}
+                      </Badge>
+                    </template>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

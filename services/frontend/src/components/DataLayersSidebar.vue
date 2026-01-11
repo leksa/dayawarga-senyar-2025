@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { Home, Droplets, Cross, Megaphone, ExternalLink, Info, Map, CloudRain, Mountain, Construction } from 'lucide-vue-next'
+import { Home, Package, Cross, Megaphone, ExternalLink, Info, Map, CloudRain, Mountain, Construction, UtensilsCrossed, BookOpen, Users, Newspaper } from 'lucide-vue-next'
 import Checkbox from './ui/Checkbox.vue'
 
 // App version from build
@@ -23,8 +23,9 @@ const emit = defineEmits<{
 
 const emergencyLayers = ref<Layer[]>([
   { id: 'shelter', name: 'Titik Posko', icon: Home, color: 'bg-gray-300', colorEnabled: 'bg-blue-500', enabled: true, available: true },
-  { id: 'water', name: 'Air Bersih', icon: Droplets, color: 'bg-gray-300', colorEnabled: 'bg-cyan-500', enabled: false, available: false },
   { id: 'medical', name: 'Fasilitas Kesehatan', icon: Cross, color: 'bg-gray-300', colorEnabled: 'bg-red-500', enabled: false, available: true },
+  { id: 'logistics', name: 'Posko Logistik', icon: Package, color: 'bg-gray-300', colorEnabled: 'bg-cyan-500', enabled: false, available: false },
+  { id: 'kitchen', name: 'Dapur Umum', icon: UtensilsCrossed, color: 'bg-gray-300', colorEnabled: 'bg-orange-500', enabled: false, available: false },
 ])
 
 watch(emergencyLayers, (layers) => {
@@ -65,13 +66,13 @@ const getLayerColor = (layer: Layer) => {
       <h3 class="hidden lg:block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Feeds</h3>
       <RouterLink
         to="/feeds"
-        class="flex items-center justify-center lg:justify-start gap-3 p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+        class="flex items-center justify-center lg:justify-start gap-2 p-1.5 lg:p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
         title="Informasi Terbaru"
       >
-        <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
-          <Megaphone class="w-4 h-4 text-white" />
+        <div class="w-7 h-7 lg:w-6 lg:h-6 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+          <Megaphone class="w-3.5 h-3.5 lg:w-3 lg:h-3 text-white" />
         </div>
-        <span class="hidden lg:inline font-medium">Informasi Terbaru</span>
+        <span class="hidden lg:inline text-sm font-medium">Informasi Terbaru</span>
         <span class="hidden lg:inline ml-auto text-gray-400">&rsaquo;</span>
       </RouterLink>
     </div>
@@ -81,17 +82,17 @@ const getLayerColor = (layer: Layer) => {
       <!-- Data Kebencanaan -->
       <div class="p-2 lg:p-4">
         <h3 class="hidden lg:block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Data Kebencanaan</h3>
-        <div class="space-y-1">
+        <div class="space-y-0.5">
           <!-- Peta Bencana -->
           <RouterLink
             to="/"
-            class="flex items-center justify-center lg:justify-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+            class="flex items-center justify-center lg:justify-start gap-2 p-1.5 lg:p-2 rounded-lg hover:bg-gray-50 transition-colors"
             title="Peta Bencana"
           >
-            <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
-              <Map class="w-4 h-4 text-white" />
+            <div class="w-7 h-7 lg:w-6 lg:h-6 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+              <Map class="w-3.5 h-3.5 lg:w-3 lg:h-3 text-white" />
             </div>
-            <span class="hidden lg:inline flex-1 text-gray-700 font-medium">Peta Bencana</span>
+            <span class="hidden lg:inline flex-1 text-sm text-gray-700">Peta Bencana</span>
             <span class="hidden lg:inline text-gray-400">&rsaquo;</span>
           </RouterLink>
 
@@ -100,16 +101,16 @@ const getLayerColor = (layer: Layer) => {
             v-for="layer in emergencyLayers"
             :key="layer.id"
             :class="[
-              'flex items-center justify-center lg:justify-start gap-3 p-2 rounded-lg',
+              'flex items-center justify-center lg:justify-start gap-2 p-1.5 lg:p-2 rounded-lg',
               layer.available ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
             ]"
             :title="layer.name"
             @click="toggleLayer(layer)"
           >
-            <div :class="['w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors', getLayerColor(layer)]">
-              <component :is="layer.icon" class="w-4 h-4 text-white" />
+            <div :class="['w-7 h-7 lg:w-6 lg:h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-colors', getLayerColor(layer)]">
+              <component :is="layer.icon" class="w-3.5 h-3.5 lg:w-3 lg:h-3 text-white" />
             </div>
-            <span :class="['hidden lg:inline flex-1', layer.available ? 'text-gray-700' : 'text-gray-400']">{{ layer.name }}</span>
+            <span :class="['hidden lg:inline flex-1 text-sm', layer.available ? 'text-gray-700' : 'text-gray-400']">{{ layer.name }}</span>
             <Checkbox v-if="layer.available" v-model="layer.enabled" class="hidden lg:block" @click.stop />
             <span v-else class="hidden lg:inline text-xs text-gray-400 italic">Segera</span>
           </div>
@@ -119,21 +120,21 @@ const getLayerColor = (layer: Layer) => {
       <!-- Lingkungan -->
       <div class="p-2 lg:p-4 border-t border-gray-200">
         <h3 class="hidden lg:block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Lingkungan</h3>
-        <div class="space-y-1">
+        <div class="space-y-0.5">
           <div
             v-for="layer in environmentLayers"
             :key="layer.id"
             :class="[
-              'flex items-center justify-center lg:justify-start gap-3 p-2 rounded-lg',
+              'flex items-center justify-center lg:justify-start gap-2 p-1.5 lg:p-2 rounded-lg',
               layer.available ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
             ]"
             :title="layer.name"
             @click="toggleLayer(layer)"
           >
-            <div :class="['w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors', getLayerColor(layer)]">
-              <component :is="layer.icon" class="w-4 h-4 text-white" />
+            <div :class="['w-7 h-7 lg:w-6 lg:h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-colors', getLayerColor(layer)]">
+              <component :is="layer.icon" class="w-3.5 h-3.5 lg:w-3 lg:h-3 text-white" />
             </div>
-            <span :class="['hidden lg:inline flex-1', layer.available ? 'text-gray-700' : 'text-gray-400']">{{ layer.name }}</span>
+            <span :class="['hidden lg:inline flex-1 text-sm', layer.available ? 'text-gray-700' : 'text-gray-400']">{{ layer.name }}</span>
             <Checkbox v-if="layer.available" v-model="layer.enabled" class="hidden lg:block" @click.stop />
             <span v-else class="hidden lg:inline text-xs text-gray-400 italic">Segera</span>
           </div>
@@ -143,21 +144,21 @@ const getLayerColor = (layer: Layer) => {
       <!-- Infrastruktur -->
       <div class="p-2 lg:p-4 border-t border-gray-200">
         <h3 class="hidden lg:block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Infrastruktur</h3>
-        <div class="space-y-1">
+        <div class="space-y-0.5">
           <div
             v-for="layer in infrastructureLayers"
             :key="layer.id"
             :class="[
-              'flex items-center justify-center lg:justify-start gap-3 p-2 rounded-lg',
+              'flex items-center justify-center lg:justify-start gap-2 p-1.5 lg:p-2 rounded-lg',
               layer.available ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
             ]"
             :title="layer.name"
             @click="toggleLayer(layer)"
           >
-            <div :class="['w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors', getLayerColor(layer)]">
-              <component :is="layer.icon" class="w-4 h-4 text-white" />
+            <div :class="['w-7 h-7 lg:w-6 lg:h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-colors', getLayerColor(layer)]">
+              <component :is="layer.icon" class="w-3.5 h-3.5 lg:w-3 lg:h-3 text-white" />
             </div>
-            <span :class="['hidden lg:inline flex-1', layer.available ? 'text-gray-700' : 'text-gray-400']">{{ layer.name }}</span>
+            <span :class="['hidden lg:inline flex-1 text-sm', layer.available ? 'text-gray-700' : 'text-gray-400']">{{ layer.name }}</span>
             <Checkbox v-if="layer.available" v-model="layer.enabled" class="hidden lg:block" @click.stop />
             <span v-else class="hidden lg:inline text-xs text-gray-400 italic">Segera</span>
           </div>
@@ -168,17 +169,50 @@ const getLayerColor = (layer: Layer) => {
     <!-- Tentang Section -->
     <div class="p-2 lg:p-4 border-t border-gray-200 bg-white">
       <h3 class="hidden lg:block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tentang</h3>
-      <RouterLink
-        to="/tentang"
-        class="flex items-center justify-center lg:justify-start gap-3 p-2 rounded-lg bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
-        title="Tentang"
-      >
-        <div class="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center flex-shrink-0">
-          <Info class="w-4 h-4 text-white" />
-        </div>
-        <span class="hidden lg:inline font-medium">Tentang</span>
-        <span class="hidden lg:inline ml-auto text-gray-400">&rsaquo;</span>
-      </RouterLink>
+      <div class="space-y-0.5">
+        <RouterLink
+          to="/tentang"
+          class="flex items-center justify-center lg:justify-start gap-2 p-1.5 lg:p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+          title="Penjelasan"
+        >
+          <div class="w-7 h-7 lg:w-6 lg:h-6 rounded-full bg-gray-500 flex items-center justify-center flex-shrink-0">
+            <Info class="w-3.5 h-3.5 lg:w-3 lg:h-3 text-white" />
+          </div>
+          <span class="hidden lg:inline text-sm">Penjelasan</span>
+        </RouterLink>
+        <RouterLink
+          to="/pakai-dayawarga"
+          class="flex items-center justify-center lg:justify-start gap-2 p-1.5 lg:p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+          title="Pakai Dayawarga"
+        >
+          <div class="w-7 h-7 lg:w-6 lg:h-6 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+            <BookOpen class="w-3.5 h-3.5 lg:w-3 lg:h-3 text-white" />
+          </div>
+          <span class="hidden lg:inline text-sm">Pakai Dayawarga</span>
+        </RouterLink>
+        <RouterLink
+          to="/belakang-layar"
+          class="flex items-center justify-center lg:justify-start gap-2 p-1.5 lg:p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+          title="Belakang Layar"
+        >
+          <div class="w-7 h-7 lg:w-6 lg:h-6 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
+            <Users class="w-3.5 h-3.5 lg:w-3 lg:h-3 text-white" />
+          </div>
+          <span class="hidden lg:inline text-sm">Belakang Layar</span>
+        </RouterLink>
+        <a
+          href="https://stories.dayawarga.com"
+          target="_blank"
+          class="flex items-center justify-center lg:justify-start gap-2 p-1.5 lg:p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+          title="Blog"
+        >
+          <div class="w-7 h-7 lg:w-6 lg:h-6 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+            <Newspaper class="w-3.5 h-3.5 lg:w-3 lg:h-3 text-white" />
+          </div>
+          <span class="hidden lg:inline text-sm">Blog</span>
+          <ExternalLink class="hidden lg:inline w-3 h-3 text-gray-400 ml-auto" />
+        </a>
+      </div>
     </div>
 
     <!-- Footer - GitHub icon on mobile, full text on desktop -->

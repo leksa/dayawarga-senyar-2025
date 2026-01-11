@@ -21,8 +21,13 @@ type FeedFilter struct {
 	Type         string
 	Search       string
 	Since        string // ISO date string for filtering feeds since a date
-	Page         int
-	Limit        int
+	// Region filters - uses calc_nama_* fields in raw_data JSONB
+	Provinsi  string
+	KotaKab   string
+	Kecamatan string
+	Desa      string
+	Page      int
+	Limit     int
 }
 
 type FeedWithCoords struct {
@@ -90,6 +95,19 @@ func (r *FeedRepository) FindAll(filter FeedFilter) ([]FeedWithCoords, int64, er
 	if filter.Since != "" {
 		query = query.Where("COALESCE(f.submitted_at, f.created_at) >= ?", filter.Since)
 	}
+	// Region filters - filter by calc_nama_* fields in raw_data JSONB
+	if filter.Provinsi != "" {
+		query = query.Where("f.raw_data->>'calc_nama_provinsi' ILIKE ?", "%"+filter.Provinsi+"%")
+	}
+	if filter.KotaKab != "" {
+		query = query.Where("f.raw_data->>'calc_nama_kota_kab' ILIKE ?", "%"+filter.KotaKab+"%")
+	}
+	if filter.Kecamatan != "" {
+		query = query.Where("f.raw_data->>'calc_nama_kecamatan' ILIKE ?", "%"+filter.Kecamatan+"%")
+	}
+	if filter.Desa != "" {
+		query = query.Where("f.raw_data->>'calc_nama_desa' ILIKE ?", "%"+filter.Desa+"%")
+	}
 
 	// Count total
 	countQuery := r.db.Table("information_feeds f").
@@ -109,6 +127,19 @@ func (r *FeedRepository) FindAll(filter FeedFilter) ([]FeedWithCoords, int64, er
 	}
 	if filter.Since != "" {
 		countQuery = countQuery.Where("COALESCE(f.submitted_at, f.created_at) >= ?", filter.Since)
+	}
+	// Region filters for count
+	if filter.Provinsi != "" {
+		countQuery = countQuery.Where("f.raw_data->>'calc_nama_provinsi' ILIKE ?", "%"+filter.Provinsi+"%")
+	}
+	if filter.KotaKab != "" {
+		countQuery = countQuery.Where("f.raw_data->>'calc_nama_kota_kab' ILIKE ?", "%"+filter.KotaKab+"%")
+	}
+	if filter.Kecamatan != "" {
+		countQuery = countQuery.Where("f.raw_data->>'calc_nama_kecamatan' ILIKE ?", "%"+filter.Kecamatan+"%")
+	}
+	if filter.Desa != "" {
+		countQuery = countQuery.Where("f.raw_data->>'calc_nama_desa' ILIKE ?", "%"+filter.Desa+"%")
 	}
 	countQuery.Count(&total)
 

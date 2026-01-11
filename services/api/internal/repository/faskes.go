@@ -93,8 +93,8 @@ func (r *FaskesRepository) FindAll(filter FaskesFilter) ([]FaskesWithCoords, int
 	if filter.Limit <= 0 {
 		filter.Limit = 50
 	}
-	if filter.Limit > 200 {
-		filter.Limit = 200
+	if filter.Limit > 500 {
+		filter.Limit = 500
 	}
 
 	offset := (filter.Page - 1) * filter.Limit

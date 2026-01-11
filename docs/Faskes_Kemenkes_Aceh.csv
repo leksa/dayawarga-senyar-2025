@@ -1,0 +1,366 @@
+JENIS FASYANKES,NAMA,LONGITUDE,LATITUDE,PROVINSI,KABUPATEN,STATUS OPERASIONAL,KECAMATAN,DESA,GEOCODE_STATUS
+Puskesmas,Lokop,97.42379,4.41929,Aceh,Aceh Timur,Belum Beroperasi,,,no_data
+Puskesmas,Peusangan,96.78749,5.19671,Aceh,Bireuen,Belum Beroperasi,Peusangan,Keude Matang Glumpang Dua,ok
+Puskesmas,Rusip Antara,96.62975,4.6302,Aceh,Aceh Tengah,Belum Beroperasi,Rusip Antara,Pantan Tengah,ok
+Puskesmas,Jambur Lak-Lak,97.69628,3.64224,Aceh,Aceh Tenggara,Belum Beroperasi,,Kutejamburlak-Lak,ok
+Rumah Sakit,RS Umum Daerah Dr. H. Yulidin Away,97.3665,3.00035,Aceh,Aceh Selatan,Beroperasi,Kluet Selatan,Pasie Lembang,ok
+Rumah Sakit,RS Umum Daerah H. Sahudin Kutacane,97.5891,3.76794,Aceh,Aceh Tenggara,Beroperasi,Pintu Rime Gayo,Singah Mulo,ok
+Rumah Sakit,RS Ibu dan Anak Keluarga Desa,97.82262,3.47056,Aceh,Aceh Tenggara,Beroperasi,,Perapattitipanjang,ok
+Rumah Sakit,RS Umum Nurul Hasanah,97.8085569,3.4957305,Aceh,Aceh Tenggara,Beroperasi,,Kampungmelayu Satu,ok
+Rumah Sakit,RS Umum Daerah dr. Zubir Mahmud,97.79774,4.91983,Aceh,Aceh Timur,Beroperasi,,Ketapangdua,ok
+Rumah Sakit,RS Umum Graha Bunda,97.76336,4.95734,Aceh,Aceh Timur,Beroperasi,Blang Bintang,Teupin Batee,ok
+Rumah Sakit,RS Umum Daerah Sultan Abdul Aziz Syah Peureulak,97.893,4.80925,Aceh,Aceh Timur,Beroperasi,Peureulak,Keude Peureulak,ok
+Rumah Sakit,RS Umum Fandika,96.84677,4.62438,Aceh,Aceh Tengah,Beroperasi,,Blangkolak Satu,ok
+Rumah Sakit,RS Umum Daerah Datu Beru Takengon,96.85176,4.63634,Aceh,Aceh Tengah,Beroperasi,Bebesen,Mongal,ok
+Rumah Sakit,RS Umum Daerah Cut Nyak Dhien,96.12977,4.15626,Aceh,Aceh Barat,Beroperasi,Johan Pahwalan,Rundeng,ok
+Rumah Sakit,RS Umum Montella,96.1191,4.17221,Aceh,Aceh Barat,Beroperasi,Blang Mangat,Seuneubok,ok
+Rumah Sakit,RS Umum Harapan Sehat,96.13423,4.17014,Aceh,Aceh Barat,Beroperasi,Johan Pahwalan,Leuhan,ok
+Rumah Sakit,RS Tk. IV IM 07.02,96.1327488,4.1317561,Aceh,Aceh Barat,Beroperasi,Johan Pahwalan,Pasar Aceh,ok
+Rumah Sakit,RS Umum Daerah TGK. Abdullah Syafii Beureuneun,97.10364,5.09359,Aceh,Pidie,Beroperasi,,Ietarek Dua,ok
+Rumah Sakit,RS Islam Ibnu Sina Sigli,95.95656,5.36957,Aceh,Pidie,Beroperasi,Pidie,Cot Teungoh,ok
+Rumah Sakit,RS Umum Mufid,95.9588,5.37565,Aceh,Pidie,Beroperasi,,,no_data
+Rumah Sakit,RS Umum Citra Husada,95.9598,5.36201,Aceh,Pidie,Beroperasi,,Mesjid Reuntoh,ok
+Rumah Sakit,RS Umum Daerah TGK Chik Ditiro Sigli,95.95979,5.36378,Aceh,Pidie,Beroperasi,,Mesjid Reuntoh,ok
+Rumah Sakit,RS Umum Harapan Ibu,96.0193466,5.2662247,Aceh,Pidie,Beroperasi,,Dayah Kampong Pisang,ok
+Rumah Sakit,RS Umum Cut Meutia Kab. Aceh Utara,97.149,5.1892,Aceh,Aceh Utara,Beroperasi,Banda Sakti,,ok
+Rumah Sakit,RS Umum Daerah dr. Muchtar Hasbi,97.35177,4.57415,Aceh,Aceh Utara,Beroperasi,,,no_data
+Rumah Sakit,RS Zahra,97.33977,5.06043,Aceh,Aceh Utara,Beroperasi,Langsa Timur,Matang Panyang,ok
+Rumah Sakit,RS Umum Prima Inti Medika,97.02597,5.22152,Aceh,Aceh Utara,Beroperasi,Dewantara,Tambon Baroh,ok
+Rumah Sakit,RS Umum Daerah Aceh Singkil,97.92711,2.3478,Aceh,Aceh Singkil,Beroperasi,Gunung Meriah,Seping Baru,ok
+Rumah Sakit,RS Umum Malahayati,96.697,5.20945,Aceh,Bireuen,Beroperasi,Langsa Lama,Baro,ok
+Rumah Sakit,RS Umum Telaga Bunda,96.6945,5.20152,Aceh,Bireuen,Beroperasi,Kota Juang,Bireuen Meunasah Blang,ok
+Rumah Sakit,RS Umum Daerah Dr. Fauziah Bireun,96.69878,5.20411,Aceh,Bireuen,Beroperasi,,,no_data
+Rumah Sakit,RS Umum Avicenna,96.70085,5.24276,Aceh,Bireuen,Beroperasi,Kuala,Krueng Juli Timu,ok
+Rumah Sakit,RS Umum Bireuen Medical Center,96.6712,5.20599,Aceh,Bireuen,Beroperasi,Blang Pidie,Geulumpang Payong,ok
+Rumah Sakit,RS Umum Jeumpa Hospital,96.7200425,5.2041026,Aceh,Bireuen,Beroperasi,,,no_data
+Rumah Sakit,RS Umum Muhammad Ali Kasim,97.36998,4.00606,Aceh,Gayo Lues,Beroperasi,Dabun Gelang,Pangur,ok
+Rumah Sakit,RS Umum Daerah Sultan Iskandar Muda Nagan Raya,96.4892,4.13144,Aceh,Nagan Raya,Beroperasi,,,no_data
+Rumah Sakit,RS Umum Pertamina Rantau,98.1061,4.34552,Aceh,Aceh Tamiang,Beroperasi,Rantau,Alur Manis,ok
+Rumah Sakit,RS Umum Daerah Muda Sedia Kabupaten Aceh Tamiang,98.0035,4.20804,Aceh,Aceh Tamiang,Beroperasi,Tolangohula,Sukamakmur,ok
+Rumah Sakit,RS Ibu dan Anak Azalia,96.85943,4.7169,Aceh,Bener Meriah,Beroperasi,Bukit,Tingkem Benyer,ok
+Rumah Sakit,RS Umum Daerah Muyang Kute Redelong Bener Meriah,96.7494,4.69514,Aceh,Bener Meriah,Beroperasi,Kute Panang,Balik,ok
+Rumah Sakit,RS Umum Daerah Pidie Jaya,96.2801,4.98824,Aceh,Pidie Jaya,Beroperasi,,,no_data
+Rumah Sakit,RS Umum Az-Zuhra,97.1405218,5.1828949,Aceh,Kota Lhokseumawe,Beroperasi,Banda Sakti,,ok
+Rumah Sakit,RS Ibu dan Anak ABBY,97.14737,5.18279,Aceh,Kota Lhokseumawe,Beroperasi,Banda Sakti,,ok
+Rumah Sakit,RS Umum Bunda,97.14588,5.18345,Aceh,Kota Lhokseumawe,Beroperasi,Banda Sakti,,ok
+Rumah Sakit,RS Umum PMI Cabang Aceh Utara (RS Umum Marhamah PMI),97.1489,5.18127,Aceh,Kota Lhokseumawe,Beroperasi,Banda Sakti,,ok
+Rumah Sakit,RS Arun Lhokseumawe,97.0491,5.21701,Aceh,Kota Lhokseumawe,Beroperasi,Muara Satu,,ok
+Rumah Sakit,RS Umum Kasih Ibu Lhokseumawe,97.1379,5.18188,Aceh,Kota Lhokseumawe,Beroperasi,Banda Sakti,,ok
+Rumah Sakit,RS Umum Sakinah,97.14574,5.187,Aceh,Kota Lhokseumawe,Beroperasi,Banda Sakti,,ok
+Rumah Sakit,RS Umum Bunga Melati,97.14655,5.17536,Aceh,Kota Lhokseumawe,Beroperasi,Banda Sakti,,ok
+Rumah Sakit,RS Tk. IV Lhokseumawe Aceh Utara,97.1498012,5.1825118,Aceh,Kota Lhokseumawe,Beroperasi,Banda Sakti,,ok
+Rumah Sakit,RS Umum Metro Medical Center,97.1334064,5.1799014,Aceh,Kota Lhokseumawe,Beroperasi,Banda Sakti,,ok
+Rumah Sakit,RS Umum Daerah Langsa,97.9704,4.4692,Aceh,Kota Langsa,Beroperasi,Langsa Kota,,ok
+Rumah Sakit,RS Cut Nyak Dhien Langsa,97.9475,4.48793,Aceh,Kota Langsa,Beroperasi,Langsa Baro,,ok
+Rumah Sakit,RS Umum Cut Meutia,97.9474,4.48803,Aceh,Kota Langsa,Beroperasi,Langsa Baro,,ok
+Rumah Sakit,RS Umum Ummi Langsa,97.9883,4.46853,Aceh,Kota Langsa,Beroperasi,Langsa Kota,,ok
+Rumah Sakit,RS Ibu dan Anak Ummi Langsa,97.9552273,4.4974749,Aceh,Kota Langsa,Beroperasi,Langsa Baro,,ok
+Rumah Sakit,RS Umum Daerah Kota Subulussalam,98.0099,2.63953,Aceh,Kota Subulussalam,Beroperasi,Simpang Kiri,,ok
+Rumah Sakit,RS Cahaya Sehat,97.1731982,3.2548345,Aceh,Aceh Selatan,Beroperasi,Tangse,Lhok Keutapang,ok
+Rumah Sakit,RS Tanoh Gayo,98.66117,3.56188,Aceh,Gayo Lues,Beroperasi,Jejawi,Padang Bulan,ok
+Rumah Sakit,RS Gayo Medical Centre,96.83437,4.65092,Aceh,Aceh Tengah,Beroperasi,,Payatumpi Satu,ok
+Rumah Sakit,RS Hermina Aceh,95.3441,5.51168,Aceh,Aceh Besar,Beroperasi,Ingin Jaya,Meunasah Manyet,ok
+Puskesmas,Blang Mangat,97.16711,5.11345,Aceh,Kota Lhokseumawe,Beroperasi,Blang Mangat,,ok
+Puskesmas,Mila,95.9184,5.30221,Aceh,Pidie,Beroperasi,Sawang,Lagang,ok
+Puskesmas,Simpang Kanan,98.02234,4.23484,Aceh,Aceh Singkil,Beroperasi,Kejuruan Muda,Tanjung Genteng,ok
+Puskesmas,Beutong,96.40755,4.25085,Aceh,Nagan Raya,Beroperasi,Beutong,Lhok Seumot,ok
+Puskesmas,Bendahara,98.16802,4.39695,Aceh,Aceh Tamiang,Beroperasi,,Seunebokdalam,ok
+Puskesmas,Simpang Kiri,98.01384,2.64547,Aceh,Kota Subulussalam,Beroperasi,Simpang Kiri,,ok
+Puskesmas,Blangkejeren,96.97425,3.57651,Aceh,Aceh Selatan,Beroperasi,Kota Mukomuko,Ujung Padang,ok
+Puskesmas,Singkil,97.78888,2.26176,Aceh,Aceh Singkil,Beroperasi,Lembah Segar,Pasar,ok
+Puskesmas,Bebesen,96.83881,4.63691,Aceh,Aceh Tengah,Beroperasi,Bebesen,Empus Talu,ok
+Puskesmas,Nurussalam,97.66364,4.9771,Aceh,Aceh Timur,Beroperasi,Idi Tunong,Seuneubok Buloh,ok
+Puskesmas,Kluet Utara,97.34187,3.08666,Aceh,Aceh Selatan,Beroperasi,Kluet Utara,Limau Purut,ok
+Puskesmas,Langkahan,97.47006,4.95497,Aceh,Aceh Utara,Beroperasi,Muara Dua,Meunasah Blang,ok
+Puskesmas,Samalanga,96.37624,5.20572,Aceh,Bireuen,Beroperasi,Samalanga,Sangso,ok
+Puskesmas,Mamas,97.7644,3.55585,Aceh,Aceh Tenggara,Beroperasi,Darul Hasanah,Mamas,ok
+Puskesmas,Baitussalam,95.36013,5.59198,Aceh,Aceh Besar,Beroperasi,Baitussalam,Cadek,ok
+Puskesmas,Makmur,96.69225,4.60394,Aceh,Bireuen,Beroperasi,,Blangkekumur,ok
+Puskesmas,Langsa Baro,97.99123,4.49397,Aceh,Kota Langsa,Beroperasi,Langsa Barat,,ok
+Puskesmas,Kenyaran,97.20079,4.14809,Aceh,Gayo Lues,Beroperasi,Pantan Cuaca,Suri Musara,ok
+Puskesmas,Suro,98.02792,2.50648,Aceh,Aceh Singkil,Beroperasi,Suro Makmur,Bulu Sema,ok
+Puskesmas,Kota Jantho,95.58605,5.3013,Aceh,Aceh Besar,Beroperasi,Kota Jantho,Jantho Makmur,ok
+Puskesmas,Sultan Daulat,97.94258,2.87036,Aceh,Kota Subulussalam,Beroperasi,Sultan Daulat,,ok
+Puskesmas,Peunaron,97.67724,4.58414,Aceh,Aceh Timur,Beroperasi,Peunaron,Peunaron Baru,ok
+Puskesmas,Blang Cut,97.1623,5.13647,Aceh,Kota Lhokseumawe,Beroperasi,Blang Mangat,,ok
+Puskesmas,Glumpang Tiga,96.04229,5.26808,Aceh,Pidie,Beroperasi,Geulumpang Tiga,Pulo Lueng Teuga,ok
+Puskesmas,Indrapuri,95.4482,5.41859,Aceh,Aceh Besar,Beroperasi,Tapung,Indrapuri,ok
+Puskesmas,Dewantara,97.00086,5.24831,Aceh,Aceh Utara,Beroperasi,Dewantara,Ulee Pulo,ok
+Puskesmas,Menggamat,97.374,3.22,Aceh,Aceh Selatan,Beroperasi,Pulau-Pulau Batu,Koto,ok
+Puskesmas,Padang Tiji,95.8736,5.41105,Aceh,Pidie,Beroperasi,Matangkuli,Mee,ok
+Puskesmas,Natam,97.77015,3.56335,Aceh,Aceh Tenggara,Beroperasi,Badar,Natam,ok
+Puskesmas,Syamtalira Aron,97.25556,5.10589,Aceh,Aceh Utara,Beroperasi,Syamtalira Aron,Tanjong Mulieng,ok
+Puskesmas,Kota Sigli,95.9408,5.36098,Aceh,Pidie,Beroperasi,Padang,Barat,ok
+Puskesmas,Lampahan,96.77387,4.76217,Aceh,Bener Meriah,Beroperasi,Timang gajah,Pantan Pediangan,ok
+Puskesmas,Bandar,96.91666,4.75875,Aceh,Bener Meriah,Beroperasi,Bandar,Janarata,ok
+Puskesmas,Lueng Kebeu Jagad,96.4127,3.91432,Aceh,Nagan Raya,Beroperasi,Jangkat Timur,Kabu,ok
+Puskesmas,Glumpang Baro,96.02276,5.27147,Aceh,Pidie,Beroperasi,Glumpang Baro,Jurong Baro,ok
+Puskesmas,Seubadeh,97.55364,2.89884,Aceh,Aceh Selatan,Beroperasi,Bakongan Timur,Pasie Seubadeh,ok
+Puskesmas,Tangse,95.91621,5.01726,Aceh,Pidie,Beroperasi,,Pulo Mesjid Dua,ok
+Puskesmas,Meurah Dua,96.25805,5.23145,Aceh,Pidie Jaya,Beroperasi,Ulim,Meunasah Pupu,ok
+Puskesmas,Peureulak,97.89109,4.78471,Aceh,Aceh Timur,Beroperasi,Peureulak,Dama Tutong,ok
+Puskesmas,Matang Pudeng,97.49214,5.08922,Aceh,Aceh Timur,Beroperasi,Pante Bidari,Matang Pudeng,ok
+Puskesmas,Seleleh,97.99602,4.34689,Aceh,Aceh Tamiang,Beroperasi,,Seleleh,ok
+Puskesmas,Simpang Jernih,97.76225,4.35108,Aceh,Aceh Timur,Beroperasi,Simpang Jernih,Simpang Jernih,ok
+Puskesmas,Tangkeh,96.061,4.438,Aceh,Aceh Barat,Beroperasi,Woyla Timur,Tangkeh,ok
+Puskesmas,Lawe Sumur,97.89904,3.32571,Aceh,Aceh Tenggara,Beroperasi,Babul Rahmah,Uning Sigugur,ok
+Puskesmas,Mane,96.07201,4.87028,Aceh,Pidie,Beroperasi,Mane,Mane,ok
+Puskesmas,Pante Ceureumen,96.299,4.415,Aceh,Aceh Barat,Beroperasi,Seunagan,Pante Ceureumen,ok
+Puskesmas,Tiro,95.99111,5.13468,Aceh,Pidie,Beroperasi,,,no_data
+Puskesmas,Peureulak Barat,97.8758,4.8649,Aceh,Aceh Timur,Beroperasi,Peureulak Barat,Beusa Baroh,ok
+Puskesmas,Kuala Tadu,96.30742,3.97134,Aceh,Nagan Raya,Beroperasi,Tadu Raya,Kuala Tadu,ok
+Puskesmas,Kuala Baru,96.20564,2.57967,Aceh,Aceh Singkil,Beroperasi,,,no_data
+Puskesmas,Cubo,96.11454,5.22286,Aceh,Pidie Jaya,Beroperasi,Bandar Baru,Blang Sukon,ok
+Puskesmas,Cot Girek,97.36647,4.76853,Aceh,Aceh Utara,Beroperasi,,,no_data
+Puskesmas,Pegasing,96.83717,4.59313,Aceh,Aceh Tengah,Beroperasi,,,no_data
+Puskesmas,Mon Geudong,97.13884,5.1749,Aceh,Kota Lhokseumawe,Beroperasi,Banda Sakti,,ok
+Puskesmas,Simpang Tiga,97.49035,5.03287,Aceh,Aceh Utara,Beroperasi,Muara Dua,Meunasah Blang,ok
+Puskesmas,Nisam,97.02172,5.16819,Aceh,Aceh Utara,Beroperasi,Nisam,Tingkeum,ok
+Puskesmas,Singkil Utara,97.92352,2.27997,Aceh,Aceh Singkil,Beroperasi,Singkil Utara,Gosong Telaga Utara,ok
+Puskesmas,Ketol,96.74026,4.68362,Aceh,Aceh Tengah,Beroperasi,,Blangmancung Timur,ok
+Puskesmas,Mesjid Raya,95.5168,5.59369,Aceh,Aceh Besar,Beroperasi,Mesjid Raya,Meunasah Mon,ok
+Puskesmas,Delima,95.9999,5.28396,Aceh,Pidie,Beroperasi,,Blang Beureuh,ok
+Puskesmas,Kuala,96.71083,5.23612,Aceh,Bireuen,Beroperasi,Kuala,Weu Jangka,ok
+Puskesmas,Baktiya,97.04425,5.14331,Aceh,Aceh Utara,Beroperasi,Kuta Makmur,Langkuta,ok
+Puskesmas,Pandrah,96.46176,5.18254,Aceh,Bireuen,Beroperasi,,Meunasahreudep,ok
+Puskesmas,Cot Seumereung,96.069,4.228,Aceh,Aceh Barat,Beroperasi,,Cotseumeureung,ok
+Puskesmas,Tapaktuan,97.374,3.27541,Aceh,Aceh Selatan,Beroperasi,,,no_data
+Puskesmas,Lawe Perbunga,97.95735,3.29832,Aceh,Aceh Tenggara,Beroperasi,,Laweperbunga,ok
+Puskesmas,Lhoksukon,97.32808,5.04544,Aceh,Aceh Utara,Beroperasi,,,no_data
+Puskesmas,Ladang Rimba,97.65273,2.89261,Aceh,Aceh Selatan,Beroperasi,Trumon Tengah,Ladang Rimba,ok
+Puskesmas,Darul Falah,97.63388,5.01222,Aceh,Aceh Timur,Beroperasi,,Blangpanjau,ok
+Puskesmas,Piyeung,95.26317,5.27026,Aceh,Aceh Besar,Beroperasi,Lhoong,Jantang,ok
+Puskesmas,Lhok Beuringen,97.47422,5.06761,Aceh,Aceh Utara,Beroperasi,T. Jambo Aye,Lhok Beuringen,ok
+Puskesmas,Buloh Seuma,97.66072,2.54864,Aceh,Aceh Selatan,Beroperasi,Trumon,Raket,ok
+Puskesmas,Peureulak Timur,97.90005,4.71176,Aceh,Aceh Timur,Beroperasi,Peureulak Timur,Seuneubok Teupin,ok
+Puskesmas,Terangun,97.06524,4.07679,Aceh,Gayo Lues,Beroperasi,Terangun,Terangun,ok
+Puskesmas,Sukamakmur,95.38333,5.46588,Aceh,Aceh Besar,Beroperasi,Sukamakmur,Reuhat Tuha,ok
+Puskesmas,Seulimeum,95.57539,5.365,Aceh,Aceh Besar,Beroperasi,Seulimeum,Gampong Seulimeum,ok
+Puskesmas,Simpang Teritit,96.83456,4.68379,Aceh,Bener Meriah,Beroperasi,Wih Pesam,Simpang Teritit,ok
+Puskesmas,Gunung Meriah,97.9323,2.35217,Aceh,Aceh Singkil,Beroperasi,Gunung Meriah,Gunung Lagan,ok
+Puskesmas,Meukek,97.0582,3.45867,Aceh,Aceh Selatan,Beroperasi,Meukek,Keude Meukek,ok
+Puskesmas,Ramung,96.94831,4.80958,Aceh,Bener Meriah,Beroperasi,Permata,Pemango,ok
+Puskesmas,Muara Dua,97.11766,5.17077,Aceh,Kota Lhokseumawe,Beroperasi,Muara Dua,,ok
+Puskesmas,Nisam Antara,96.99072,5.08542,Aceh,Aceh Utara,Beroperasi,Nisam Antara,Blang Jrat,ok
+Puskesmas,Uteun Pulo,96.35174,4.27073,Aceh,Nagan Raya,Beroperasi,Seunagan Timur,Uteun Pulo,ok
+Puskesmas,Kuala Ba'U,97.31488,3.08427,Aceh,Aceh Selatan,Beroperasi,,Suaqgeringgeng,ok
+Puskesmas,Matangkuli,97.28589,5.04239,Aceh,Aceh Utara,Beroperasi,Matangkuli,Rayeuk Matangkuli,ok
+Puskesmas,Peureumeu,96.174,4.229,Aceh,Aceh Barat,Beroperasi,Kaway XVI,Alue Tampak,ok
+Puskesmas,Gurgur Pardomuan,97.93854,3.29867,Aceh,Aceh Tenggara,Beroperasi,,Lawediskysabas,ok
+Puskesmas,Muara Tiga,95.82238,5.4536,Aceh,Pidie,Beroperasi,Padang Tiji,Jok Tanjong,ok
+Puskesmas,Kandang,97.13149,5.16468,Aceh,Kota Lhokseumawe,Beroperasi,Muara Dua,,ok
+Puskesmas,Madat,97.51558,5.10722,Aceh,Aceh Timur,Beroperasi,Madat,Madat,ok
+Puskesmas,Ketapang Nusantara,97.12469,4.37,Aceh,Aceh Tengah,Beroperasi,,Belanglane,ok
+Puskesmas,Ganda Pura,96.88175,5.23757,Aceh,Bireuen,Beroperasi,Gandapura,Lhok Mambang,ok
+Puskesmas,Sawang,97.09556,3.39808,Aceh,Aceh Selatan,Beroperasi,Sawang,Blang Geulinggang,ok
+Puskesmas,Kuta Padang Layung,96.086,4.295,Aceh,Aceh Barat,Beroperasi,Suka Makmue,Kuta Padang,ok
+Puskesmas,Sekerak,97.852,4.2679,Aceh,Aceh Tamiang,Beroperasi,,,no_data
+Puskesmas,Bandar Pusaka,97.88171,4.28422,Aceh,Aceh Tamiang,Beroperasi,Sang Tombolang,Babo,ok
+Puskesmas,Krueng Barona Jaya,95.36328,5.55726,Aceh,Aceh Besar,Beroperasi,,Leungle,ok
+Puskesmas,Sungai Raya,97.92323,4.66751,Aceh,Aceh Timur,Beroperasi,,Labuhangeude,ok
+Puskesmas,Julok,97.59485,5.06721,Aceh,Aceh Timur,Beroperasi,Julok,Seumatang,ok
+Puskesmas,Kuta Baro,95.39855,5.53174,Aceh,Aceh Besar,Beroperasi,Darussalam,Lampuuk,ok
+Puskesmas,Batee,95.9031,5.38971,Aceh,Pidie,Beroperasi,Pidie,Batee,ok
+Puskesmas,Karang Baru,98.06912,4.33249,Aceh,Aceh Tamiang,Beroperasi,Curup Utara,Pahlawan,ok
+Puskesmas,Darul Aman,97.71611,4.98694,Aceh,Aceh Timur,Beroperasi,Baktiya,Matang Pineung,ok
+Puskesmas,Blang Rakal,96.74455,4.85106,Aceh,Bener Meriah,Beroperasi,Pintu Rime Gayo,Singah Mulo,ok
+Puskesmas,Ulim,96.28406,5.2276,Aceh,Pidie Jaya,Beroperasi,Ulim,Keude Ulim,ok
+Puskesmas,Lawe Sigala-Gala,97.91767,3.35033,Aceh,Aceh Tenggara,Beroperasi,Curug,Sukajaya,ok
+Puskesmas,Paya Bakong,97.24228,4.99822,Aceh,Aceh Utara,Beroperasi,,Teungkudibandapirak,ok
+Puskesmas,Langsa Lama,97.97354,4.44805,Aceh,Kota Langsa,Beroperasi,Langsa Lama,,ok
+Puskesmas,Titeue,95.89894,5.24203,Aceh,Pidie,Beroperasi,,Pulo Pante,ok
+Puskesmas,Durian Kawan,97.37382,3.08456,Aceh,Aceh Selatan,Beroperasi,Kluet Timur,Durian Kawan,ok
+Puskesmas,Buket Hagu,97.34175,4.77653,Aceh,Aceh Utara,Beroperasi,,,no_data
+Puskesmas,Bies,96.79768,4.60156,Aceh,Aceh Tengah,Beroperasi,,Simpanglukubbadak,ok
+Puskesmas,Nibong,97.24078,5.06311,Aceh,Aceh Utara,Beroperasi,Nibong,Paya Terbang,ok
+Puskesmas,Mutiara Barat,95.94289,5.27137,Aceh,Pidie,Beroperasi,,Dayah Syarif,ok
+Puskesmas,Rantau Selamat,97.90833,4.5886,Aceh,Aceh Timur,Beroperasi,Rantau Selamat,Bayeun,ok
+Puskesmas,Geureudong Pase,97.12442,4.99731,Aceh,Aceh Utara,Beroperasi,Geuredong Pase,Rayeuk Jawa,ok
+Puskesmas,Seunudon,97.43714,5.17483,Aceh,Aceh Utara,Beroperasi,Seunuddon,Keude Simpang Jalan,ok
+Puskesmas,Kuta Krueng,96.33216,5.20431,Aceh,Pidie Jaya,Beroperasi,,Peulakancibrek,ok
+Puskesmas,Krueng Luas,97.74622,2.866,Aceh,Aceh Selatan,Beroperasi,Trumon Timur,Krueng Luas,ok
+Puskesmas,Rantau,98.09859,4.33747,Aceh,Aceh Tamiang,Beroperasi,Rantau,Alur Cucur,ok
+Puskesmas,Leubok Pempeng,97.89113,4.80366,Aceh,Aceh Timur,Beroperasi,Peureulak,Dama Tutong,ok
+Puskesmas,Simpang Tiga,95.35065,5.4712,Aceh,Aceh Besar,Beroperasi,Simpang Tiga,Lamjamee Dayah,ok
+Puskesmas,Tanah Pasir,97.25711,5.13864,Aceh,Aceh Utara,Beroperasi,Tanah Pasir,Cangguek,ok
+Puskesmas,Bandar Dua,96.31715,5.19995,Aceh,Pidie Jaya,Beroperasi,Bandar Dua,Meuko Kuthang,ok
+Puskesmas,Banda Sakti,97.13416,5.19777,Aceh,Kota Lhokseumawe,Beroperasi,Banda Sakti,,ok
+Puskesmas,Longkib,97.83519,2.544,Aceh,Kota Subulussalam,Beroperasi,,Longkip,ok
+Puskesmas,Reubee,95.88274,5.35045,Aceh,Pidie,Beroperasi,Kunduran,Buloh,ok
+Puskesmas,Blang Geulumpang,97.37181,5.19147,Aceh,Aceh Utara,Beroperasi,Langsa Timur,Matang Panyang,ok
+Puskesmas,Biak Muli,97.83617,3.44316,Aceh,Aceh Tenggara,Beroperasi,Bambel,Pedesi,ok
+Puskesmas,Keumala,95.88245,5.22907,Aceh,Pidie,Beroperasi,Keumala,Dayah Keumala,ok
+Puskesmas,Bakongan,97.4716,2.92691,Aceh,Aceh Selatan,Beroperasi,,,no_data
+Puskesmas,Juli,96.71842,5.16683,Aceh,Bireuen,Beroperasi,Juli,Juli Payaru,ok
+Puskesmas,Alue Bilie,96.48583,4.03788,Aceh,Nagan Raya,Beroperasi,Darul Makmur,Ujong Lamie,ok
+Puskesmas,Darul Kamal,95.33838,5.47775,Aceh,Aceh Besar,Beroperasi,Darul Kamal,Biluy,ok
+Puskesmas,Pining,97.46321,4.05943,Aceh,Gayo Lues,Beroperasi,Bukit,Uring,ok
+Puskesmas,Indrajaya,95.94523,5.32014,Aceh,Pidie,Beroperasi,Indra Jaya,Ulee Birah,ok
+Puskesmas,Labuhan Haji,97.00243,3.54925,Aceh,Aceh Selatan,Beroperasi,Labuhan Haji,Manggis Harapan,ok
+Puskesmas,Idi Tunong,97.72494,4.92167,Aceh,Aceh Timur,Beroperasi,Nurussalam,Alue Siwah Serdang,ok
+Puskesmas,Rundeng,97.85344,2.66065,Aceh,Kota Subulussalam,Beroperasi,Rundeng,,ok
+Puskesmas,Meureudu,96.24665,5.25147,Aceh,Pidie Jaya,Beroperasi,,Rhieng Blang,ok
+Puskesmas,Bener Kelipah,96.92503,4.77442,Aceh,Bener Meriah,Beroperasi,Bener Kelipah,Bener Kelipah Utara,ok
+Puskesmas,Kebayakan,96.84901,4.63954,Aceh,Aceh Tengah,Beroperasi,Kebayakan,Gunung Balohen,ok
+Puskesmas,Kuta Makmur,97.08553,5.12094,Aceh,Aceh Utara,Beroperasi,Songgon,Bayu,ok
+Puskesmas,Ronga Ronga,96.74138,4.82045,Aceh,Bener Meriah,Beroperasi,Gajah Putih,Reronga,ok
+Puskesmas,Jeuram,96.30688,4.23237,Aceh,Nagan Raya,Beroperasi,Seunagan,Paya Udeung,ok
+Puskesmas,Rerebe,97.0325,4.1316,Aceh,Gayo Lues,Beroperasi,Teripe Jaya,Buntul Musara,ok
+Puskesmas,Mesidah,97.07835,4.75482,Aceh,Bener Meriah,Beroperasi,,Perumpakanbenjadi,ok
+Puskesmas,Simpang 4 Nyong,96.04653,5.25689,Aceh,Pidie Jaya,Beroperasi,Geulumpang Tiga,Blang Drang,ok
+Puskesmas,Linge,96.85218,4.48989,Aceh,Aceh Tengah,Beroperasi,Linge,Gelampang Gading,ok
+Puskesmas,Sungai Iyu,98.09522,4.37262,Aceh,Aceh Tamiang,Beroperasi,Bendahara,Upah,ok
+Puskesmas,Lhoong,95.24772,5.25719,Aceh,Aceh Besar,Beroperasi,Lhoong,Baroh Blang Mee,ok
+Puskesmas,Jangka,96.78011,5.25606,Aceh,Bireuen,Beroperasi,Jangka,Alue Bie Pusong,ok
+Puskesmas,Ingin Jaya,95.35674,5.51562,Aceh,Aceh Besar,Beroperasi,Ingin Jaya,Lubok Batee,ok
+Puskesmas,Samudera,97.20417,5.12689,Aceh,Aceh Utara,Beroperasi,Meuraxa,Gampong Pie,ok
+Puskesmas,Muara Satu,97.07706,5.1957,Aceh,Kota Lhokseumawe,Beroperasi,Muara Satu,,ok
+Puskesmas,Mentulang,96.208,4.402,Aceh,Aceh Barat,Beroperasi,,Meutulang,ok
+Puskesmas,Simpang Jaya,96.37632,4.14301,Aceh,Nagan Raya,Beroperasi,Wanaraya,Simpang Jaya,ok
+Puskesmas,Kekuyang,96.92535,4.59468,Aceh,Aceh Tengah,Beroperasi,Bintang,Bamil Nosar,ok
+Puskesmas,Cot Kuta,96.30653,4.23152,Aceh,Nagan Raya,Beroperasi,Seunagan,Jeuram,ok
+Puskesmas,Pante Raya,96.81152,4.73634,Aceh,Bener Meriah,Beroperasi,Wih Pesam,Wih Pesam,ok
+Puskesmas,Cinta Maju,97.31612,3.97385,Aceh,Gayo Lues,Beroperasi,Blangpegayon,Ume Lah,ok
+Puskesmas,Batu-Batu,97.9606012,2.7174812,Aceh,Kota Subulussalam,Beroperasi,Sultan Daulat,,ok
+Puskesmas,Peukan Baro,97.13778,5.16163,Aceh,Pidie,Beroperasi,Muara Dua,,ok
+Puskesmas,Celala,96.68768,4.60124,Aceh,Aceh Tengah,Beroperasi,Celala,Celala,ok
+Puskesmas,Kute Panang,96.79994,4.67925,Aceh,Aceh Tengah,Beroperasi,Kute Panang,Tawardi,ok
+Puskesmas,Alue Ie Mirah,97.59097,4.92091,Aceh,Aceh Timur,Beroperasi,Indra Makmu,Jambo Lubok,ok
+Puskesmas,Bintang,97.01846,4.60532,Aceh,Aceh Tengah,Beroperasi,Bintang,Gele Pulo,ok
+Puskesmas,Leuser,97.96338,3.11995,Aceh,Aceh Tenggara,Beroperasi,Leuser,Gunung Pak-Pak,ok
+Puskesmas,Drien Rampak,95.968,4.312,Aceh,Aceh Barat,Beroperasi,Arongan Lambalek,Drien Rampak,ok
+Puskesmas,Simpang Kramat,97.12542,5.0895,Aceh,Aceh Utara,Beroperasi,Kejaksan,Kebonbaru,ok
+Puskesmas,Padang Rubek,96.22381,4.07581,Aceh,Nagan Raya,Beroperasi,Kuala Pesisir,Gampong Lhok,ok
+Puskesmas,Kuala Bhee,96.047,4.385,Aceh,Aceh Barat,Beroperasi,Woyla,Tingkeum Panyang,ok
+Puskesmas,Lhoknga,95.27773,5.43518,Aceh,Aceh Besar,Beroperasi,Lhoknga,Naga Umbang,ok
+Puskesmas,Naga Timbul,97.96914,3.10161,Aceh,Aceh Tenggara,Beroperasi,Leuser,Gunung Pak-Pak,ok
+Puskesmas,Simpang Ulim,97.53301,5.10581,Aceh,Aceh Timur,Beroperasi,,Gampongblang,ok
+Puskesmas,Perkebunan Inti Alue Ie Itam,97.59097,4.92091,Aceh,Aceh Timur,Beroperasi,Indra Makmu,Jambo Lubok,ok
+Puskesmas,Lamteuba,95.60159,5.44204,Aceh,Aceh Besar,Beroperasi,,,no_data
+Puskesmas,Peusangan Selatan,96.77902,5.0024,Aceh,Bireuen,Beroperasi,,,no_data
+Puskesmas,Babah Buloh,96.8931,5.12545,Aceh,Aceh Utara,Beroperasi,,Gampongsawang,ok
+Puskesmas,Geumpang,96.12571,4.84441,Aceh,Pidie,Beroperasi,,Lhok Kuala,ok
+Puskesmas,Montasik,95.42413,5.46057,Aceh,Aceh Besar,Beroperasi,Montasik,Lamme Garot,ok
+Puskesmas,Suka Mulia,96.53143,3.94965,Aceh,Nagan Raya,Beroperasi,Darul Makmur,Alue Jampak,ok
+Puskesmas,Kejuruan Muda,98.06385,4.23694,Aceh,Aceh Tamiang,Beroperasi,Kejuruan Muda,Sungai Liput,ok
+Puskesmas,Padang Panyang,96.29306,4.03446,Aceh,Nagan Raya,Beroperasi,Kuala Pesisir,Padang Panyang,ok
+Puskesmas,Kuta Blang,96.83043,5.2108,Aceh,Bireuen,Beroperasi,Kuta Blang,Tingkeum Manyang,ok
+Puskesmas,Cot Ie Jue,96.75521,5.20433,Aceh,Bireuen,Beroperasi,,Gampongbaro,ok
+Puskesmas,Gumpang,97.52626,3.83942,Aceh,Gayo Lues,Beroperasi,Puteri Betung,Uning Pune,ok
+Puskesmas,Tanah Jambo Aye,97.05969,5.00539,Aceh,Aceh Utara,Beroperasi,Simpang Kramat,Pase Sentosa,ok
+Puskesmas,Beutong Ateuh,96.51054,4.47066,Aceh,Nagan Raya,Beroperasi,Beutong Ateuh Banggalang,Babah Suak,ok
+Puskesmas,Darul Ihsan,97.75853,4.92955,Aceh,Aceh Timur,Beroperasi,Blang Pidie,Meudang Ara,ok
+Puskesmas,Deleng Pokhkisen,97.81813,3.51201,Aceh,Aceh Tenggara,Beroperasi,Deleng Pokhkisen,Beriring Naru,ok
+Puskesmas,Kuta Malaka,95.48121,5.34644,Aceh,Aceh Besar,Beroperasi,Kota Cot Glie,Siron Krueng,ok
+Puskesmas,Banda Mulia,97.9915,4.35494,Aceh,Aceh Tamiang,Beroperasi,,Seleleh,ok
+Puskesmas,Meurah Mulia,97.20586,5.06061,Aceh,Aceh Utara,Beroperasi,Meurah Mulia,Keude Jungka Gajah,ok
+Puskesmas,Bukit Gadeng,97.5088,2.97898,Aceh,Aceh Selatan,Beroperasi,Kota Bahagia,Buket Gadeng,ok
+Puskesmas,Jagong,96.77367,4.36116,Aceh,Aceh Tengah,Beroperasi,Jagong Jeget,Jagong Jeget,ok
+Puskesmas,Lembah Seulawah,95.71471,5.47241,Aceh,Aceh Besar,Beroperasi,,,no_data
+Puskesmas,Jontor,98.07813,2.6072,Aceh,Kota Subulussalam,Beroperasi,Penanggalan,,ok
+Puskesmas,Banda Baro,96.98636,5.21292,Aceh,Aceh Utara,Beroperasi,Makmur,Paya Dua,ok
+Puskesmas,Sawang,96.89842,5.14306,Aceh,Aceh Utara,Beroperasi,Sawang,Lhok Bayu,ok
+Puskesmas,Pirak Timu,97.28103,5.00531,Aceh,Aceh Utara,Beroperasi,Pirak Timur,Ceumeucet,ok
+Puskesmas,Lapang,97.30328,5.16919,Aceh,Aceh Utara,Beroperasi,,Kualakeureutoe,ok
+Puskesmas,Kuta Cot Glie,95.51804,5.40056,Aceh,Aceh Besar,Beroperasi,Kota Cot Glie,Lam Aling,ok
+Puskesmas,Bandar Baru,96.05995,5.25452,Aceh,Pidie Jaya,Beroperasi,Bandar Baru,Peub Lueng Nibong,ok
+Puskesmas,Buntul Keumumu,96.91782,4.82897,Aceh,Bener Meriah,Beroperasi,Permata,Bintang Permata,ok
+Puskesmas,Kluet Timur,97.374,3.085,Aceh,Aceh Selatan,Beroperasi,Kluet Timur,Paya Dapur,ok
+Puskesmas,Birem Bayeun,97.94074,4.53267,Aceh,Aceh Timur,Beroperasi,Birem Bayeun,Keude Birem,ok
+Puskesmas,Ujong Fatihah,96.32163,4.12177,Aceh,Nagan Raya,Beroperasi,,Ujongfatihah,ok
+Puskesmas,Baktiya Barat,97.37319,5.12033,Aceh,Aceh Utara,Beroperasi,Baktiya Barat,Matang Bayu,ok
+Puskesmas,Sakti,95.94029,5.25419,Aceh,Pidie,Beroperasi,Sakti,Pante Krueng,ok
+Puskesmas,Kembang Tanjong,96.01688,5.30411,Aceh,Pidie,Beroperasi,Kembang Tanjong,Aron Asan Kumbang,ok
+Puskesmas,Pintu Rime,97.58992,4.10974,Aceh,Gayo Lues,Beroperasi,Pining,Pining,ok
+Puskesmas,Penanggalan,98.02686,2.61824,Aceh,Kota Subulussalam,Beroperasi,Penanggalan,,ok
+Puskesmas,Idi Timur,97.80028,4.91278,Aceh,Aceh Timur,Beroperasi,Juli,Seuneubok Dalam,ok
+Puskesmas,Muara Batu,96.92533,5.25367,Aceh,Aceh Utara,Beroperasi,Muara Batu,Keude Bungkaih,ok
+Puskesmas,Seruway,98.17783,4.35744,Aceh,Aceh Tamiang,Beroperasi,Seruway,Tangsi Lama,ok
+Puskesmas,Peusangan Siblah Krueng,96.77902,5.0024,Aceh,Bireuen,Beroperasi,,,no_data
+Puskesmas,Idi Rayeuk,97.78202,4.94441,Aceh,Aceh Timur,Beroperasi,Nurussalam,Seuneubok Rambong,ok
+Puskesmas,Jeunieb,96.50631,5.18941,Aceh,Bireuen,Beroperasi,Krueng Sabee,Dayah Baro,ok
+Puskesmas,Blangkejeren,97.33863,3.96617,Aceh,Gayo Lues,Beroperasi,,Kutesere,ok
+Puskesmas,Lut Tawar,96.84898,4.62483,Aceh,Aceh Tengah,Beroperasi,,Blangkolak Satu,ok
+Puskesmas,Kuala Simpang,98.06003,4.2918,Aceh,Aceh Tamiang,Beroperasi,Kota Kualasinpang,Kota Kualasimpang,ok
+Puskesmas,Keude Geurobak,97.69653,4.90754,Aceh,Aceh Timur,Beroperasi,Sungai Raya,Buket Drien,ok
+Puskesmas,Rikit Gaib,97.25538,4.10974,Aceh,Gayo Lues,Beroperasi,Rikit Gaib,Cane Toa,ok
+Puskesmas,Peudada,96.59189,5.1998,Aceh,Bireuen,Beroperasi,Muara Batu,Meunasah Baro,ok
+Puskesmas,Kajeung,96.099,4.516,Aceh,Aceh Barat,Beroperasi,Sungai Mas,Tuwi Saya,ok
+Puskesmas,Tanah Luas,97.27472,5.06744,Aceh,Aceh Utara,Beroperasi,,Jeumpabeureghang,ok
+Puskesmas,Jangka Buya,96.32128,5.22231,Aceh,Pidie Jaya,Beroperasi,Jangka Buaya,Keurisi Meunasah Raya,ok
+Puskesmas,Teupien Raya,96.04539,5.25464,Aceh,Pidie,Beroperasi,Geulumpang Tiga,Kruet Teumpeun,ok
+Puskesmas,Ujong Padang Rasian,97.3044,3.1554,Aceh,Aceh Selatan,Beroperasi,Pasi Raja,Ujung Padang Rasian,ok
+Puskesmas,Pulo Teungoh,96.55982,3.98205,Aceh,Nagan Raya,Beroperasi,Darul Makmur,Pulo Teungoh,ok
+Puskesmas,Pulo Aceh,95.12071,5.68026,Aceh,Aceh Besar,Beroperasi,Teluk Sampit,Lampuyang,ok
+Puskesmas,Pidie,95.93631,5.38361,Aceh,Pidie,Beroperasi,Sakti,Kampong Baro,ok
+Puskesmas,Pasi Mali,96.015,4.346,Aceh,Aceh Barat,Beroperasi,,Cotlagan,ok
+Puskesmas,Atu Lintang,96.7925,4.46414,Aceh,Aceh Tengah,Beroperasi,Atu Lintang,Merah Mege,ok
+Puskesmas,Meureubo,96.153,4.15,Aceh,Aceh Barat,Beroperasi,Suka Makmue,Meureubo,ok
+Puskesmas,Kuta Tinggi,98.07122,2.44681,Aceh,Aceh Singkil,Beroperasi,Sine,Pandansari,ok
+Puskesmas,Pulau Banyak,97.39932,2.30692,Aceh,Aceh Singkil,Beroperasi,Pulau Banyak,Pulau Balai,ok
+Puskesmas,Peukan Bada,95.2527,5.52894,Aceh,Aceh Besar,Beroperasi,Peukan Bada,Lam Isek,ok
+Puskesmas,Jeumpa,96.64445,5.20232,Aceh,Bireuen,Beroperasi,Jeumpa,Teupok Tunong,ok
+Puskesmas,Trienggadeng,96.18751,5.25397,Aceh,Pidie Jaya,Beroperasi,,Paya Tringgadeng,ok
+Puskesmas,Dabun Gelang,97.3544,4.01792,Aceh,Gayo Lues,Beroperasi,Dabun Gelang,Uning Gelung,ok
+Puskesmas,Blang Bintang,95.41341,5.51709,Aceh,Aceh Besar,Beroperasi,,Kampungblang,ok
+Puskesmas,Peulimbang,96.53182,5.18648,Aceh,Bireuen,Beroperasi,Arongan Lambalek,Seuneubok Teungoh,ok
+Puskesmas,Drien Jalo,97.0724,3.48959,Aceh,Aceh Selatan,Beroperasi,,,no_data
+Puskesmas,Babussalam,97.4924,3.2803,Aceh,Aceh Tenggara,Beroperasi,,,no_data
+Puskesmas,Kuta Baharu,97.87802,2.45409,Aceh,Aceh Singkil,Beroperasi,Kota Baharu,Ladang Bisik,ok
+Puskesmas,Blangjerango,97.28057,4.02103,Aceh,Gayo Lues,Beroperasi,,Tampengmesura,ok
+Puskesmas,Trumon,97.62468,2.82815,Aceh,Aceh Selatan,Beroperasi,Trumon,Keude Trumon,ok
+Puskesmas,Kota Kutacane,97.81007,3.48629,Aceh,Aceh Tenggara,Beroperasi,,,no_data
+Puskesmas,Peudawa,97.80758,4.88303,Aceh,Aceh Timur,Beroperasi,Arongan Lambalek,Seuneubok Teungoh,ok
+Puskesmas,Suak Ribee,96.117,4.154,Aceh,Aceh Barat,Beroperasi,Johan Pahwalan,Suak Ribee,ok
+Puskesmas,Mutiara,95.992,5.28554,Aceh,Pidie,Beroperasi,Mutiara,Lampoh Sirong,ok
+Puskesmas,Ngkeran,97.82549,3.42574,Aceh,Aceh Tenggara,Beroperasi,,Ngkeran,ok
+Puskesmas,Simpang Tiga,96.88189,4.73458,Aceh,Bener Meriah,Beroperasi,Bukit,Godang,ok
+Puskesmas,Syamtalira Bayu,97.186,5.11764,Aceh,Aceh Utara,Beroperasi,Syamtalira Bayu,Beunot,ok
+Puskesmas,Lawe Dua,97.88005,3.42632,Aceh,Aceh Tenggara,Beroperasi,Bukit Tusam,Kute Empat Lima,ok
+Puskesmas,Pamar,96.36483,4.67063,Aceh,Aceh Tengah,Beroperasi,,,no_data
+Puskesmas,Pante Bidari,97.52061,5.0614,Aceh,Aceh Timur,Beroperasi,Peudada,Meunasah Tunong,ok
+Puskesmas,Bakal Buah,97.93214,2.67982,Aceh,Kota Subulussalam,Beroperasi,Rundeng,,ok
+Puskesmas,Silih Nara,96.72393,4.62357,Aceh,Aceh Tengah,Beroperasi,,Pepayungenangkup,ok
+Puskesmas,Alue Rambot,96.68372,4.02769,Aceh,Nagan Raya,Beroperasi,,,no_data
+Puskesmas,Sapta Jaya,98.12481,4.26373,Aceh,Aceh Tamiang,Beroperasi,Sukamulia,Sukamulia,ok
+Puskesmas,Langsa Barat,97.97083,4.52187,Aceh,Kota Langsa,Beroperasi,Langsa Barat,Seuriget,ok
+Puskesmas,Kuta Panjang,97.28057,4.02103,Aceh,Gayo Lues,Beroperasi,,Tampengmesura,ok
+Puskesmas,Samar Kilang,97.27499,4.67654,Aceh,Bener Meriah,Beroperasi,,,no_data
+Puskesmas,Pante Raja,96.13492,5.27368,Aceh,Pidie Jaya,Beroperasi,Panteraja,Tu,ok
+Puskesmas,Langsa Kota,97.95023,4.47573,Aceh,Kota Langsa,Beroperasi,Langsa Baro,,ok
+Puskesmas,Kutambaru,97.83561,3.48513,Aceh,Aceh Tenggara,Beroperasi,Deleng Pokhkisen,Tading Ni Ulihi,ok
+Puskesmas,Ie Alang,95.49533,5.41032,Aceh,Aceh Besar,Beroperasi,Kota Cot Glie,Leupung Bruek,ok
+Puskesmas,Lampupok,95.4421,5.43691,Aceh,Aceh Besar,Beroperasi,Indrapuri,Lambeutong,ok
+Puskesmas,Ujong Rimba,95.6417,4.92965,Aceh,Pidie,Beroperasi,,,no_data
+Puskesmas,Darussalam,95.39761,5.58893,Aceh,Aceh Besar,Beroperasi,Darussalam,Miruek Taman,ok
+Puskesmas,Lampisang,95.27244,5.5143,Aceh,Aceh Besar,Beroperasi,Peukan Bada,Lampisang,ok
+Puskesmas,Tamiang Hulu,97.859,4.16846,Aceh,Aceh Tamiang,Beroperasi,,,no_data
+Puskesmas,Tanoh Alas,97.97339,3.28405,Aceh,Aceh Tenggara,Beroperasi,Babul Makmur,Sejahtera Baru,ok
+Puskesmas,Singkohor,97.95854,2.52812,Aceh,Aceh Singkil,Beroperasi,Singkohor,Singkohor,ok
+Puskesmas,Juli-2,96.67098,5.14378,Aceh,Bireuen,Beroperasi,,,no_data
+Puskesmas,Kluet Selatan,97.32345,3.05696,Aceh,Aceh Selatan,Beroperasi,Kluet Selatan,Suaq Bakung,ok
+Puskesmas,Ladang Tuha,97.28007,3.19417,Aceh,Aceh Selatan,Beroperasi,Pasi Raja,Ladang Tuha,ok
+Puskesmas,Lhok Bengkuang,97.19714,3.25868,Aceh,Aceh Selatan,Beroperasi,Sijuk,Batu Itam,ok
+Puskesmas,Johan Pahlawan,96.133,4.147,Aceh,Aceh Barat,Beroperasi,,,no_data
+Puskesmas,Darul Imarah,95.32692,5.3046,Aceh,Aceh Besar,Beroperasi,,,no_data
+Puskesmas,Mon Keulayu,96.36483,5.22753,Aceh,Bireuen,Beroperasi,Samalanga,Tanjong Baro,ok
+Puskesmas,Simpang Kiri,97.984,4.1112,Aceh,Aceh Tamiang,Beroperasi,,Kampung Simpang Kiri,ok
+Puskesmas,Langsa Timur,98.01754,4.45561,Aceh,Kota Langsa,Beroperasi,Langsa Timur,,ok
+Puskesmas,Ranto Peureulak,97.82304,4.80555,Aceh,Aceh Timur,Beroperasi,Rantau Peureulak,Blang Barom,ok
+Puskesmas,Danau Paris,98.13297,2.23924,Aceh,Aceh Singkil,Beroperasi,Danau Paris,Lae Balno,ok
+Puskesmas,Blang Kuta,96.27843,5.18216,Aceh,Pidie Jaya,Beroperasi,Bandar Dua,Alue Mee,ok
+Puskesmas,Pulau Banyak Barat,97.29405,2.1347,Aceh,Aceh Singkil,Beroperasi,,,no_data
+Puskesmas,Uning Sigur-Gur,97.89634,3.333,Aceh,Aceh Tenggara,Beroperasi,Babul Rahmah,Uning Sigugur,ok
+Puskesmas,Simpang Mamplam,96.4192,5.17615,Aceh,Bireuen,Beroperasi,Simpang Mamplam,Ie Rhob Timu,ok
+Puskesmas,Grong-Grong,97.71062,4.99212,Aceh,Pidie,Beroperasi,Meureudu,Grong-Grong,ok
+Puskesmas,Suka Makmur,97.70646,3.39152,Aceh,Aceh Tenggara,Beroperasi,,,no_data
+Puskesmas,Leupung,95.24382,5.34317,Aceh,Aceh Besar,Beroperasi,Leupung,Layeun,ok
+Puskesmas,Manyak Payed,98.07554,4.39921,Aceh,Aceh Tamiang,Beroperasi,Bukit Tusam,Tualang Baru,ok
+Puskesmas,Kota Juang,96.72611,5.19641,Aceh,Bireuen,Beroperasi,Idi Tunong,Buket Teukuh,ok
+Puskesmas,Samadua,97.1478,3.30856,Aceh,Aceh Selatan,Beroperasi,Samadua,Jilatang,ok
+Puskesmas,Peulumat,97.03249,3.5038,Aceh,Aceh Selatan,Beroperasi,Pasi Raja,Ladang Tuha,ok
+Puskesmas,Singah Mulo,96.73417,4.90973,Aceh,Bener Meriah,Beroperasi,Pintu Rime Gayo,Blang Rakal,ok
+Puskesmas,Kampung Paya,97.36872,3.11173,Aceh,Aceh Selatan,Beroperasi,Kluet Utara,Kampung Paya,ok
+Puskesmas,Darussalam,95.3975525,5.5888732,Aceh,Aceh Selatan,Beroperasi,Darussalam,Miruek Taman,ok
+Puskesmas,Sedar,97.1295617,3.3216884,Aceh,Aceh Selatan,Beroperasi,Samadua,Alur Pinang,ok
+Puskesmas,Simpang Tiga,95.990453,5.3515085,Aceh,Pidie,Beroperasi,,Teungoh Baro,ok

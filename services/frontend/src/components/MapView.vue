@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
-import { Plus, Minus, Locate, Layers } from 'lucide-vue-next'
+import { ref, onMounted, watch, computed } from 'vue'
+import { Locate, Layers, MapPin, ChevronDown, X, Plus, Minus } from 'lucide-vue-next'
 import { useLocations } from '@/composables/useLocations'
 import { useFaskes } from '@/composables/useFaskes'
 import { api, type Feed } from '@/services/api'
@@ -34,6 +34,217 @@ let markerLayer: any = null
 let faskesLayer: any = null
 let feedsLayer: any = null
 let currentTileLayer: any = null
+
+// Region filter state - pending (before Apply) and applied (after Apply)
+const showRegionFilter = ref(false)
+const filterLevel = ref<'provinsi' | 'kotakab' | 'kecamatan' | 'desa'>('provinsi')
+
+// Pending filter values (before clicking Apply)
+const pendingProvinsi = ref<string>('')
+const pendingKotaKab = ref<string>('')
+const pendingKecamatan = ref<string>('')
+const pendingDesa = ref<string>('')
+
+// Applied filter values (after clicking Apply)
+const appliedProvinsi = ref<string>('')
+const appliedKotaKab = ref<string>('')
+const appliedKecamatan = ref<string>('')
+const appliedDesa = ref<string>('')
+
+// Available options for each level (dynamically populated from data)
+const availableKotaKab = ref<string[]>([])
+const availableKecamatan = ref<string[]>([])
+const availableDesa = ref<string[]>([])
+
+// Collect unique region values from all markers
+const collectRegionData = () => {
+  const kotaKabSet = new Set<string>()
+  const kecamatanMap = new Map<string, Set<string>>()
+  const desaMap = new Map<string, Set<string>>()
+
+  // From location markers
+  markers.value.forEach(m => {
+    if (m.namaKotaKab) kotaKabSet.add(m.namaKotaKab)
+    if (m.namaKotaKab && m.namaKecamatan) {
+      if (!kecamatanMap.has(m.namaKotaKab)) kecamatanMap.set(m.namaKotaKab, new Set())
+      kecamatanMap.get(m.namaKotaKab)!.add(m.namaKecamatan)
+    }
+    if (m.namaKecamatan && m.namaDesa) {
+      if (!desaMap.has(m.namaKecamatan)) desaMap.set(m.namaKecamatan, new Set())
+      desaMap.get(m.namaKecamatan)!.add(m.namaDesa)
+    }
+  })
+
+  // From faskes markers
+  faskesMarkers.value.forEach(m => {
+    if (m.namaKotaKab) kotaKabSet.add(m.namaKotaKab)
+    if (m.namaKotaKab && m.namaKecamatan) {
+      if (!kecamatanMap.has(m.namaKotaKab)) kecamatanMap.set(m.namaKotaKab, new Set())
+      kecamatanMap.get(m.namaKotaKab)!.add(m.namaKecamatan)
+    }
+    if (m.namaKecamatan && m.namaDesa) {
+      if (!desaMap.has(m.namaKecamatan)) desaMap.set(m.namaKecamatan, new Set())
+      desaMap.get(m.namaKecamatan)!.add(m.namaDesa)
+    }
+  })
+
+  // From feeds
+  feedsWithCoords.value.forEach(f => {
+    if (f.region?.kota_kab) kotaKabSet.add(f.region.kota_kab)
+    if (f.region?.kota_kab && f.region?.kecamatan) {
+      if (!kecamatanMap.has(f.region.kota_kab)) kecamatanMap.set(f.region.kota_kab, new Set())
+      kecamatanMap.get(f.region.kota_kab)!.add(f.region.kecamatan)
+    }
+    if (f.region?.kecamatan && f.region?.desa) {
+      if (!desaMap.has(f.region.kecamatan)) desaMap.set(f.region.kecamatan, new Set())
+      desaMap.get(f.region.kecamatan)!.add(f.region.desa)
+    }
+  })
+
+  return { kotaKabSet, kecamatanMap, desaMap }
+}
+
+// Update available kota/kab when provinsi selected
+const updateAvailableKotaKab = () => {
+  const { kotaKabSet } = collectRegionData()
+  availableKotaKab.value = Array.from(kotaKabSet).sort()
+}
+
+// Update available kecamatan when kota/kab selected
+const updateAvailableKecamatan = (kotaKab: string) => {
+  const { kecamatanMap } = collectRegionData()
+  const kecSet = kecamatanMap.get(kotaKab)
+  availableKecamatan.value = kecSet ? Array.from(kecSet).sort() : []
+}
+
+// Update available desa when kecamatan selected
+const updateAvailableDesa = (kecamatan: string) => {
+  const { desaMap } = collectRegionData()
+  const desaSet = desaMap.get(kecamatan)
+  availableDesa.value = desaSet ? Array.from(desaSet).sort() : []
+}
+
+// Filter label for display (shows applied filter)
+const filterLabel = computed(() => {
+  if (appliedDesa.value) return appliedDesa.value
+  if (appliedKecamatan.value) return appliedKecamatan.value
+  if (appliedKotaKab.value) return appliedKotaKab.value
+  if (appliedProvinsi.value) return appliedProvinsi.value
+  return 'Semua Wilayah'
+})
+
+const hasActiveFilter = computed(() => {
+  return appliedProvinsi.value !== '' || appliedKotaKab.value !== '' || appliedKecamatan.value !== '' || appliedDesa.value !== ''
+})
+
+const hasPendingChanges = computed(() => {
+  return pendingProvinsi.value !== appliedProvinsi.value ||
+    pendingKotaKab.value !== appliedKotaKab.value ||
+    pendingKecamatan.value !== appliedKecamatan.value ||
+    pendingDesa.value !== appliedDesa.value
+})
+
+// Handle province selection
+const selectProvinsi = (provinsi: string) => {
+  pendingProvinsi.value = provinsi
+  pendingKotaKab.value = ''
+  pendingKecamatan.value = ''
+  pendingDesa.value = ''
+  if (provinsi === 'Aceh') {
+    updateAvailableKotaKab()
+    filterLevel.value = 'kotakab'
+  }
+}
+
+// Handle kota/kab selection
+const selectKotaKab = (kotaKab: string) => {
+  pendingKotaKab.value = kotaKab
+  pendingKecamatan.value = ''
+  pendingDesa.value = ''
+  if (kotaKab) {
+    updateAvailableKecamatan(kotaKab)
+    filterLevel.value = 'kecamatan'
+  }
+}
+
+// Handle kecamatan selection
+const selectKecamatan = (kecamatan: string) => {
+  pendingKecamatan.value = kecamatan
+  pendingDesa.value = ''
+  if (kecamatan) {
+    updateAvailableDesa(kecamatan)
+    filterLevel.value = 'desa'
+  }
+}
+
+// Handle desa selection
+const selectDesa = (desa: string) => {
+  pendingDesa.value = desa
+}
+
+// Apply filter
+const applyFilter = () => {
+  appliedProvinsi.value = pendingProvinsi.value
+  appliedKotaKab.value = pendingKotaKab.value
+  appliedKecamatan.value = pendingKecamatan.value
+  appliedDesa.value = pendingDesa.value
+  showRegionFilter.value = false
+}
+
+// Clear filter
+const clearFilter = () => {
+  pendingProvinsi.value = ''
+  pendingKotaKab.value = ''
+  pendingKecamatan.value = ''
+  pendingDesa.value = ''
+  appliedProvinsi.value = ''
+  appliedKotaKab.value = ''
+  appliedKecamatan.value = ''
+  appliedDesa.value = ''
+  availableKotaKab.value = []
+  availableKecamatan.value = []
+  availableDesa.value = []
+  filterLevel.value = 'provinsi'
+}
+
+// Go back to previous level
+const goBackLevel = () => {
+  if (filterLevel.value === 'desa') {
+    filterLevel.value = 'kecamatan'
+    pendingDesa.value = ''
+  } else if (filterLevel.value === 'kecamatan') {
+    filterLevel.value = 'kotakab'
+    pendingKecamatan.value = ''
+    pendingDesa.value = ''
+  } else if (filterLevel.value === 'kotakab') {
+    filterLevel.value = 'provinsi'
+    pendingKotaKab.value = ''
+    pendingKecamatan.value = ''
+    pendingDesa.value = ''
+  }
+}
+
+// Toggle filter dropdown
+const toggleRegionFilter = () => {
+  if (!showRegionFilter.value) {
+    // Opening: sync pending with applied
+    pendingProvinsi.value = appliedProvinsi.value
+    pendingKotaKab.value = appliedKotaKab.value
+    pendingKecamatan.value = appliedKecamatan.value
+    pendingDesa.value = appliedDesa.value
+    // Set appropriate level
+    if (appliedDesa.value) filterLevel.value = 'desa'
+    else if (appliedKecamatan.value) filterLevel.value = 'kecamatan'
+    else if (appliedKotaKab.value) filterLevel.value = 'kotakab'
+    else if (appliedProvinsi.value) filterLevel.value = 'kotakab'
+    else filterLevel.value = 'provinsi'
+    // Update available options
+    if (appliedProvinsi.value) updateAvailableKotaKab()
+    if (appliedKotaKab.value) updateAvailableKecamatan(appliedKotaKab.value)
+    if (appliedKecamatan.value) updateAvailableDesa(appliedKecamatan.value)
+  }
+  showRegionFilter.value = !showRegionFilter.value
+}
 
 // Fetch feeds with coordinates (free geolocation feeds)
 const fetchFeedsWithCoords = async () => {
@@ -80,23 +291,34 @@ const buildFeedPopupContent = (feed: Feed): string => {
     ? `<div class="popup-photo"><img src="${getFeedPhotoUrl(feed.photos[0].id)}" alt="Foto" loading="lazy" /></div>`
     : ''
 
+  // Google Maps link (if coordinates available)
+  const gmapsLink = feed.coordinates
+    ? `<a href="https://www.google.com/maps?q=${feed.coordinates[1]},${feed.coordinates[0]}" target="_blank" class="gmaps-link" title="Buka di Google Maps">
+        <span class="gmaps-text">GMaps</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+      </a>`
+    : ''
+
   // Location name (clickable if has location_id or faskes_id)
   let locationHtml = ''
   if (feed.location_id && feed.location_name) {
     locationHtml = `<div class="popup-location clickable" data-location-id="${feed.location_id}">
       <span class="location-icon">📍</span>
       <span class="location-name">${feed.location_name}</span>
+      ${gmapsLink}
     </div>`
   } else if (feed.faskes_id && feed.faskes_name) {
     locationHtml = `<div class="popup-location clickable" data-faskes-id="${feed.faskes_id}">
       <span class="location-icon">🏥</span>
       <span class="location-name">${feed.faskes_name}</span>
       <span class="faskes-badge">Faskes</span>
+      ${gmapsLink}
     </div>`
   } else {
     locationHtml = `<div class="popup-location free">
-      <span class="location-icon">📢</span>
+      <span class="location-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 13v-2z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></span>
       <span class="location-name">Laporan Situasi</span>
+      ${gmapsLink}
     </div>`
   }
 
@@ -177,10 +399,10 @@ const markerIcons: Record<string, { color: string; icon: string }> = {
 }
 
 const faskesIcons: Record<string, { color: string; icon: string }> = {
-  rumah_sakit: { color: '#DC2626', icon: '🏥' },
-  puskesmas: { color: '#EA580C', icon: '🩺' },
-  klinik: { color: '#D97706', icon: '💊' },
-  posko_kes_darurat: { color: '#EF4444', icon: '⛑️' },
+  rumah_sakit: { color: '#940000', icon: '🏥' },      // Dark Red - Rumah Sakit
+  puskesmas: { color: '#EC4899', icon: '🏥' },        // Pink - Puskesmas (sama dengan RS, warna merah muda)
+  klinik: { color: '#2563EB', icon: '💊' },           // Blue - Klinik
+  posko_kes_darurat: { color: '#F59E0B', icon: '⛑️' }, // Orange/Amber - Posko Darurat
 }
 
 const getMarkerIcon = (type: string) => {
@@ -234,12 +456,12 @@ onMounted(async () => {
   // Setup popup click handlers
   setupPopupClickHandlers()
 
-  // Fetch locations from API
-  await fetchLocations()
+  // Fetch locations from API (use high limit to get all markers on map)
+  await fetchLocations({ limit: 1000 })
 
   // Fetch faskes if enabled
   if (props.showFaskes) {
-    await fetchFaskes()
+    await fetchFaskes({ limit: 1000 })
     faskesLayer.addTo(map)
   }
 
@@ -266,7 +488,7 @@ watch(() => props.showFaskes, async (show) => {
   if (show) {
     // Fetch faskes data if not already loaded
     if (faskesMarkers.value.length === 0) {
-      await fetchFaskes()
+      await fetchFaskes({ limit: 1000 })
     }
     faskesLayer.addTo(map)
   } else {
@@ -288,8 +510,128 @@ watch(() => props.showFeeds, async (show) => {
   }
 })
 
-// Watch for marker changes and update map
-watch(markers, async (newMarkers) => {
+// Computed filtered location markers based on region filter
+const filteredLocationMarkers = computed(() => {
+  // Access reactive values directly for proper reactivity
+  const prov = appliedProvinsi.value
+  const kab = appliedKotaKab.value
+  const kec = appliedKecamatan.value
+  const desa = appliedDesa.value
+
+  // No filter - return all
+  if (!prov && !kab && !kec && !desa) {
+    return markers.value
+  }
+
+  return markers.value.filter(m => {
+    const normalize = (s?: string) => (s || '').toLowerCase().trim()
+
+    if (desa) {
+      const mDesa = normalize(m.namaDesa)
+      const fDesa = normalize(desa)
+      return mDesa.includes(fDesa) || fDesa.includes(mDesa)
+    }
+    if (kec) {
+      const mKec = normalize(m.namaKecamatan)
+      const fKec = normalize(kec)
+      return mKec.includes(fKec) || fKec.includes(mKec)
+    }
+    if (kab) {
+      const mKab = normalize(m.namaKotaKab)
+      const fKab = normalize(kab)
+      return mKab.includes(fKab) || fKab.includes(mKab)
+    }
+    if (prov) {
+      const mProv = normalize(m.namaProvinsi)
+      const fProv = normalize(prov)
+      return mProv.includes(fProv) || fProv.includes(mProv)
+    }
+    return true
+  })
+})
+
+// Computed filtered faskes markers based on region filter
+const filteredFaskesMarkers = computed(() => {
+  // Access reactive values directly for proper reactivity
+  const prov = appliedProvinsi.value
+  const kab = appliedKotaKab.value
+  const kec = appliedKecamatan.value
+  const desa = appliedDesa.value
+
+  // No filter - return all
+  if (!prov && !kab && !kec && !desa) {
+    return faskesMarkers.value
+  }
+
+  return faskesMarkers.value.filter(m => {
+    const normalize = (s?: string) => (s || '').toLowerCase().trim()
+
+    if (desa) {
+      const mDesa = normalize(m.namaDesa)
+      const fDesa = normalize(desa)
+      return mDesa.includes(fDesa) || fDesa.includes(mDesa)
+    }
+    if (kec) {
+      const mKec = normalize(m.namaKecamatan)
+      const fKec = normalize(kec)
+      return mKec.includes(fKec) || fKec.includes(mKec)
+    }
+    if (kab) {
+      const mKab = normalize(m.namaKotaKab)
+      const fKab = normalize(kab)
+      return mKab.includes(fKab) || fKab.includes(mKab)
+    }
+    if (prov) {
+      const mProv = normalize(m.namaProvinsi)
+      const fProv = normalize(prov)
+      return mProv.includes(fProv) || fProv.includes(mProv)
+    }
+    return true
+  })
+})
+
+// Computed filtered feeds based on region filter
+const filteredFeeds = computed(() => {
+  // Access reactive values directly for proper reactivity
+  const prov = appliedProvinsi.value
+  const kab = appliedKotaKab.value
+  const kec = appliedKecamatan.value
+  const desa = appliedDesa.value
+
+  // No filter - return all
+  if (!prov && !kab && !kec && !desa) {
+    return feedsWithCoords.value
+  }
+
+  return feedsWithCoords.value.filter(f => {
+    const normalize = (s?: string) => (s || '').toLowerCase().trim()
+
+    if (desa) {
+      const mDesa = normalize(f.region?.desa)
+      const fDesa = normalize(desa)
+      return mDesa.includes(fDesa) || fDesa.includes(mDesa)
+    }
+    if (kec) {
+      const mKec = normalize(f.region?.kecamatan)
+      const fKec = normalize(kec)
+      return mKec.includes(fKec) || fKec.includes(mKec)
+    }
+    if (kab) {
+      const mKab = normalize(f.region?.kota_kab)
+      const fKab = normalize(kab)
+      return mKab.includes(fKab) || fKab.includes(mKab)
+    }
+    if (prov) {
+      const mProv = normalize(f.region?.provinsi)
+      const fProv = normalize(prov)
+      return mProv.includes(fProv) || fProv.includes(mProv)
+    }
+    return true
+  })
+})
+
+// Watch for filtered location marker changes and update map
+watch(filteredLocationMarkers, async (newMarkers) => {
   if (!map || !markerLayer) return
 
   const L = await import('leaflet')
@@ -323,8 +665,8 @@ watch(markers, async (newMarkers) => {
   }
 }, { immediate: true })
 
-// Watch for faskes marker changes and update map
-watch(faskesMarkers, async (newMarkers) => {
+// Watch for filtered faskes marker changes and update map
+watch(filteredFaskesMarkers, async (newMarkers) => {
   if (!map || !faskesLayer) return
 
   const L = await import('leaflet')
@@ -349,8 +691,8 @@ watch(faskesMarkers, async (newMarkers) => {
   })
 }, { immediate: true })
 
-// Watch for feeds with coords changes and update map
-watch(feedsWithCoords, async (newFeeds) => {
+// Watch for filtered feeds changes and update map
+watch(filteredFeeds, async (newFeeds) => {
   if (!map || !feedsLayer) return
 
   const L = await import('leaflet')
@@ -380,19 +722,30 @@ watch(feedsWithCoords, async (newFeeds) => {
     // Add popup with feed content and photo
     const popupContent = buildFeedPopupContent(feed)
     marker.bindPopup(popupContent, {
-      maxWidth: 250,
-      className: 'feed-popup-container'
+      maxWidth: 350,
+      className: 'feed-popup-container',
+      closeButton: false
     })
   })
 }, { immediate: true })
 
-const zoomIn = () => map?.zoomIn()
-const zoomOut = () => map?.zoomOut()
 const locateMe = () => {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition((pos) => {
       map?.setView([pos.coords.latitude, pos.coords.longitude], 14)
     })
+  }
+}
+
+const zoomIn = () => {
+  if (map) {
+    map.zoomIn()
+  }
+}
+
+const zoomOut = () => {
+  if (map) {
+    map.zoomOut()
   }
 }
 
@@ -449,7 +802,13 @@ const showFeedPopup = async (feedId: string, lat: number, lng: number) => {
 
   if (feed) {
     const popupContent = buildFeedPopupContent(feed)
-    L.popup()
+    L.popup({
+      closeButton: false,
+      className: 'feed-popup-container',
+      maxWidth: 350,
+      autoPanPaddingTopLeft: [50, 150],
+      autoPanPaddingBottomRight: [50, 50]
+    })
       .setLatLng([lat, lng])
       .setContent(popupContent)
       .openOn(map)
@@ -474,23 +833,181 @@ defineExpose({
       <span class="text-sm text-gray-600">Memuat data...</span>
     </div>
 
+    <!-- Region Filter (top-left) -->
+    <div class="absolute top-4 left-4 z-[1000]">
+      <div class="relative">
+        <!-- Filter Button -->
+        <button
+          class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-md hover:bg-gray-50 text-sm"
+          @click="toggleRegionFilter"
+        >
+          <MapPin class="w-4 h-4 text-gray-500" />
+          <span class="text-gray-700 max-w-[150px] truncate">{{ filterLabel }}</span>
+          <ChevronDown class="w-4 h-4 text-gray-400" :class="{ 'rotate-180': showRegionFilter }" />
+          <button
+            v-if="hasActiveFilter"
+            class="ml-1 p-0.5 hover:bg-gray-200 rounded"
+            @click.stop="clearFilter"
+          >
+            <X class="w-3 h-3 text-gray-500" />
+          </button>
+        </button>
+
+        <!-- Dropdown Menu -->
+        <div
+          v-if="showRegionFilter"
+          class="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 min-w-[250px] max-h-[450px] overflow-hidden flex flex-col"
+        >
+          <!-- Breadcrumb / Current Selection -->
+          <div v-if="filterLevel !== 'provinsi'" class="px-3 py-2 bg-gray-50 border-b border-gray-200">
+            <div class="flex items-center gap-1 text-xs text-gray-500 flex-wrap">
+              <button class="hover:text-blue-600" @click="filterLevel = 'provinsi'; pendingKotaKab = ''; pendingKecamatan = ''; pendingDesa = ''">
+                {{ pendingProvinsi || 'Provinsi' }}
+              </button>
+              <span v-if="pendingKotaKab">›</span>
+              <button v-if="pendingKotaKab" class="hover:text-blue-600" @click="filterLevel = 'kecamatan'; pendingKecamatan = ''; pendingDesa = ''">
+                {{ pendingKotaKab }}
+              </button>
+              <span v-if="pendingKecamatan">›</span>
+              <button v-if="pendingKecamatan" class="hover:text-blue-600" @click="filterLevel = 'desa'; pendingDesa = ''">
+                {{ pendingKecamatan }}
+              </button>
+              <span v-if="pendingDesa">›</span>
+              <span v-if="pendingDesa" class="font-medium text-gray-700">{{ pendingDesa }}</span>
+            </div>
+          </div>
+
+          <!-- Header with Back button -->
+          <div class="px-3 py-2 border-b border-gray-200 flex items-center justify-between">
+            <span class="text-xs font-medium text-gray-500 uppercase">
+              {{ filterLevel === 'provinsi' ? 'Provinsi' : filterLevel === 'kotakab' ? 'Kota/Kabupaten' : filterLevel === 'kecamatan' ? 'Kecamatan' : 'Desa' }}
+            </span>
+            <button
+              v-if="filterLevel !== 'provinsi'"
+              class="text-blue-500 hover:text-blue-700 text-xs"
+              @click="goBackLevel"
+            >
+              ← Kembali
+            </button>
+          </div>
+
+          <!-- List Content -->
+          <div class="max-h-[280px] overflow-y-auto flex-1">
+            <!-- Provinsi Selection -->
+            <template v-if="filterLevel === 'provinsi'">
+              <button
+                class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2"
+                :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingProvinsi === 'Aceh' }"
+                @click="selectProvinsi('Aceh')"
+              >
+                <MapPin class="w-4 h-4" />
+                Aceh
+              </button>
+            </template>
+
+            <!-- Kota/Kab Selection -->
+            <template v-else-if="filterLevel === 'kotakab'">
+              <button
+                class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600"
+                :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingKotaKab === '' }"
+                @click="pendingKotaKab = ''; pendingKecamatan = ''; pendingDesa = ''"
+              >
+                Semua Kota/Kabupaten
+              </button>
+              <button
+                v-for="kota in availableKotaKab"
+                :key="kota"
+                class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600"
+                :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingKotaKab === kota }"
+                @click="selectKotaKab(kota)"
+              >
+                {{ kota }}
+              </button>
+              <div v-if="availableKotaKab.length === 0" class="px-3 py-4 text-sm text-gray-400 text-center">
+                Tidak ada data
+              </div>
+            </template>
+
+            <!-- Kecamatan Selection -->
+            <template v-else-if="filterLevel === 'kecamatan'">
+              <button
+                class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600"
+                :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingKecamatan === '' }"
+                @click="pendingKecamatan = ''; pendingDesa = ''"
+              >
+                Semua Kecamatan
+              </button>
+              <button
+                v-for="kec in availableKecamatan"
+                :key="kec"
+                class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600"
+                :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingKecamatan === kec }"
+                @click="selectKecamatan(kec)"
+              >
+                {{ kec }}
+              </button>
+              <div v-if="availableKecamatan.length === 0" class="px-3 py-4 text-sm text-gray-400 text-center">
+                Tidak ada data kecamatan
+              </div>
+            </template>
+
+            <!-- Desa Selection -->
+            <template v-else-if="filterLevel === 'desa'">
+              <button
+                class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600"
+                :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingDesa === '' }"
+                @click="pendingDesa = ''"
+              >
+                Semua Desa
+              </button>
+              <button
+                v-for="desa in availableDesa"
+                :key="desa"
+                class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600"
+                :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingDesa === desa }"
+                @click="selectDesa(desa)"
+              >
+                {{ desa }}
+              </button>
+              <div v-if="availableDesa.length === 0" class="px-3 py-4 text-sm text-gray-400 text-center">
+                Tidak ada data desa
+              </div>
+            </template>
+          </div>
+
+          <!-- Apply Button -->
+          <div class="px-3 py-2 border-t border-gray-200 bg-gray-50">
+            <button
+              class="w-full px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              @click="applyFilter"
+            >
+              Terapkan Filter
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Map container -->
     <div ref="mapContainer" class="w-full h-full"></div>
 
     <!-- Map controls -->
     <div class="absolute right-4 bottom-24 z-[1000] flex flex-col gap-2">
-      <button
-        class="w-10 h-10 bg-white rounded-lg shadow-md flex items-center justify-center hover:bg-gray-50"
-        @click="zoomIn"
-      >
-        <Plus class="w-5 h-5 text-gray-600" />
-      </button>
-      <button
-        class="w-10 h-10 bg-white rounded-lg shadow-md flex items-center justify-center hover:bg-gray-50"
-        @click="zoomOut"
-      >
-        <Minus class="w-5 h-5 text-gray-600" />
-      </button>
+      <!-- Zoom controls -->
+      <div class="flex flex-col bg-white rounded-lg shadow-md overflow-hidden">
+        <button
+          class="w-10 h-10 flex items-center justify-center hover:bg-gray-50 border-b border-gray-200"
+          @click="zoomIn"
+        >
+          <Plus class="w-5 h-5 text-gray-600" />
+        </button>
+        <button
+          class="w-10 h-10 flex items-center justify-center hover:bg-gray-50"
+          @click="zoomOut"
+        >
+          <Minus class="w-5 h-5 text-gray-600" />
+        </button>
+      </div>
       <button
         class="w-10 h-10 bg-white rounded-lg shadow-md flex items-center justify-center hover:bg-gray-50"
         @click="locateMe"
@@ -548,7 +1065,7 @@ defineExpose({
 
 .feed-popup-container .leaflet-popup-content {
   margin: 0;
-  width: 260px !important;
+  width: 350px !important;
 }
 
 .feed-popup-container .leaflet-popup-tip {
@@ -578,6 +1095,33 @@ defineExpose({
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.feed-popup-new .popup-location .location-name {
+  flex: 1;
+}
+
+.feed-popup-new .popup-location .gmaps-link {
+  margin-left: auto;
+  color: #4285f4;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+
+.feed-popup-new .popup-location .gmaps-link:hover {
+  background-color: #e8f0fe;
+  color: #1a73e8;
+}
+
+.feed-popup-new .popup-location .gmaps-link .gmaps-text {
+  white-space: nowrap;
 }
 
 .feed-popup-new .popup-location.clickable {

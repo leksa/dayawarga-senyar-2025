@@ -89,15 +89,27 @@ func (h *FaskesHandler) GetFaskes(c *gin.Context) {
 	// Convert to GeoJSON
 	features := make([]dto.FaskesFeatureResponse, len(faskesList))
 	for i, f := range faskesList {
-		// Build alamat singkat
+		// Extract alamat fields
 		alamatSingkat := ""
+		namaProvinsi := ""
+		namaKotaKab := ""
+		namaKecamatan := ""
+		namaDesa := ""
 		if f.Alamat != nil {
 			parts := []string{}
-			if desa, ok := f.Alamat["desa"].(string); ok && desa != "" {
+			if desa, ok := f.Alamat["nama_desa"].(string); ok && desa != "" {
 				parts = append(parts, desa)
+				namaDesa = desa
 			}
-			if kab, ok := f.Alamat["kabupaten"].(string); ok && kab != "" {
+			if kab, ok := f.Alamat["nama_kota_kab"].(string); ok && kab != "" {
 				parts = append(parts, kab)
+				namaKotaKab = kab
+			}
+			if kec, ok := f.Alamat["nama_kecamatan"].(string); ok && kec != "" {
+				namaKecamatan = kec
+			}
+			if prov, ok := f.Alamat["nama_provinsi"].(string); ok && prov != "" {
+				namaProvinsi = prov
 			}
 			alamatSingkat = strings.Join(parts, ", ")
 		}
@@ -126,6 +138,10 @@ func (h *FaskesHandler) GetFaskes(c *gin.Context) {
 				StatusFaskes:    f.StatusFaskes,
 				KondisiFaskes:   kondisiFaskes,
 				AlamatSingkat:   alamatSingkat,
+				NamaProvinsi:    namaProvinsi,
+				NamaKotaKab:     namaKotaKab,
+				NamaKecamatan:   namaKecamatan,
+				NamaDesa:        namaDesa,
 				UpdatedAt:       f.UpdatedAt,
 			},
 		}

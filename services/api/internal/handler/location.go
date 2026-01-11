@@ -76,15 +76,41 @@ func (h *LocationHandler) GetLocations(c *gin.Context) {
 	// Convert to GeoJSON
 	features := make([]dto.LocationFeatureResponse, len(locations))
 	for i, loc := range locations {
-		// Build alamat singkat
+		// Build alamat singkat and extract region fields
 		alamatSingkat := ""
+		namaProvinsi := ""
+		namaKotaKab := ""
+		namaKecamatan := ""
+		namaDesa := ""
 		if loc.Alamat != nil {
 			parts := []string{}
-			if desa, ok := loc.Alamat["desa"].(string); ok && desa != "" {
+			// Check both "nama_desa" and "desa" keys
+			if desa, ok := loc.Alamat["nama_desa"].(string); ok && desa != "" {
 				parts = append(parts, desa)
+				namaDesa = desa
+			} else if desa, ok := loc.Alamat["desa"].(string); ok && desa != "" {
+				parts = append(parts, desa)
+				namaDesa = desa
 			}
-			if kab, ok := loc.Alamat["kabupaten"].(string); ok && kab != "" {
+			// Check both "nama_kota_kab" and "kabupaten" keys
+			if kab, ok := loc.Alamat["nama_kota_kab"].(string); ok && kab != "" {
 				parts = append(parts, kab)
+				namaKotaKab = kab
+			} else if kab, ok := loc.Alamat["kabupaten"].(string); ok && kab != "" {
+				parts = append(parts, kab)
+				namaKotaKab = kab
+			}
+			// Check both "nama_kecamatan" and "kecamatan" keys
+			if kec, ok := loc.Alamat["nama_kecamatan"].(string); ok && kec != "" {
+				namaKecamatan = kec
+			} else if kec, ok := loc.Alamat["kecamatan"].(string); ok && kec != "" {
+				namaKecamatan = kec
+			}
+			// Check both "nama_provinsi" and "provinsi" keys
+			if prov, ok := loc.Alamat["nama_provinsi"].(string); ok && prov != "" {
+				namaProvinsi = prov
+			} else if prov, ok := loc.Alamat["provinsi"].(string); ok && prov != "" {
+				namaProvinsi = prov
 			}
 			alamatSingkat = strings.Join(parts, ", ")
 		}
@@ -127,6 +153,10 @@ func (h *LocationHandler) GetLocations(c *gin.Context) {
 				Type:            loc.Type,
 				Status:          loc.Status,
 				AlamatSingkat:   alamatSingkat,
+				NamaProvinsi:    namaProvinsi,
+				NamaKotaKab:     namaKotaKab,
+				NamaKecamatan:   namaKecamatan,
+				NamaDesa:        namaDesa,
 				JumlahKK:        jumlahKK,
 				TotalJiwa:       totalJiwa,
 				BaselineSumber:  baselineSumber,

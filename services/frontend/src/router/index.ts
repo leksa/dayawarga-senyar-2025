@@ -18,6 +18,16 @@ const router = createRouter({
       name: 'tentang',
       component: () => import('@/views/TentangView.vue'),
     },
+    {
+      path: '/pakai-dayawarga',
+      name: 'pakai-dayawarga',
+      component: () => import('@/views/PakaiDayawargaView.vue'),
+    },
+    {
+      path: '/belakang-layar',
+      name: 'belakang-layar',
+      component: () => import('@/views/BelakangLayarView.vue'),
+    },
   ],
 })
 

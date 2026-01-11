@@ -62,6 +62,10 @@ export function useFaskes() {
       lat: f.geometry.coordinates[1],
       lng: f.geometry.coordinates[0],
       alamatSingkat: f.properties.alamat_singkat,
+      namaProvinsi: f.properties.nama_provinsi,
+      namaKotaKab: f.properties.nama_kota_kab,
+      namaKecamatan: f.properties.nama_kecamatan,
+      namaDesa: f.properties.nama_desa,
       updatedAt: f.properties.updated_at,
     }))
   })

@@ -110,24 +110,6 @@ watch(() => props.faskes, async (newFaskes) => {
   }
 }, { immediate: true })
 
-// Format ID from alamat
-const locationId = computed(() => {
-  if (!locationDetail.value?.alamat) return '-'
-  const alamat = locationDetail.value.alamat as Record<string, string>
-  const idDesa = alamat.id_desa || ''
-  const nama = locationDetail.value.identitas?.nama || props.marker?.name || ''
-  return `${idDesa} - ${nama}`
-})
-
-// Format ID for faskes
-const faskesId = computed(() => {
-  if (!faskesDetail.value?.alamat) return '-'
-  const alamat = faskesDetail.value.alamat as Record<string, string>
-  const idDesa = alamat.id_desa || ''
-  const nama = faskesDetail.value.nama || props.faskes?.name || ''
-  return `${idDesa} - ${nama}`
-})
-
 // Format status badge
 const statusVariant = computed(() => {
   const status = locationDetail.value?.status || props.marker?.status
@@ -264,13 +246,13 @@ const closePhotoModal = () => {
   <!-- Mobile backdrop (covers area behind panel, clicking closes it) -->
   <div
     v-if="marker || faskes"
-    class="fixed inset-0 left-14 bg-black/30 z-40 lg:hidden"
+    class="fixed inset-0 left-14 bg-black/30 z-[1100] lg:hidden"
     @click="emit('close')"
   />
 
   <aside
     v-if="marker || faskes"
-    class="fixed inset-y-0 left-14 right-0 lg:h-full lg:relative lg:inset-auto lg:w-96 bg-white border-l border-gray-200 flex flex-col overflow-hidden z-50 lg:border-t-0"
+    class="fixed inset-y-0 left-14 right-0 lg:h-full lg:relative lg:inset-auto lg:w-96 bg-white border-l border-gray-200 flex flex-col overflow-hidden z-[1200] lg:z-auto lg:border-t-0"
   >
     <!-- Header for Location/Posko -->
     <div v-if="!isFaskesView" class="p-3 lg:p-4 border-b border-gray-200">
@@ -280,7 +262,6 @@ const closePhotoModal = () => {
           <div class="flex items-center gap-2 mt-1">
             <Badge :variant="statusVariant">Status Posko: {{ statusLabel }}</Badge>
           </div>
-          <div class="text-xs text-gray-500 mt-1">ID: {{ locationId }}</div>
         </div>
         <button
           class="p-1 hover:bg-gray-100 rounded"
@@ -301,7 +282,6 @@ const closePhotoModal = () => {
               Status Faskes: {{ faskesDetail?.status_faskes === 'operasional' ? 'Operasional' : 'Non-aktif' }}
             </Badge>
           </div>
-          <div class="text-xs text-gray-500 mt-1">ID: {{ faskesId }}</div>
         </div>
         <button
           class="p-1 hover:bg-gray-100 rounded"
@@ -441,7 +421,7 @@ const closePhotoModal = () => {
           <div>
             <div class="text-xs text-gray-500">Terisolir</div>
             <div class="text-sm font-medium">
-              {{ formatTerisolir((locationDetail?.data_pengungsi as any)?.terisolir) }}
+              {{ formatTerisolir((locationDetail?.akses as any)?.terisolir) }}
             </div>
           </div>
           <div>
@@ -487,6 +467,15 @@ const closePhotoModal = () => {
               <div class="text-xs text-gray-500">Nama Relawan</div>
             </div>
           </div>
+          <div v-if="(locationDetail?.identitas as any)?.institusi" class="flex items-start gap-3">
+            <Home class="w-5 h-5 text-gray-400 mt-0.5" />
+            <div>
+              <div class="text-sm font-medium">
+                {{ (locationDetail?.identitas as any)?.institusi }}
+              </div>
+              <div class="text-xs text-gray-500">Institusi/Organisasi</div>
+            </div>
+          </div>
           <div class="flex items-start gap-3">
             <Clock class="w-5 h-5 text-gray-400 mt-0.5" />
             <div>
@@ -520,6 +509,14 @@ const closePhotoModal = () => {
             <div>
               <span class="text-gray-500">Total Pengungsi:</span>
               <span class="ml-1 font-medium">{{ (locationDetail?.data_pengungsi as any)?.total_pengungsi || '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">KK Perempuan:</span>
+              <span class="ml-1 font-medium">{{ (locationDetail?.data_pengungsi as any)?.kk_perempuan ?? '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">KK Anak:</span>
+              <span class="ml-1 font-medium">{{ (locationDetail?.data_pengungsi as any)?.kk_anak ?? '-' }}</span>
             </div>
             <div>
               <span class="text-gray-500">Lansia:</span>
@@ -573,6 +570,10 @@ const closePhotoModal = () => {
         </button>
         <div v-if="expandedSections.fasilitas" class="px-4 pb-4">
           <div class="grid grid-cols-2 gap-3 text-sm">
+            <div class="col-span-2" v-if="(locationDetail?.data_pengungsi as any)?.persen_keterlibatan">
+              <span class="text-gray-500">Keterlibatan Masyarakat:</span>
+              <span class="ml-1 font-medium">{{ (locationDetail?.data_pengungsi as any)?.persen_keterlibatan }}%</span>
+            </div>
             <div>
               <span class="text-gray-500">Posko Logistik:</span>
               <span class="ml-1 font-medium">{{ formatYesNo((locationDetail?.fasilitas as any)?.posko_logistik) }}</span>
@@ -600,6 +601,18 @@ const closePhotoModal = () => {
             <div>
               <span class="text-gray-500">Tempat Sampah:</span>
               <span class="ml-1 font-medium">{{ (locationDetail?.fasilitas as any)?.tempat_sampah || '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Saluran Limbah:</span>
+              <span class="ml-1 font-medium">{{ formatYesNo((locationDetail?.fasilitas as any)?.saluran_limbah) }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Ketersediaan Air:</span>
+              <span class="ml-1 font-medium capitalize">{{ (locationDetail?.fasilitas as any)?.ketersediaan_air?.replace('_', ' ') || '-' }}</span>
+            </div>
+            <div>
+              <span class="text-gray-500">Kebutuhan Air:</span>
+              <span class="ml-1 font-medium">{{ (locationDetail?.fasilitas as any)?.kebutuhan_air ? `${(locationDetail?.fasilitas as any)?.kebutuhan_air} L/hari` : '-' }}</span>
             </div>
             <div>
               <span class="text-gray-500">Tenaga Medis:</span>
@@ -669,6 +682,14 @@ const closePhotoModal = () => {
         </button>
         <div v-if="expandedSections.akses" class="px-4 pb-4">
           <div class="space-y-2 text-sm">
+            <div v-if="(locationDetail?.identitas as any)?.kota_terdekat">
+              <span class="text-gray-500">Kota Terdekat:</span>
+              <span class="ml-1 font-medium">{{ (locationDetail?.identitas as any)?.kota_terdekat }}</span>
+            </div>
+            <div v-if="(locationDetail?.akses as any)?.nama_faskes_terdekat">
+              <span class="text-gray-500">Faskes Terdekat:</span>
+              <span class="ml-1 font-medium">{{ (locationDetail?.akses as any)?.nama_faskes_terdekat }}</span>
+            </div>
             <div>
               <span class="text-gray-500">Jarak ke Puskesmas:</span>
               <span class="ml-1 font-medium">{{ (locationDetail?.akses as any)?.jarak_pkm || '-' }} km</span>
@@ -696,15 +717,33 @@ const closePhotoModal = () => {
           Alamat
         </h3>
         <div class="text-sm text-gray-600">
-          <p>{{ (locationDetail?.identitas as any)?.alamat_dusun || '' }}</p>
+          <p v-if="(locationDetail?.identitas as any)?.alamat_dusun">{{ (locationDetail?.identitas as any)?.alamat_dusun }}</p>
           <p>
-            Desa {{ (locationDetail?.alamat as any)?.nama_desa || '-' }},
-            Kec. {{ (locationDetail?.alamat as any)?.nama_kecamatan || '-' }}
+            Desa {{ (locationDetail?.alamat as any)?.nama_desa || (locationDetail?.alamat as any)?.id_desa || '-' }},
+            Kec. {{ (locationDetail?.alamat as any)?.nama_kecamatan || (locationDetail?.alamat as any)?.id_kecamatan || '-' }}
           </p>
           <p>
-            {{ (locationDetail?.alamat as any)?.nama_kota_kab || '-' }},
-            {{ (locationDetail?.alamat as any)?.nama_provinsi || '-' }}
+            {{ (locationDetail?.alamat as any)?.nama_kota_kab || (locationDetail?.alamat as any)?.id_kota_kab || '-' }},
+            {{ (locationDetail?.alamat as any)?.nama_provinsi || (locationDetail?.alamat as any)?.id_provinsi || '-' }}
           </p>
+        </div>
+      </div>
+
+      <!-- Sumber Data & Metadata -->
+      <div class="p-4 border-b border-gray-200 bg-gray-50">
+        <div class="space-y-2 text-sm">
+          <div v-if="locationDetail?.meta?.submitter" class="flex items-center justify-between">
+            <span class="text-gray-500">Data diperbarui oleh:</span>
+            <span class="font-medium">{{ locationDetail?.meta?.submitter }}</span>
+          </div>
+          <div v-if="(locationDetail?.identitas as any)?.baseline_sumber" class="flex items-center justify-between">
+            <span class="text-gray-500">Sumber Data:</span>
+            <span class="font-medium text-blue-600">{{ (locationDetail?.identitas as any)?.baseline_sumber }}</span>
+          </div>
+          <div v-if="(locationDetail?.identitas as any)?.mulai_tanggal" class="flex items-center justify-between">
+            <span class="text-gray-500">Mulai Operasi:</span>
+            <span class="font-medium">{{ (locationDetail?.identitas as any)?.mulai_tanggal }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -1019,14 +1058,37 @@ const closePhotoModal = () => {
           Alamat
         </h3>
         <div class="text-sm text-gray-600">
-          <p>
-            Desa {{ (faskesDetail?.alamat as any)?.nama_desa || '-' }},
-            Kec. {{ (faskesDetail?.alamat as any)?.nama_kecamatan || '-' }}
+          <p v-if="(faskesDetail?.identitas as any)?.alamat_dusun">
+            {{ (faskesDetail?.identitas as any)?.alamat_dusun }}
+          </p>
+          <p v-if="(faskesDetail?.alamat as any)?.nama_desa || (faskesDetail?.alamat as any)?.nama_kecamatan">
+            <span v-if="(faskesDetail?.alamat as any)?.nama_desa">Desa {{ (faskesDetail?.alamat as any)?.nama_desa }}, </span>
+            <span v-if="(faskesDetail?.alamat as any)?.nama_kecamatan">Kec. {{ (faskesDetail?.alamat as any)?.nama_kecamatan }}</span>
           </p>
           <p>
             {{ (faskesDetail?.alamat as any)?.nama_kota_kab || '-' }},
             {{ (faskesDetail?.alamat as any)?.nama_provinsi || '-' }}
           </p>
+        </div>
+      </div>
+
+      <!-- Sumber Data & Metadata Faskes -->
+      <div class="p-4 border-b border-gray-200 bg-gray-50">
+        <div class="space-y-2 text-sm">
+          <div v-if="faskesDetail?.meta?.submitter" class="flex items-center justify-between">
+            <span class="text-gray-500">Data diperbarui oleh:</span>
+            <span class="font-medium">{{ faskesDetail?.meta?.submitter }}</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-gray-500">Sumber Data:</span>
+            <span class="font-medium text-blue-600">
+              {{ (faskesDetail?.identitas as any)?.baseline_sumber || 'BNPB/Kemenkes' }}
+            </span>
+          </div>
+          <div v-if="faskesDetail?.meta?.submitted_at" class="flex items-center justify-between">
+            <span class="text-gray-500">Terakhir diperbarui:</span>
+            <span class="font-medium">{{ formatDate(faskesDetail?.meta?.updated_at) }}</span>
+          </div>
         </div>
       </div>
     </div>
