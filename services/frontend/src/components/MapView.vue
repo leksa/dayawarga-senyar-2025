@@ -137,13 +137,6 @@ const hasActiveFilter = computed(() => {
   return appliedProvinsi.value !== '' || appliedKotaKab.value !== '' || appliedKecamatan.value !== '' || appliedDesa.value !== ''
 })
 
-const hasPendingChanges = computed(() => {
-  return pendingProvinsi.value !== appliedProvinsi.value ||
-    pendingKotaKab.value !== appliedKotaKab.value ||
-    pendingKecamatan.value !== appliedKecamatan.value ||
-    pendingDesa.value !== appliedDesa.value
-})
-
 // Handle province selection
 const selectProvinsi = (provinsi: string) => {
   pendingProvinsi.value = provinsi

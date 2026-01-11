@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import DataLayersSidebar from '@/components/DataLayersSidebar.vue'
-import { ClipboardList, MessageSquare, Wifi, Users, Heart, ExternalLink } from 'lucide-vue-next'
+import { ClipboardList, MessageSquare, Wifi, Users, Heart } from 'lucide-vue-next'
 
 // Image URLs - stored in public/images/
 const odkCollectImage = '/images/odk-collect-screenshots.png'
