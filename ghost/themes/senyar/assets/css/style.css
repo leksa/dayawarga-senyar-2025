@@ -922,6 +922,21 @@ p {
     color: white;
 }
 
+.sidebar-icon.purple {
+    background: var(--color-purple);
+    color: white;
+}
+
+.sidebar-link-active {
+    background: #f0fdf4; /* green-50 */
+    color: var(--color-green);
+}
+
+.sidebar-link-active:hover {
+    background: #dcfce7; /* green-100 */
+    color: var(--color-green);
+}
+
 .sidebar-link-text {
     flex: 1;
 }
