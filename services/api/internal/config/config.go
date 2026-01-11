@@ -45,6 +45,9 @@ type Config struct {
 	S3SecretAccessKey string
 	S3Region          string
 	S3PathPrefix      string
+
+	// API Key for protected endpoints (sync, scheduler, etc.)
+	SyncAPIKey string
 }
 
 func Load() *Config {
@@ -77,6 +80,8 @@ func Load() *Config {
 		S3SecretAccessKey: getEnv("S3_SECRET_ACCESS_KEY", ""),
 		S3Region:          getEnv("S3_REGION", "auto"),
 		S3PathPrefix:      getEnv("S3_PATH_PREFIX", ""),
+		// API Key
+		SyncAPIKey:        getEnv("SYNC_API_KEY", ""),
 	}
 }
 
