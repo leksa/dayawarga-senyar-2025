@@ -214,7 +214,7 @@ func (h *LocationHandler) GetLocationByID(c *gin.Context) {
 		photoResponses[i] = dto.PhotoResponse{
 			Type:     p.PhotoType,
 			Filename: p.Filename,
-			URL:      "/api/v1/attachments/" + id.String() + "/" + p.Filename,
+			URL:      "/api/v1/photos/" + p.ID.String() + "/file",
 		}
 	}
 
