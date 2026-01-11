@@ -209,34 +209,38 @@ func main() {
 		// SSE Events (no cache, streaming)
 		v1.GET("/events", sseHandler.Stream)
 
-		// Sync endpoints (no cache)
-		v1.POST("/sync/posko", syncHandler.SyncAll)
-		v1.GET("/sync/status", syncHandler.GetSyncStatus)
-		v1.POST("/sync/feed", syncHandler.SyncFeeds)
-		v1.GET("/sync/feed/status", syncHandler.GetFeedSyncStatus)
-		v1.POST("/sync/faskes", syncHandler.SyncFaskes)
-		v1.GET("/sync/faskes/status", syncHandler.GetFaskesSyncStatus)
-		v1.POST("/sync/photos", photoHandler.SyncPhotos)              // Posko photos
-		v1.POST("/sync/feed-photos", photoHandler.SyncFeedPhotos)     // Feed photos
-		v1.POST("/sync/faskes-photos", photoHandler.SyncFaskesPhotos) // Faskes photos
-		v1.POST("/migrate/s3", photoHandler.MigrateToS3)              // Migrate local photos to S3
-		v1.POST("/photos/reset-cache", photoHandler.ResetCache)       // Reset cache for missing files
-
-		// Hard sync endpoints - sync AND delete records not in ODK Central
-		v1.POST("/sync/posko/hard", syncHandler.HardSyncPosko)
-		v1.POST("/sync/feed/hard", syncHandler.HardSyncFeeds)
-		v1.POST("/sync/faskes/hard", syncHandler.HardSyncFaskes)
-
-		// Scheduler endpoints
-		scheduler := v1.Group("/scheduler")
+		// Protected endpoints - require API key
+		protected := v1.Group("")
+		protected.Use(middleware.APIKeyAuth(cfg.SyncAPIKey))
 		{
-			scheduler.GET("/status", schedulerHandler.GetStatus)
-			scheduler.POST("/start", schedulerHandler.Start)
-			scheduler.POST("/stop", schedulerHandler.Stop)
-			scheduler.POST("/trigger", schedulerHandler.TriggerSync)
-			scheduler.POST("/mode/:mode", schedulerHandler.SetMode)
-			scheduler.POST("/mode/auto", schedulerHandler.ClearManualMode)
+			// Sync endpoints
+			protected.POST("/sync/posko", syncHandler.SyncAll)
+			protected.POST("/sync/feed", syncHandler.SyncFeeds)
+			protected.POST("/sync/faskes", syncHandler.SyncFaskes)
+			protected.POST("/sync/photos", photoHandler.SyncPhotos)              // Posko photos
+			protected.POST("/sync/feed-photos", photoHandler.SyncFeedPhotos)     // Feed photos
+			protected.POST("/sync/faskes-photos", photoHandler.SyncFaskesPhotos) // Faskes photos
+			protected.POST("/migrate/s3", photoHandler.MigrateToS3)              // Migrate local photos to S3
+			protected.POST("/photos/reset-cache", photoHandler.ResetCache)       // Reset cache for missing files
+
+			// Hard sync endpoints - sync AND delete records not in ODK Central
+			protected.POST("/sync/posko/hard", syncHandler.HardSyncPosko)
+			protected.POST("/sync/feed/hard", syncHandler.HardSyncFeeds)
+			protected.POST("/sync/faskes/hard", syncHandler.HardSyncFaskes)
+
+			// Scheduler endpoints
+			protected.GET("/scheduler/status", schedulerHandler.GetStatus)
+			protected.POST("/scheduler/start", schedulerHandler.Start)
+			protected.POST("/scheduler/stop", schedulerHandler.Stop)
+			protected.POST("/scheduler/trigger", schedulerHandler.TriggerSync)
+			protected.POST("/scheduler/mode/:mode", schedulerHandler.SetMode)
+			protected.POST("/scheduler/mode/auto", schedulerHandler.ClearManualMode)
 		}
+
+		// Sync status endpoints (read-only, no auth required)
+		v1.GET("/sync/status", syncHandler.GetSyncStatus)
+		v1.GET("/sync/feed/status", syncHandler.GetFeedSyncStatus)
+		v1.GET("/sync/faskes/status", syncHandler.GetFaskesSyncStatus)
 	}
 
 	// Graceful shutdown
