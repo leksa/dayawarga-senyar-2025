@@ -26,13 +26,14 @@ type Config struct {
 	CORSOrigins string
 
 	// ODK Central
-	ODKBaseURL      string
-	ODKEmail        string
-	ODKPassword     string
-	ODKProjectID    int
-	ODKFormID       string
-	ODKFeedFormID   string
-	ODKFaskesFormID string
+	ODKBaseURL            string
+	ODKEmail              string
+	ODKPassword           string
+	ODKProjectID          int
+	ODKFormID             string
+	ODKFeedFormID         string
+	ODKFaskesFormID       string
+	ODKInfrastrukturFormID string
 
 	// Storage
 	PhotoStoragePath string
@@ -68,10 +69,11 @@ func Load() *Config {
 		ODKEmail:      getEnv("ODK_EMAIL", ""),
 		ODKPassword:   getEnv("ODK_PASSWORD", ""),
 		ODKProjectID:  getEnvInt("ODK_PROJECT_ID", 3),
-		ODKFormID:        getEnv("ODK_FORM_ID", "form_posko_v1"),
-		ODKFeedFormID:    getEnv("ODK_FEED_FORM_ID", "form_feed_v1"),
-		ODKFaskesFormID:  getEnv("ODK_FASKES_FORM_ID", "form_faskes_v1"),
-		PhotoStoragePath: getEnv("PHOTO_STORAGE_PATH", "./storage/photos"),
+		ODKFormID:              getEnv("ODK_FORM_ID", "form_posko_v1"),
+		ODKFeedFormID:          getEnv("ODK_FEED_FORM_ID", "form_feed_v1"),
+		ODKFaskesFormID:        getEnv("ODK_FASKES_FORM_ID", "form_faskes_v1"),
+		ODKInfrastrukturFormID: getEnv("ODK_INFRASTRUKTUR_FORM_ID", "form_jembatan_v1"),
+		PhotoStoragePath:       getEnv("PHOTO_STORAGE_PATH", "./storage/photos"),
 		// S3 Storage
 		S3Enabled:         getEnvBool("S3_ENABLED", false),
 		S3Endpoint:        getEnv("S3_ENDPOINT", ""),

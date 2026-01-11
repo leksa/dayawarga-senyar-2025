@@ -72,6 +72,7 @@ def main():
     parser.add_argument('--limit', type=int, default=0, help='Limit number of approvals (0 = all)')
     parser.add_argument('--form-id', type=str, default=ODK_FORM_ID, help='Form ID to process')
     parser.add_argument('--project-id', type=str, default=ODK_PROJECT_ID, help='Project ID')
+    parser.add_argument('--include-edited', action='store_true', help='Also approve submissions with edited state')
     args = parser.parse_args()
 
     print("=" * 60)
@@ -103,16 +104,24 @@ def main():
     submissions = client.get_submissions(args.project_id, args.form_id)
     print(f"Total submissions: {len(submissions)}")
 
-    # Filter pending (null review state)
+    # Filter pending (null review state) and optionally edited
     pending = [s for s in submissions if s.get('reviewState') is None]
+    edited = [s for s in submissions if s.get('reviewState') == 'edited']
     print(f"Pending (null): {len(pending)}")
+    print(f"Edited: {len(edited)}")
 
-    if len(pending) == 0:
-        print("\nNo pending submissions to approve!")
+    # Combine based on flags
+    to_approve = pending.copy()
+    if args.include_edited:
+        to_approve.extend(edited)
+        print(f"Including edited submissions: {len(edited)}")
+
+    if len(to_approve) == 0:
+        print("\nNo submissions to approve!")
         return
 
     # Determine how many to process
-    to_process = pending if args.limit == 0 else pending[:args.limit]
+    to_process = to_approve if args.limit == 0 else to_approve[:args.limit]
     print(f"\nWill process: {len(to_process)} submissions")
 
     if args.dry_run:

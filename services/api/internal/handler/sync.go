@@ -11,9 +11,10 @@ import (
 
 // SyncHandler handles sync-related API endpoints
 type SyncHandler struct {
-	syncService       *service.SyncService
-	feedSyncService   *service.FeedSyncService
-	faskesSyncService *service.FaskesSyncService
+	syncService             *service.SyncService
+	feedSyncService         *service.FeedSyncService
+	faskesSyncService       *service.FaskesSyncService
+	infrastrukturSyncService *service.InfrastrukturSyncService
 }
 
 // NewSyncHandler creates a new sync handler
@@ -22,6 +23,16 @@ func NewSyncHandler(syncService *service.SyncService, feedSyncService *service.F
 		syncService:       syncService,
 		feedSyncService:   feedSyncService,
 		faskesSyncService: faskesSyncService,
+	}
+}
+
+// NewSyncHandlerWithInfrastruktur creates a new sync handler with infrastruktur support
+func NewSyncHandlerWithInfrastruktur(syncService *service.SyncService, feedSyncService *service.FeedSyncService, faskesSyncService *service.FaskesSyncService, infrastrukturSyncService *service.InfrastrukturSyncService) *SyncHandler {
+	return &SyncHandler{
+		syncService:              syncService,
+		feedSyncService:          feedSyncService,
+		faskesSyncService:        faskesSyncService,
+		infrastrukturSyncService: infrastrukturSyncService,
 	}
 }
 
@@ -266,6 +277,126 @@ func (h *SyncHandler) HardSyncFaskes(c *gin.Context) {
 			Success: false,
 			Error: &dto.ErrorInfo{
 				Code:    "FASKES_HARD_SYNC_FAILED",
+				Message: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.APIResponse{
+		Success: true,
+		Data:    result,
+	})
+}
+
+// ========================================
+// INFRASTRUKTUR SYNC ENDPOINTS
+// ========================================
+
+// SyncInfrastruktur triggers a full sync of all infrastruktur submissions
+// @Summary Sync all infrastruktur submissions
+// @Description Fetches all approved infrastruktur submissions from ODK Central and syncs to PostgreSQL
+// @Tags sync
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.APIResponse
+// @Failure 500 {object} dto.APIResponse
+// @Router /api/v1/sync/infrastruktur [post]
+func (h *SyncHandler) SyncInfrastruktur(c *gin.Context) {
+	if h.infrastrukturSyncService == nil {
+		c.JSON(http.StatusInternalServerError, dto.APIResponse{
+			Success: false,
+			Error: &dto.ErrorInfo{
+				Code:    "SERVICE_NOT_CONFIGURED",
+				Message: "Infrastruktur sync service not configured",
+			},
+		})
+		return
+	}
+
+	result, err := h.infrastrukturSyncService.SyncAll()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.APIResponse{
+			Success: false,
+			Error: &dto.ErrorInfo{
+				Code:    "INFRASTRUKTUR_SYNC_FAILED",
+				Message: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.APIResponse{
+		Success: true,
+		Data:    result,
+	})
+}
+
+// GetInfrastrukturSyncStatus returns the current infrastruktur sync status
+// @Summary Get infrastruktur sync status
+// @Description Returns the current synchronization status for infrastruktur form
+// @Tags sync
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.APIResponse
+// @Router /api/v1/sync/infrastruktur/status [get]
+func (h *SyncHandler) GetInfrastrukturSyncStatus(c *gin.Context) {
+	if h.infrastrukturSyncService == nil {
+		c.JSON(http.StatusInternalServerError, dto.APIResponse{
+			Success: false,
+			Error: &dto.ErrorInfo{
+				Code:    "SERVICE_NOT_CONFIGURED",
+				Message: "Infrastruktur sync service not configured",
+			},
+		})
+		return
+	}
+
+	state, err := h.infrastrukturSyncService.GetSyncState()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.APIResponse{
+			Success: false,
+			Error: &dto.ErrorInfo{
+				Code:    "INFRASTRUKTUR_STATUS_FETCH_FAILED",
+				Message: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.APIResponse{
+		Success: true,
+		Data:    state,
+	})
+}
+
+// HardSyncInfrastruktur triggers a hard sync of infrastruktur - syncs and deletes removed submissions
+// @Summary Hard sync infrastruktur data
+// @Description Syncs infrastruktur data and deletes records that no longer exist in ODK Central
+// @Tags sync
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.APIResponse
+// @Failure 500 {object} dto.APIResponse
+// @Router /api/v1/sync/infrastruktur/hard [post]
+func (h *SyncHandler) HardSyncInfrastruktur(c *gin.Context) {
+	if h.infrastrukturSyncService == nil {
+		c.JSON(http.StatusInternalServerError, dto.APIResponse{
+			Success: false,
+			Error: &dto.ErrorInfo{
+				Code:    "SERVICE_NOT_CONFIGURED",
+				Message: "Infrastruktur sync service not configured",
+			},
+		})
+		return
+	}
+
+	result, err := h.infrastrukturSyncService.HardSync()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.APIResponse{
+			Success: false,
+			Error: &dto.ErrorInfo{
+				Code:    "INFRASTRUKTUR_HARD_SYNC_FAILED",
 				Message: err.Error(),
 			},
 		})

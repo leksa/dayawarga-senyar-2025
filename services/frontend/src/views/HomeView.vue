@@ -14,8 +14,10 @@ const mapViewRef = ref<InstanceType<typeof MapView> | null>(null)
 const showDetail = ref(false)
 const selectedMarker = ref<MapMarker | null>(null)
 const selectedFaskes = ref<any | null>(null)
+const selectedInfrastruktur = ref<any | null>(null)
 const showPoskoMarkers = ref(true)
 const showFaskesMarkers = ref(false)
+const showInfrastrukturMarkers = ref(false)
 const showFeedsMarkers = ref(false)
 
 // Handle URL query params for map navigation and detail panel
@@ -28,7 +30,7 @@ watch(() => route.query, () => {
 })
 
 const checkQueryParams = async () => {
-  const { lat, lng, zoom, location, faskes, feed } = route.query
+  const { lat, lng, zoom, location, faskes, infrastruktur, feed } = route.query
 
   // Handle map navigation with optional feed popup
   if (lat && lng && mapViewRef.value) {
@@ -55,6 +57,11 @@ const checkQueryParams = async () => {
   // Handle faskes detail from query param
   if (faskes) {
     await showFaskesDetail(faskes as string)
+  }
+
+  // Handle infrastruktur detail from query param
+  if (infrastruktur) {
+    await showInfrastrukturDetail(infrastruktur as string)
   }
 }
 
@@ -107,6 +114,7 @@ const showFaskesDetail = async (faskesId: string) => {
       }
       selectedFaskes.value = marker
       selectedMarker.value = null
+      selectedInfrastruktur.value = null
       showDetail.value = true
 
       // Fly to faskes
@@ -119,15 +127,57 @@ const showFaskesDetail = async (faskesId: string) => {
   }
 }
 
+// Fetch and show infrastruktur detail
+const showInfrastrukturDetail = async (infrastrukturId: string) => {
+  try {
+    const response = await api.getInfrastrukturById(infrastrukturId)
+    if (response.success && response.data) {
+      const inf = response.data
+      // Convert to infrastruktur marker format
+      const marker = {
+        id: inf.id,
+        name: inf.nama,
+        jenis: inf.jenis,
+        statusJln: inf.status_jln,
+        statusAkses: inf.status_akses,
+        statusPenanganan: inf.status_penanganan,
+        progress: inf.progress,
+        lat: inf.geometry.coordinates[1],
+        lng: inf.geometry.coordinates[0],
+      }
+      selectedInfrastruktur.value = marker
+      selectedMarker.value = null
+      selectedFaskes.value = null
+      showDetail.value = true
+
+      // Fly to infrastruktur
+      if (mapViewRef.value) {
+        mapViewRef.value.flyTo(marker.lat, marker.lng, 15)
+      }
+    }
+  } catch (e) {
+    console.error('Failed to fetch infrastruktur:', e)
+  }
+}
+
 const handleMarkerClick = (marker: MapMarker) => {
   selectedMarker.value = marker
   selectedFaskes.value = null
+  selectedInfrastruktur.value = null
   showDetail.value = true
 }
 
 const handleFaskesClick = (marker: any) => {
   selectedFaskes.value = marker
   selectedMarker.value = null
+  selectedInfrastruktur.value = null
+  showDetail.value = true
+}
+
+const handleInfrastrukturClick = (marker: any) => {
+  selectedInfrastruktur.value = marker
+  selectedMarker.value = null
+  selectedFaskes.value = null
   showDetail.value = true
 }
 
@@ -139,6 +189,7 @@ const closeDetailPanel = () => {
   showDetail.value = false
   selectedMarker.value = null
   selectedFaskes.value = null
+  selectedInfrastruktur.value = null
 }
 
 const handleLayerToggle = (layerId: string, enabled: boolean) => {
@@ -146,6 +197,8 @@ const handleLayerToggle = (layerId: string, enabled: boolean) => {
     showPoskoMarkers.value = enabled
   } else if (layerId === 'medical') {
     showFaskesMarkers.value = enabled
+  } else if (layerId === 'infrastructure') {
+    showInfrastrukturMarkers.value = enabled
   } else if (layerId === 'feeds') {
     showFeedsMarkers.value = enabled
   }
@@ -159,16 +212,20 @@ const handleLayerToggle = (layerId: string, enabled: boolean) => {
       ref="mapViewRef"
       @marker-click="handleMarkerClick"
       @faskes-click="handleFaskesClick"
+      @infrastruktur-click="handleInfrastrukturClick"
       @show-location-detail="showLocationDetail"
       @show-faskes-detail="showFaskesDetail"
+      @show-infrastruktur-detail="showInfrastrukturDetail"
       :show-markers="showPoskoMarkers"
       :show-faskes="showFaskesMarkers"
+      :show-infrastruktur="showInfrastrukturMarkers"
       :show-feeds="showFeedsMarkers"
     />
     <DetailPanel
       v-if="showDetail"
       :marker="selectedMarker"
       :faskes="selectedFaskes"
+      :infrastruktur="selectedInfrastruktur"
       @close="closeDetailPanel"
       @show-location-updates="showLocationUpdates"
     />

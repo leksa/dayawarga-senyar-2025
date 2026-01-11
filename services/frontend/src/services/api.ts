@@ -241,6 +241,80 @@ export interface FaskesFilter {
   limit?: number
 }
 
+// Infrastruktur (Roads/Bridges) types
+export interface InfrastrukturFeature {
+  type: 'Feature'
+  id: string
+  geometry: {
+    type: 'Point'
+    coordinates: [number, number]
+  }
+  properties: {
+    entity_id?: string
+    nama: string
+    jenis: string
+    status_jln: string
+    nama_provinsi?: string
+    nama_kabupaten?: string
+    status_akses?: string
+    status_penanganan?: string
+    progress: number
+    updated_at: string
+  }
+}
+
+export interface InfrastrukturListResponse {
+  type: 'FeatureCollection'
+  features: InfrastrukturFeature[]
+}
+
+export interface InfrastrukturDetail {
+  id: string
+  entity_id?: string
+  object_id?: string
+  nama: string
+  jenis: string
+  status_jln: string
+  nama_provinsi?: string
+  nama_kabupaten?: string
+  geometry: {
+    type: 'Point'
+    coordinates: [number, number]
+  }
+  status_akses?: string
+  keterangan_bencana?: string
+  dampak?: string
+  status_penanganan?: string
+  penanganan_detail?: string
+  bailey?: string
+  progress: number
+  target_selesai?: string
+  baseline_sumber?: string
+  update_by?: string
+  photos: {
+    type: string
+    filename: string
+    url: string
+  }[]
+  meta: {
+    submitted_at?: string
+    updated_at: string
+    submitter_name?: string
+  }
+}
+
+export interface InfrastrukturFilter {
+  jenis?: string
+  status_jln?: string
+  status_akses?: string
+  status_penanganan?: string
+  kabupaten?: string
+  search?: string
+  bbox?: string
+  page?: number
+  limit?: number
+}
+
 export const api = {
   async getLocations(filter?: LocationFilter): Promise<APIResponse<LocationListResponse>> {
     const params = new URLSearchParams()
@@ -321,5 +395,26 @@ export const api = {
 
   async getFaskesById(id: string): Promise<APIResponse<FaskesDetail>> {
     return fetchAPI<FaskesDetail>(`/faskes/${id}`)
+  },
+
+  // Infrastruktur (Roads/Bridges) endpoints
+  async getInfrastruktur(filter?: InfrastrukturFilter): Promise<APIResponse<InfrastrukturListResponse>> {
+    const params = new URLSearchParams()
+    if (filter?.jenis) params.append('jenis', filter.jenis)
+    if (filter?.status_jln) params.append('status_jln', filter.status_jln)
+    if (filter?.status_akses) params.append('status_akses', filter.status_akses)
+    if (filter?.status_penanganan) params.append('status_penanganan', filter.status_penanganan)
+    if (filter?.kabupaten) params.append('kabupaten', filter.kabupaten)
+    if (filter?.search) params.append('search', filter.search)
+    if (filter?.bbox) params.append('bbox', filter.bbox)
+    if (filter?.page) params.append('page', filter.page.toString())
+    if (filter?.limit) params.append('limit', filter.limit.toString())
+
+    const query = params.toString()
+    return fetchAPI<InfrastrukturListResponse>(`/infrastruktur${query ? `?${query}` : ''}`)
+  },
+
+  async getInfrastrukturById(id: string): Promise<APIResponse<InfrastrukturDetail>> {
+    return fetchAPI<InfrastrukturDetail>(`/infrastruktur/${id}`)
   },
 }

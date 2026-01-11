@@ -187,6 +187,70 @@ type FaskesDetailResponse struct {
 	Meta            LocationMeta           `json:"meta"`
 }
 
+// InfrastrukturListResponse for GET /infrastruktur
+type InfrastrukturListResponse struct {
+	Type     string                         `json:"type"`
+	Features []InfrastrukturFeatureResponse `json:"features"`
+}
+
+type InfrastrukturFeatureResponse struct {
+	Type       string                      `json:"type"`
+	ID         string                      `json:"id"`
+	Geometry   *GeoJSONGeometry            `json:"geometry"`
+	Properties InfrastrukturListProperties `json:"properties"`
+}
+
+type InfrastrukturListProperties struct {
+	EntityID         string    `json:"entity_id,omitempty"`
+	Nama             string    `json:"nama"`
+	Jenis            string    `json:"jenis"`
+	StatusJln        string    `json:"status_jln"`
+	NamaProvinsi     string    `json:"nama_provinsi,omitempty"`
+	NamaKabupaten    string    `json:"nama_kabupaten,omitempty"`
+	StatusAkses      string    `json:"status_akses,omitempty"`
+	StatusPenanganan string    `json:"status_penanganan,omitempty"`
+	Progress         int       `json:"progress"`
+	UpdatedAt        time.Time `json:"updated_at"`
+}
+
+// InfrastrukturDetailResponse for GET /infrastruktur/:id
+type InfrastrukturDetailResponse struct {
+	ID                string            `json:"id"`
+	EntityID          string            `json:"entity_id,omitempty"`
+	ObjectID          string            `json:"object_id,omitempty"`
+	Nama              string            `json:"nama"`
+	Jenis             string            `json:"jenis"`
+	StatusJln         string            `json:"status_jln"`
+	NamaProvinsi      string            `json:"nama_provinsi,omitempty"`
+	NamaKabupaten     string            `json:"nama_kabupaten,omitempty"`
+	Geometry          *LocationGeometry `json:"geometry"`
+	StatusAkses       string            `json:"status_akses,omitempty"`
+	KeteranganBencana string            `json:"keterangan_bencana,omitempty"`
+	Dampak            string            `json:"dampak,omitempty"`
+	StatusPenanganan  string            `json:"status_penanganan,omitempty"`
+	PenangananDetail  string            `json:"penanganan_detail,omitempty"`
+	Bailey            string            `json:"bailey,omitempty"`
+	Progress          int               `json:"progress"`
+	TargetSelesai     string            `json:"target_selesai,omitempty"`
+	BaselineSumber    string            `json:"baseline_sumber,omitempty"`
+	UpdateBy          string            `json:"update_by,omitempty"`
+	Photos            []PhotoResponse   `json:"photos"`
+	Meta              LocationMeta      `json:"meta"`
+}
+
+// InfrastrukturStatsResponse for GET /infrastruktur/stats
+type InfrastrukturStatsResponse struct {
+	ByJenis           []StatItem `json:"by_jenis"`
+	ByStatusAkses     []StatItem `json:"by_status_akses"`
+	ByStatusPenanganan []StatItem `json:"by_status_penanganan"`
+	AvgProgress       float64    `json:"avg_progress"`
+}
+
+type StatItem struct {
+	Name  string `json:"name"`
+	Count int64  `json:"count"`
+}
+
 // HealthResponse for GET /health
 type HealthResponse struct {
 	Status    string            `json:"status"`

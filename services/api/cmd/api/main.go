@@ -66,6 +66,7 @@ func main() {
 	locationRepo := repository.NewLocationRepository(db)
 	feedRepo := repository.NewFeedRepository(db)
 	faskesRepo := repository.NewFaskesRepository(db)
+	infrastrukturRepo := repository.NewInfrastrukturRepository(db)
 
 	// Initialize ODK client for posko form
 	odkPoskoConfig := &odk.ODKConfig{
@@ -97,10 +98,21 @@ func main() {
 	}
 	odkFaskesClient := odk.NewClient(odkFaskesConfig)
 
+	// Initialize ODK client for infrastruktur form
+	odkInfrastrukturConfig := &odk.ODKConfig{
+		BaseURL:   cfg.ODKBaseURL,
+		Email:     cfg.ODKEmail,
+		Password:  cfg.ODKPassword,
+		ProjectID: cfg.ODKProjectID,
+		FormID:    cfg.ODKInfrastrukturFormID,
+	}
+	odkInfrastrukturClient := odk.NewClient(odkInfrastrukturConfig)
+
 	// Initialize services
 	syncService := service.NewSyncService(db, odkPoskoClient, cfg.ODKFormID)
 	feedSyncService := service.NewFeedSyncService(db, odkFeedClient, cfg.ODKFeedFormID)
 	faskesSyncService := service.NewFaskesSyncService(db, odkFaskesClient, cfg.ODKFaskesFormID)
+	infrastrukturSyncService := service.NewInfrastrukturSyncService(db, odkInfrastrukturClient, cfg.ODKInfrastrukturFormID)
 
 	// Initialize photo service (with optional S3 storage)
 	var photoService *service.PhotoService
@@ -142,8 +154,9 @@ func main() {
 	locationHandler := handler.NewLocationHandler(locationRepo, feedRepo)
 	feedHandler := handler.NewFeedHandler(feedRepo)
 	faskesHandler := handler.NewFaskesHandler(faskesRepo)
+	infrastrukturHandler := handler.NewInfrastrukturHandler(infrastrukturRepo)
 	healthHandler := handler.NewHealthHandler(db)
-	syncHandler := handler.NewSyncHandler(syncService, feedSyncService, faskesSyncService)
+	syncHandler := handler.NewSyncHandlerWithInfrastruktur(syncService, feedSyncService, faskesSyncService, infrastrukturSyncService)
 	photoHandler := handler.NewPhotoHandler(photoService)
 	sseHandler := handler.NewSSEHandler(sseHub)
 	schedulerHandler := handler.NewSchedulerHandler(autoScheduler)
@@ -191,6 +204,11 @@ func main() {
 			cached.GET("/faskes", faskesHandler.GetFaskes)
 			cached.GET("/faskes/:id", faskesHandler.GetFaskesByID)
 
+			// Infrastruktur - Roads/Bridges (cached)
+			cached.GET("/infrastruktur", infrastrukturHandler.GetInfrastruktur)
+			cached.GET("/infrastruktur/:id", infrastrukturHandler.GetInfrastrukturByID)
+			cached.GET("/infrastruktur/stats", infrastrukturHandler.GetInfrastrukturStats)
+
 			// Feeds (cached)
 			cached.GET("/feeds", feedHandler.GetFeeds)
 			cached.GET("/locations/:id/feeds", feedHandler.GetFeedsByLocation)
@@ -217,6 +235,7 @@ func main() {
 			protected.POST("/sync/posko", syncHandler.SyncAll)
 			protected.POST("/sync/feed", syncHandler.SyncFeeds)
 			protected.POST("/sync/faskes", syncHandler.SyncFaskes)
+			protected.POST("/sync/infrastruktur", syncHandler.SyncInfrastruktur)
 			protected.POST("/sync/photos", photoHandler.SyncPhotos)              // Posko photos
 			protected.POST("/sync/feed-photos", photoHandler.SyncFeedPhotos)     // Feed photos
 			protected.POST("/sync/faskes-photos", photoHandler.SyncFaskesPhotos) // Faskes photos
@@ -227,6 +246,7 @@ func main() {
 			protected.POST("/sync/posko/hard", syncHandler.HardSyncPosko)
 			protected.POST("/sync/feed/hard", syncHandler.HardSyncFeeds)
 			protected.POST("/sync/faskes/hard", syncHandler.HardSyncFaskes)
+			protected.POST("/sync/infrastruktur/hard", syncHandler.HardSyncInfrastruktur)
 
 			// Scheduler endpoints
 			protected.GET("/scheduler/status", schedulerHandler.GetStatus)
@@ -241,6 +261,7 @@ func main() {
 		v1.GET("/sync/status", syncHandler.GetSyncStatus)
 		v1.GET("/sync/feed/status", syncHandler.GetFeedSyncStatus)
 		v1.GET("/sync/faskes/status", syncHandler.GetFaskesSyncStatus)
+		v1.GET("/sync/infrastruktur/status", syncHandler.GetInfrastrukturSyncStatus)
 	}
 
 	// Graceful shutdown

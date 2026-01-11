@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import { X, Phone, User, ChevronDown, ChevronUp, ChevronRight, Clock, MapPin, Users, Home, Wifi, Navigation, Camera, ArrowLeft } from 'lucide-vue-next'
+import { X, Phone, User, ChevronDown, ChevronUp, ChevronRight, Clock, MapPin, Users, Home, Wifi, Navigation, Camera, ArrowLeft, Construction, Wrench } from 'lucide-vue-next'
 import Badge from './ui/Badge.vue'
 import Button from './ui/Button.vue'
 import PhotoModal from './PhotoModal.vue'
 import type { MapMarker } from '@/types'
-import { api, type LocationDetail, type FaskesDetail, type Feed, type Photo } from '@/services/api'
+import { api, type LocationDetail, type FaskesDetail, type InfrastrukturDetail, type Feed, type Photo } from '@/services/api'
 
 interface Props {
   marker: MapMarker | null
   faskes?: any | null
+  infrastruktur?: any | null
 }
 
 const props = defineProps<Props>()
@@ -20,6 +21,7 @@ const emit = defineEmits<{
 
 const locationDetail = ref<LocationDetail | null>(null)
 const faskesDetail = ref<FaskesDetail | null>(null)
+const infrastrukturDetail = ref<InfrastrukturDetail | null>(null)
 const latestFeed = ref<Feed | null>(null)
 const loading = ref(false)
 
@@ -29,8 +31,9 @@ const viewMode = ref<'detail' | 'gallery'>('detail')
 const selectedPhotoUrl = ref<string | null>(null)
 const isModalOpen = ref(false)
 
-// Check if we are showing faskes or location
+// Check if we are showing faskes, infrastruktur, or location
 const isFaskesView = computed(() => !!props.faskes)
+const isInfrastrukturView = computed(() => !!props.infrastruktur)
 
 // Collapsible sections state
 const expandedSections = ref<Record<string, boolean>>({
@@ -80,8 +83,11 @@ watch(() => props.marker, async (newMarker) => {
 
     if (photosRes.success && photosRes.data) {
       photos.value = photosRes.data
+      console.log('Photos loaded:', photosRes.data)
+      console.log('Cached photos:', photosRes.data.filter((p: any) => p.is_cached && p.url))
     } else {
       photos.value = []
+      console.log('No photos or error:', photosRes)
     }
   } catch (e) {
     console.error('Failed to fetch location detail:', e)
@@ -105,6 +111,26 @@ watch(() => props.faskes, async (newFaskes) => {
     }
   } catch (e) {
     console.error('Failed to fetch faskes detail:', e)
+  } finally {
+    loading.value = false
+  }
+}, { immediate: true })
+
+// Fetch infrastruktur detail when infrastruktur prop changes
+watch(() => props.infrastruktur, async (newInfrastruktur) => {
+  if (!newInfrastruktur) {
+    infrastrukturDetail.value = null
+    return
+  }
+
+  loading.value = true
+  try {
+    const detailRes = await api.getInfrastrukturById(newInfrastruktur.id)
+    if (detailRes.success && detailRes.data) {
+      infrastrukturDetail.value = detailRes.data
+    }
+  } catch (e) {
+    console.error('Failed to fetch infrastruktur detail:', e)
   } finally {
     loading.value = false
   }
@@ -245,17 +271,17 @@ const closePhotoModal = () => {
 <template>
   <!-- Mobile backdrop (covers area behind panel, clicking closes it) -->
   <div
-    v-if="marker || faskes"
+    v-if="marker || faskes || infrastruktur"
     class="fixed inset-0 left-14 bg-black/30 z-[1100] lg:hidden"
     @click="emit('close')"
   />
 
   <aside
-    v-if="marker || faskes"
+    v-if="marker || faskes || infrastruktur"
     class="fixed inset-y-0 left-14 right-0 lg:h-full lg:relative lg:inset-auto lg:w-96 bg-white border-l border-gray-200 flex flex-col overflow-hidden z-[1200] lg:z-auto lg:border-t-0"
   >
     <!-- Header for Location/Posko -->
-    <div v-if="!isFaskesView" class="p-3 lg:p-4 border-b border-gray-200">
+    <div v-if="!isFaskesView && !isInfrastrukturView" class="p-3 lg:p-4 border-b border-gray-200">
       <div class="flex items-start justify-between gap-2">
         <div class="flex-1 min-w-0">
           <h2 class="text-base lg:text-lg font-semibold text-gray-900 truncate">{{ marker?.name }}</h2>
@@ -280,6 +306,29 @@ const closePhotoModal = () => {
           <div class="flex items-center gap-2 mt-1">
             <Badge :variant="faskesDetail?.status_faskes === 'operasional' ? 'success' : 'danger'">
               Status Faskes: {{ faskesDetail?.status_faskes === 'operasional' ? 'Operasional' : 'Non-aktif' }}
+            </Badge>
+          </div>
+        </div>
+        <button
+          class="p-1 hover:bg-gray-100 rounded"
+          @click="emit('close')"
+        >
+          <X class="w-5 h-5 text-gray-400" />
+        </button>
+      </div>
+    </div>
+
+    <!-- Header for Infrastruktur -->
+    <div v-if="isInfrastrukturView" class="p-3 lg:p-4 border-b border-gray-200">
+      <div class="flex items-start justify-between gap-2">
+        <div class="flex-1 min-w-0">
+          <h2 class="text-base lg:text-lg font-semibold text-gray-900 truncate">{{ infrastruktur?.name || infrastrukturDetail?.nama }}</h2>
+          <div class="flex items-center gap-2 mt-1 flex-wrap">
+            <Badge :variant="infrastrukturDetail?.jenis === 'Jembatan' ? 'danger' : 'warning'">
+              {{ infrastrukturDetail?.jenis || infrastruktur?.jenis }}
+            </Badge>
+            <Badge :variant="infrastrukturDetail?.status_jln === 'Putus' ? 'danger' : infrastrukturDetail?.status_jln === 'Rusak' ? 'warning' : 'success'">
+              {{ infrastrukturDetail?.status_jln || infrastruktur?.statusJln }}
             </Badge>
           </div>
         </div>
@@ -359,7 +408,7 @@ const closePhotoModal = () => {
     </div>
 
     <!-- Content (Detail View) - Location/Posko -->
-    <div v-if="!loading && viewMode === 'detail' && !isFaskesView" class="flex-1 overflow-y-auto">
+    <div v-if="!loading && viewMode === 'detail' && !isFaskesView && !isInfrastrukturView" class="flex-1 overflow-y-auto">
       <!-- Latest Update for this location -->
       <div v-if="latestFeed" class="p-4 border-b border-gray-200 bg-blue-50">
         <div class="flex items-center gap-2 mb-2">
@@ -1093,8 +1142,121 @@ const closePhotoModal = () => {
       </div>
     </div>
 
+    <!-- Content (Detail View) - Infrastruktur -->
+    <div v-if="!loading && viewMode === 'detail' && isInfrastrukturView" class="flex-1 overflow-y-auto">
+      <!-- Progress Bar -->
+      <div class="p-4 border-b border-gray-200 bg-amber-50">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm font-medium text-gray-700">Progress Penanganan</span>
+          <span class="text-sm font-bold text-amber-700">{{ infrastrukturDetail?.progress || 0 }}%</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-3">
+          <div
+            class="h-3 rounded-full transition-all duration-300"
+            :class="(infrastrukturDetail?.progress || 0) === 100 ? 'bg-green-500' : 'bg-amber-500'"
+            :style="{ width: `${infrastrukturDetail?.progress || 0}%` }"
+          ></div>
+        </div>
+        <div v-if="infrastrukturDetail?.target_selesai" class="mt-2 text-xs text-gray-500">
+          Target selesai: {{ infrastrukturDetail?.target_selesai }}
+        </div>
+      </div>
+
+      <!-- Informasi Umum Infrastruktur -->
+      <div class="p-4 border-b border-gray-200">
+        <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <Construction class="w-4 h-4" />
+          Informasi Infrastruktur
+        </h3>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <div class="text-xs text-gray-500">Jenis</div>
+            <div class="text-sm font-medium">{{ infrastrukturDetail?.jenis || '-' }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500">Status Jalan/Jembatan</div>
+            <div class="text-sm font-medium">{{ infrastrukturDetail?.status_jln || '-' }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500">Status Akses</div>
+            <div class="text-sm font-medium">{{ infrastrukturDetail?.status_akses || '-' }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500">Status Penanganan</div>
+            <div class="text-sm font-medium">{{ infrastrukturDetail?.status_penanganan || '-' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detail Kerusakan -->
+      <div v-if="infrastrukturDetail?.keterangan_bencana || infrastrukturDetail?.dampak" class="p-4 border-b border-gray-200">
+        <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <Navigation class="w-4 h-4" />
+          Detail Kerusakan
+        </h3>
+        <div class="space-y-3">
+          <div v-if="infrastrukturDetail?.keterangan_bencana">
+            <div class="text-xs text-gray-500 mb-1">Keterangan Bencana</div>
+            <p class="text-sm text-gray-700">{{ infrastrukturDetail?.keterangan_bencana }}</p>
+          </div>
+          <div v-if="infrastrukturDetail?.dampak">
+            <div class="text-xs text-gray-500 mb-1">Dampak</div>
+            <p class="text-sm text-gray-700">{{ infrastrukturDetail?.dampak }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detail Penanganan -->
+      <div v-if="infrastrukturDetail?.penanganan_detail || infrastrukturDetail?.bailey" class="p-4 border-b border-gray-200">
+        <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <Wrench class="w-4 h-4" />
+          Detail Penanganan
+        </h3>
+        <div class="space-y-3">
+          <div v-if="infrastrukturDetail?.penanganan_detail">
+            <div class="text-xs text-gray-500 mb-1">Penanganan</div>
+            <p class="text-sm text-gray-700">{{ infrastrukturDetail?.penanganan_detail }}</p>
+          </div>
+          <div v-if="infrastrukturDetail?.bailey">
+            <div class="text-xs text-gray-500 mb-1">Bailey Bridge</div>
+            <p class="text-sm text-gray-700">{{ infrastrukturDetail?.bailey }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lokasi -->
+      <div class="p-4 border-b border-gray-200">
+        <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <MapPin class="w-4 h-4" />
+          Lokasi
+        </h3>
+        <div class="text-sm text-gray-600">
+          <p>{{ infrastrukturDetail?.nama_kabupaten || '-' }}</p>
+          <p>{{ infrastrukturDetail?.nama_provinsi || '-' }}</p>
+        </div>
+      </div>
+
+      <!-- Sumber Data & Metadata -->
+      <div class="p-4 border-b border-gray-200 bg-gray-50">
+        <div class="space-y-2 text-sm">
+          <div v-if="infrastrukturDetail?.update_by" class="flex items-center justify-between">
+            <span class="text-gray-500">Data diperbarui oleh:</span>
+            <span class="font-medium">{{ infrastrukturDetail?.update_by }}</span>
+          </div>
+          <div v-if="infrastrukturDetail?.baseline_sumber" class="flex items-center justify-between">
+            <span class="text-gray-500">Sumber Data:</span>
+            <span class="font-medium text-blue-600">{{ infrastrukturDetail?.baseline_sumber }}</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-gray-500">Terakhir diperbarui:</span>
+            <span class="font-medium">{{ formatDate(infrastrukturDetail?.meta?.updated_at) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Footer (only in detail mode) -->
-    <div v-if="viewMode === 'detail' && !isFaskesView" class="p-4 border-t border-gray-200">
+    <div v-if="viewMode === 'detail' && !isFaskesView && !isInfrastrukturView" class="p-4 border-t border-gray-200">
       <Button variant="primary" class="w-full">
         Generate Report
       </Button>

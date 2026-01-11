@@ -3,28 +3,34 @@ import { ref, onMounted, watch, computed } from 'vue'
 import { Locate, Layers, MapPin, ChevronDown, X, Plus, Minus } from 'lucide-vue-next'
 import { useLocations } from '@/composables/useLocations'
 import { useFaskes } from '@/composables/useFaskes'
+import { useInfrastruktur } from '@/composables/useInfrastruktur'
 import { api, type Feed } from '@/services/api'
 import type { MapMarker } from '@/types'
 
 const props = withDefaults(defineProps<{
   showMarkers?: boolean
   showFaskes?: boolean
+  showInfrastruktur?: boolean
   showFeeds?: boolean
 }>(), {
   showMarkers: true,
   showFaskes: false,
+  showInfrastruktur: false,
   showFeeds: true
 })
 
 const emit = defineEmits<{
   'marker-click': [marker: MapMarker]
   'faskes-click': [marker: any]
+  'infrastruktur-click': [marker: any]
   'show-location-detail': [locationId: string]
   'show-faskes-detail': [faskesId: string]
+  'show-infrastruktur-detail': [infrastrukturId: string]
 }>()
 
 const { markers, fetchLocations, loading, lastUpdate } = useLocations()
 const { markers: faskesMarkers, fetchFaskes } = useFaskes()
+const { markers: infrastrukturMarkers, fetchInfrastruktur } = useInfrastruktur()
 const mapContainer = ref<HTMLElement | null>(null)
 const showLayerMenu = ref(false)
 const activeLayer = ref<'street' | 'satellite' | 'terrain'>('street')
@@ -32,6 +38,7 @@ const feedsWithCoords = ref<Feed[]>([])
 let map: any = null
 let markerLayer: any = null
 let faskesLayer: any = null
+let infrastrukturLayer: any = null
 let feedsLayer: any = null
 let currentTileLayer: any = null
 
@@ -398,12 +405,21 @@ const faskesIcons: Record<string, { color: string; icon: string }> = {
   posko_kes_darurat: { color: '#F59E0B', icon: '⛑️' }, // Orange/Amber - Posko Darurat
 }
 
+const infrastrukturIcons: Record<string, { color: string; icon: string }> = {
+  Jalan: { color: '#D97706', icon: '🛣️' },           // Amber - Jalan
+  Jembatan: { color: '#DC2626', icon: '🌉' },        // Red - Jembatan
+}
+
 const getMarkerIcon = (type: string) => {
   return markerIcons[type] || { color: '#6B7280', icon: '📍' }
 }
 
 const getFaskesIcon = (jenisFaskes: string) => {
   return faskesIcons[jenisFaskes] || { color: '#EF4444', icon: '🏥' }
+}
+
+const getInfrastrukturIcon = (jenis: string) => {
+  return infrastrukturIcons[jenis] || { color: '#D97706', icon: '🛣️' }
 }
 
 // Setup click handlers for popup location links
@@ -444,6 +460,7 @@ onMounted(async () => {
 
   markerLayer = L.layerGroup().addTo(map)
   faskesLayer = L.layerGroup()
+  infrastrukturLayer = L.layerGroup()
   feedsLayer = L.layerGroup()
 
   // Setup popup click handlers
@@ -456,6 +473,12 @@ onMounted(async () => {
   if (props.showFaskes) {
     await fetchFaskes({ limit: 1000 })
     faskesLayer.addTo(map)
+  }
+
+  // Fetch infrastruktur if enabled
+  if (props.showInfrastruktur) {
+    await fetchInfrastruktur({ limit: 1000 })
+    infrastrukturLayer.addTo(map)
   }
 
   // Fetch feeds with coordinates and show on map
@@ -486,6 +509,20 @@ watch(() => props.showFaskes, async (show) => {
     faskesLayer.addTo(map)
   } else {
     faskesLayer.remove()
+  }
+})
+
+// Watch for showInfrastruktur prop changes
+watch(() => props.showInfrastruktur, async (show) => {
+  if (!infrastrukturLayer) return
+  if (show) {
+    // Fetch infrastruktur data if not already loaded
+    if (infrastrukturMarkers.value.length === 0) {
+      await fetchInfrastruktur({ limit: 1000 })
+    }
+    infrastrukturLayer.addTo(map)
+  } else {
+    infrastrukturLayer.remove()
   }
 })
 
@@ -580,6 +617,24 @@ const filteredFaskesMarkers = computed(() => {
       return mProv.includes(fProv) || fProv.includes(mProv)
     }
     return true
+  })
+})
+
+// Computed filtered infrastruktur markers based on region filter
+const filteredInfrastrukturMarkers = computed(() => {
+  // Access reactive values directly for proper reactivity
+  const kab = appliedKotaKab.value
+
+  // No filter - return all
+  if (!kab) {
+    return infrastrukturMarkers.value
+  }
+
+  return infrastrukturMarkers.value.filter(m => {
+    const normalize = (s?: string) => (s || '').toLowerCase().trim()
+    const mKab = normalize(m.namaKabupaten)
+    const fKab = normalize(kab)
+    return mKab.includes(fKab) || fKab.includes(mKab)
   })
 })
 
@@ -680,6 +735,32 @@ watch(filteredFaskesMarkers, async (newMarkers) => {
       .addTo(faskesLayer)
       .on('click', () => {
         emit('faskes-click', marker)
+      })
+  })
+}, { immediate: true })
+
+// Watch for filtered infrastruktur marker changes and update map
+watch(filteredInfrastrukturMarkers, async (newMarkers) => {
+  if (!map || !infrastrukturLayer) return
+
+  const L = await import('leaflet')
+  infrastrukturLayer.clearLayers()
+
+  if (newMarkers.length === 0) return
+
+  newMarkers.forEach((marker) => {
+    const iconConfig = getInfrastrukturIcon(marker.jenis)
+    const customIcon = L.divIcon({
+      className: 'custom-marker',
+      html: `<div style="background-color: ${iconConfig.color}; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); font-size: 14px;">${iconConfig.icon}</div>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+    })
+
+    L.marker([marker.lat, marker.lng], { icon: customIcon })
+      .addTo(infrastrukturLayer)
+      .on('click', () => {
+        emit('infrastruktur-click', marker)
       })
   })
 }, { immediate: true })
@@ -813,6 +894,7 @@ defineExpose({
   loading,
   refreshLocations: fetchLocations,
   refreshFaskes: fetchFaskes,
+  refreshInfrastruktur: fetchInfrastruktur,
   refreshFeeds: fetchFeedsWithCoords,
   flyTo,
   showFeedPopup,
