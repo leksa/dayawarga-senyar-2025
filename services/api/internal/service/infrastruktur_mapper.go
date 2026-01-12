@@ -22,54 +22,51 @@ func MapSubmissionToInfrastruktur(submission map[string]interface{}) (*model.Inf
 		infra.ODKSubmissionID = &id
 	}
 
-	// Extract entity selection (sel_jembatan refers to entity 'nama' field which is UUID)
-	if selJembatan, ok := submission["sel_jembatan"].(string); ok {
-		infra.EntityID = selJembatan
-	}
-
-	// Extract calculated fields from entity lookup
+	// Extract grp_identifikasi group first - this contains entity selection and calculated fields
 	grpIdentifikasi, _ := submission["grp_identifikasi"].(map[string]interface{})
 
-	// Basic info from entity (calculated fields)
-	if nama, ok := submission["c_nama"].(string); ok && nama != "" {
-		infra.Nama = nama
-	} else if grpIdentifikasi != nil {
-		if nama, ok := grpIdentifikasi["c_nama"].(string); ok {
-			infra.Nama = nama
+	// Extract entity selection (sel_jembatan refers to entity 'nama' field which is UUID)
+	// Check in grp_identifikasi first, then root
+	if grpIdentifikasi != nil {
+		if selJembatan, ok := grpIdentifikasi["sel_jembatan"].(string); ok {
+			infra.EntityID = selJembatan
+		}
+	}
+	if infra.EntityID == "" {
+		if selJembatan, ok := submission["sel_jembatan"].(string); ok {
+			infra.EntityID = selJembatan
 		}
 	}
 
-	if objectid, ok := submission["c_objectid"].(string); ok {
-		infra.ObjectID = objectid
+	// Helper to get string from grpIdentifikasi or root
+	getString := func(key string) string {
+		if grpIdentifikasi != nil {
+			if v, ok := grpIdentifikasi[key].(string); ok && v != "" {
+				return v
+			}
+		}
+		if v, ok := submission[key].(string); ok {
+			return v
+		}
+		return ""
 	}
 
-	if jenis, ok := submission["c_jenis"].(string); ok {
-		infra.Jenis = jenis
-	}
-
-	if statusjln, ok := submission["c_statusjln"].(string); ok {
-		infra.StatusJln = statusjln
-	}
-
-	if kabupaten, ok := submission["c_kabupaten"].(string); ok {
-		infra.NamaKabupaten = kabupaten
-	}
-
-	if provinsi, ok := submission["c_provinsi"].(string); ok {
-		infra.NamaProvinsi = provinsi
-	}
-
-	if targetSelesai, ok := submission["c_target_selesai"].(string); ok {
-		infra.TargetSelesai = targetSelesai
-	}
+	// Basic info from entity (calculated fields)
+	infra.Nama = getString("c_nama")
+	infra.ObjectID = getString("c_objectid")
+	infra.Jenis = getString("c_jenis")
+	infra.StatusJln = getString("c_statusjln")
+	infra.NamaKabupaten = getString("c_kabupaten")
+	infra.NamaProvinsi = getString("c_provinsi")
+	infra.TargetSelesai = getString("c_target_selesai")
 
 	// Extract coordinates from entity
-	if latStr, ok := submission["c_latitude"].(string); ok {
+	if latStr := getString("c_latitude"); latStr != "" {
 		if lat, err := strconv.ParseFloat(latStr, 64); err == nil {
 			infra.Latitude = &lat
 		}
 	}
-	if lngStr, ok := submission["c_longitude"].(string); ok {
+	if lngStr := getString("c_longitude"); lngStr != "" {
 		if lng, err := strconv.ParseFloat(lngStr, 64); err == nil {
 			infra.Longitude = &lng
 		}

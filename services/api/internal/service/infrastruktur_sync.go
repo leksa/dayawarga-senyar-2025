@@ -92,7 +92,14 @@ func (s *InfrastrukturSyncService) groupByEntityLatest(submissions []map[string]
 		}
 
 		// Get entity ID from sel_jembatan (the entity being updated)
-		entityID, _ := submission["sel_jembatan"].(string)
+		// Check in grp_identifikasi first, then root
+		var entityID string
+		if grpIdentifikasi, ok := submission["grp_identifikasi"].(map[string]interface{}); ok {
+			entityID, _ = grpIdentifikasi["sel_jembatan"].(string)
+		}
+		if entityID == "" {
+			entityID, _ = submission["sel_jembatan"].(string)
+		}
 		if entityID == "" {
 			continue
 		}
