@@ -22,7 +22,7 @@ const emit = defineEmits<{
 }>()
 
 const emergencyLayers = ref<Layer[]>([
-  { id: 'shelter', name: 'Titik Posko', icon: Home, color: 'bg-gray-300', colorEnabled: 'bg-blue-500', enabled: true, available: true },
+  { id: 'shelter', name: 'Posko Pengungsi', icon: Home, color: 'bg-gray-300', colorEnabled: 'bg-blue-500', enabled: true, available: true },
   { id: 'medical', name: 'Fasilitas Kesehatan', icon: Cross, color: 'bg-gray-300', colorEnabled: 'bg-red-500', enabled: false, available: true },
   { id: 'infrastructure', name: 'Jalan Jembatan', icon: Construction, color: 'bg-gray-300', colorEnabled: 'bg-amber-600', enabled: false, available: true },
   { id: 'logistics', name: 'Posko Logistik', icon: Package, color: 'bg-gray-300', colorEnabled: 'bg-cyan-500', enabled: false, available: false },

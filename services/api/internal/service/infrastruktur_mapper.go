@@ -139,19 +139,24 @@ func MapSubmissionToInfrastruktur(submission map[string]interface{}) (*model.Inf
 		infra.BaselineSumber = "BNPB/PU"
 	}
 
-	if updateBy, ok := submission["update_by"].(string); ok {
-		infra.UpdateBy = updateBy
-	}
-
-	// Extract system metadata
+	// Extract system metadata and use submitterName as update_by
 	if system, ok := submission["__system"].(map[string]interface{}); ok {
 		if submitterName, ok := system["submitterName"].(string); ok {
 			infra.SubmitterName = &submitterName
+			// Use submitter name as update_by (who updated the data)
+			infra.UpdateBy = submitterName
 		}
 		if submittedAt, ok := system["submissionDate"].(string); ok {
 			if t, err := time.Parse(time.RFC3339, submittedAt); err == nil {
 				infra.SubmittedAt = &t
 			}
+		}
+	}
+
+	// Fallback to update_by field if submitter not available
+	if infra.UpdateBy == "" {
+		if updateBy, ok := submission["update_by"].(string); ok {
+			infra.UpdateBy = updateBy
 		}
 	}
 
