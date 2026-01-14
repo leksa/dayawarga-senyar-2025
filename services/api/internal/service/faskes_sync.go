@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/leksa/datamapper-senyar/internal/model"
@@ -48,8 +49,13 @@ func (s *FaskesSyncService) SyncAll() (*SyncResult, error) {
 	result.TotalFetched = len(submissions)
 	log.Printf("Fetched %d faskes submissions from ODK Central", result.TotalFetched)
 
+	// Filter to get only latest submission per entity (sel_faskes)
+	// ODK submissions are append-only with update mode, so we need the latest per entity
+	latestSubmissions := s.filterLatestPerEntity(submissions)
+	log.Printf("Filtered to %d latest submissions (by entity)", len(latestSubmissions))
+
 	// Process each submission
-	for _, submission := range submissions {
+	for _, submission := range latestSubmissions {
 		if err := s.processSubmission(submission, result); err != nil {
 			result.Errors++
 			result.ErrorDetails = append(result.ErrorDetails, err.Error())
@@ -61,12 +67,59 @@ func (s *FaskesSyncService) SyncAll() (*SyncResult, error) {
 	result.Duration = result.EndTime.Sub(result.StartTime).String()
 
 	// Update sync state
-	s.updateSyncStateSuccess(result.TotalFetched)
+	s.updateSyncStateSuccess(len(latestSubmissions))
 
-	log.Printf("Faskes sync completed: %d fetched, %d created, %d updated, %d errors",
-		result.TotalFetched, result.Created, result.Updated, result.Errors)
+	log.Printf("Faskes sync completed: %d fetched, %d filtered, %d created, %d updated, %d errors",
+		result.TotalFetched, len(latestSubmissions), result.Created, result.Updated, result.Errors)
 
 	return result, nil
+}
+
+// filterLatestPerEntity filters submissions to get only the latest per entity (sel_faskes)
+// and skips submissions with empty calc_nama_faskes (incomplete submissions)
+func (s *FaskesSyncService) filterLatestPerEntity(submissions []map[string]interface{}) []map[string]interface{} {
+	// Map to store latest submission per entity
+	latestByEntity := make(map[string]map[string]interface{})
+	latestTimeByEntity := make(map[string]time.Time)
+
+	for _, submission := range submissions {
+		// Skip if calc_nama_faskes is empty (incomplete submission)
+		calcNama, _ := submission["calc_nama_faskes"].(string)
+		if calcNama == "" {
+			continue
+		}
+
+		// Get entity ID (sel_faskes) - this is the unique identifier for the faskes
+		entityID, _ := submission["sel_faskes"].(string)
+		if entityID == "" {
+			// Fallback to calc_nama_faskes if no entity ID
+			entityID = calcNama
+		}
+
+		// Get submission time
+		var submittedAt time.Time
+		if system, ok := submission["__system"].(map[string]interface{}); ok {
+			if dateStr, ok := system["submissionDate"].(string); ok {
+				if t, err := time.Parse(time.RFC3339, dateStr); err == nil {
+					submittedAt = t
+				}
+			}
+		}
+
+		// Check if this is newer than what we have
+		if existing, exists := latestTimeByEntity[entityID]; !exists || submittedAt.After(existing) {
+			latestByEntity[entityID] = submission
+			latestTimeByEntity[entityID] = submittedAt
+		}
+	}
+
+	// Convert map to slice
+	result := make([]map[string]interface{}, 0, len(latestByEntity))
+	for _, submission := range latestByEntity {
+		result = append(result, submission)
+	}
+
+	return result
 }
 
 // processSubmission processes a single faskes submission
@@ -90,6 +143,9 @@ func (s *FaskesSyncService) processSubmission(submission map[string]interface{},
 	if err != nil {
 		return fmt.Errorf("failed to map faskes submission %s: %w", odkID, err)
 	}
+
+	// Inject region IDs from wilayah reference if not present
+	s.injectRegionIDs(faskes)
 
 	// Check if faskes already exists
 	var existingFaskes model.Faskes
@@ -314,7 +370,7 @@ func (s *FaskesSyncService) GetSyncState() (*odk.SyncState, error) {
 	return &syncState, nil
 }
 
-// HardSync performs a full sync and deletes faskes that no longer exist in ODK Central
+// HardSync performs a full sync and deletes faskes that are not in the latest submissions
 func (s *FaskesSyncService) HardSync() (*SyncResult, error) {
 	result := &SyncResult{
 		StartTime: time.Now(),
@@ -333,16 +389,20 @@ func (s *FaskesSyncService) HardSync() (*SyncResult, error) {
 	result.TotalFetched = len(submissions)
 	log.Printf("Faskes HardSync: Fetched %d submissions from ODK Central", result.TotalFetched)
 
-	// Build a set of ODK submission IDs from ODK Central
-	odkIDSet := make(map[string]bool)
-	for _, submission := range submissions {
+	// Filter to get only latest submission per entity (handles ODK append-only update mode)
+	latestSubmissions := s.filterLatestPerEntity(submissions)
+	log.Printf("Faskes HardSync: Filtered to %d latest submissions (by entity)", len(latestSubmissions))
+
+	// Build a set of valid ODK submission IDs (only from latest submissions)
+	validODKIDSet := make(map[string]bool)
+	for _, submission := range latestSubmissions {
 		if odkID, ok := submission["__id"].(string); ok {
-			odkIDSet[odkID] = true
+			validODKIDSet[odkID] = true
 		}
 	}
 
-	// Process each submission (create/update)
-	for _, submission := range submissions {
+	// Process each latest submission (create/update)
+	for _, submission := range latestSubmissions {
 		if err := s.processSubmission(submission, result); err != nil {
 			result.Errors++
 			result.ErrorDetails = append(result.ErrorDetails, err.Error())
@@ -350,16 +410,17 @@ func (s *FaskesSyncService) HardSync() (*SyncResult, error) {
 		}
 	}
 
-	// Find and delete faskes that no longer exist in ODK Central
+	// Find and delete faskes that are not in the latest submissions
+	// This handles: duplicates, old submissions, and incomplete submissions
 	var faskesItems []model.Faskes
 	if err := s.db.Where("odk_submission_id IS NOT NULL").Find(&faskesItems).Error; err != nil {
 		result.Errors++
 		result.ErrorDetails = append(result.ErrorDetails, fmt.Sprintf("failed to fetch existing faskes: %v", err))
 	} else {
 		for _, faskes := range faskesItems {
-			if faskes.ODKSubmissionID != nil && !odkIDSet[*faskes.ODKSubmissionID] {
-				// This faskes no longer exists in ODK Central - delete it
-				log.Printf("Faskes HardSync: Deleting faskes %s (%s) - no longer in ODK Central", faskes.Nama, *faskes.ODKSubmissionID)
+			if faskes.ODKSubmissionID != nil && !validODKIDSet[*faskes.ODKSubmissionID] {
+				// This faskes is not in the latest valid submissions - delete it
+				log.Printf("Faskes HardSync: Deleting faskes %s (%s) - not in latest submissions", faskes.Nama, *faskes.ODKSubmissionID)
 
 				// Delete associated photos first
 				if err := s.db.Where("faskes_id = ?", faskes.ID).Delete(&model.FaskesPhoto{}).Error; err != nil {
@@ -380,10 +441,44 @@ func (s *FaskesSyncService) HardSync() (*SyncResult, error) {
 	result.EndTime = time.Now()
 	result.Duration = result.EndTime.Sub(result.StartTime).String()
 
-	s.updateSyncStateSuccess(result.TotalFetched)
+	s.updateSyncStateSuccess(len(latestSubmissions))
 
-	log.Printf("Faskes HardSync completed: %d fetched, %d created, %d updated, %d deleted, %d errors",
-		result.TotalFetched, result.Created, result.Updated, result.Deleted, result.Errors)
+	log.Printf("Faskes HardSync completed: %d fetched, %d filtered, %d created, %d updated, %d deleted, %d errors",
+		result.TotalFetched, len(latestSubmissions), result.Created, result.Updated, result.Deleted, result.Errors)
 
 	return result, nil
+}
+
+// injectRegionIDs looks up region IDs from wilayah reference table and injects into faskes.Alamat
+// This handles faskes data that only has region names but not IDs
+func (s *FaskesSyncService) injectRegionIDs(faskes *model.Faskes) {
+	if faskes.Alamat == nil {
+		return
+	}
+
+	// Get current values
+	idKotaKab, _ := faskes.Alamat["id_kota_kab"].(string)
+	namaKotaKab, _ := faskes.Alamat["nama_kota_kab"].(string)
+
+	// Only lookup if id_kota_kab is empty but nama_kota_kab exists
+	if idKotaKab == "" && namaKotaKab != "" {
+		var kode string
+		// Lookup from wilayah_kota_kab table
+		err := s.db.Raw(`
+			SELECT kode FROM wilayah_kota_kab
+			WHERE UPPER(REPLACE(nama, 'KAB. ', '')) = UPPER(?)
+			   OR UPPER(REPLACE(nama, 'KOTA ', '')) = UPPER(?)
+			   OR UPPER(nama) = UPPER(?)
+			LIMIT 1
+		`, namaKotaKab, namaKotaKab, namaKotaKab).Scan(&kode).Error
+
+		if err == nil && kode != "" {
+			faskes.Alamat["id_kota_kab"] = kode
+			// Derive id_provinsi from kode (format: "11.01" -> "11")
+			parts := strings.Split(kode, ".")
+			if len(parts) >= 1 {
+				faskes.Alamat["id_provinsi"] = parts[0]
+			}
+		}
+	}
 }
