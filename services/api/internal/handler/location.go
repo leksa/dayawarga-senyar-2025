@@ -358,11 +358,20 @@ func (h *LocationHandler) GetLocationByID(c *gin.Context) {
 		akses = location.Akses
 	}
 
+	// Get baseline_sumber - prefer dedicated column, fallback to identitas JSONB
+	baselineSumber := location.BaselineSumber
+	if baselineSumber == "" && location.Identitas != nil {
+		if v, ok := location.Identitas["baseline_sumber"].(string); ok {
+			baselineSumber = v
+		}
+	}
+
 	response := dto.LocationDetailResponse{
 		ID:              location.ID.String(),
 		ODKSubmissionID: odkSubmissionID,
 		Type:            location.Type,
 		Status:          location.Status,
+		BaselineSumber:  baselineSumber,
 		Geometry: &dto.LocationGeometry{
 			Type:        "Point",
 			Coordinates: []float64{location.Longitude, location.Latitude},

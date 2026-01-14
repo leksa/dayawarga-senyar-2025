@@ -85,6 +85,7 @@ type LocationDetailResponse struct {
 	ODKSubmissionID string                 `json:"odk_submission_id,omitempty"`
 	Type            string                 `json:"type"`
 	Status          string                 `json:"status"`
+	BaselineSumber  string                 `json:"baseline_sumber,omitempty"`
 	Geometry        *LocationGeometry      `json:"geometry"`
 	Identitas       map[string]interface{} `json:"identitas"`
 	Alamat          map[string]interface{} `json:"alamat"`
