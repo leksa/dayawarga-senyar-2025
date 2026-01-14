@@ -55,19 +55,28 @@ type LocationFeatureResponse struct {
 }
 
 type LocationListProperties struct {
-	ODKSubmissionID string    `json:"odk_submission_id,omitempty"`
-	Nama            string    `json:"nama"`
-	Type            string    `json:"type"`
-	Status          string    `json:"status"`
-	AlamatSingkat   string    `json:"alamat_singkat,omitempty"`
-	NamaProvinsi    string    `json:"nama_provinsi,omitempty"`
-	NamaKotaKab     string    `json:"nama_kota_kab,omitempty"`
-	NamaKecamatan   string    `json:"nama_kecamatan,omitempty"`
-	NamaDesa        string    `json:"nama_desa,omitempty"`
-	JumlahKK        int       `json:"jumlah_kk"`
-	TotalJiwa       int       `json:"total_jiwa"`
-	BaselineSumber  string    `json:"baseline_sumber,omitempty"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ODKSubmissionID  string    `json:"odk_submission_id,omitempty"`
+	Nama             string    `json:"nama"`
+	Type             string    `json:"type"`
+	Status           string    `json:"status"`
+	AlamatSingkat    string    `json:"alamat_singkat,omitempty"`
+	NamaProvinsi     string    `json:"nama_provinsi,omitempty"`
+	NamaKotaKab      string    `json:"nama_kota_kab,omitempty"`
+	NamaKecamatan    string    `json:"nama_kecamatan,omitempty"`
+	NamaDesa         string    `json:"nama_desa,omitempty"`
+	IDProvinsi       string    `json:"id_provinsi,omitempty"`
+	IDKotaKab        string    `json:"id_kota_kab,omitempty"`
+	IDKecamatan      string    `json:"id_kecamatan,omitempty"`
+	IDDesa           string    `json:"id_desa,omitempty"`
+	JumlahKK         int       `json:"jumlah_kk"`
+	TotalJiwa        int       `json:"total_jiwa"`
+	JumlahPerempuan  int       `json:"jumlah_perempuan"`
+	JumlahLaki       int       `json:"jumlah_laki"`
+	JumlahBalita       int       `json:"jumlah_balita"`
+	KebutuhanAir       string    `json:"kebutuhan_air,omitempty"`
+	KebutuhanAirLiter  int       `json:"kebutuhan_air_liter"`
+	BaselineSumber     string    `json:"baseline_sumber,omitempty"`
+	UpdatedAt          time.Time `json:"updated_at"`
 }
 
 // LocationDetailResponse for GET /locations/:id
@@ -126,10 +135,14 @@ type FeedResponse struct {
 
 // FeedRegion contains regional information from ODK submission
 type FeedRegion struct {
-	Provinsi  string `json:"provinsi,omitempty"`
-	KotaKab   string `json:"kota_kab,omitempty"`
-	Kecamatan string `json:"kecamatan,omitempty"`
-	Desa      string `json:"desa,omitempty"`
+	Provinsi    string `json:"provinsi,omitempty"`
+	KotaKab     string `json:"kota_kab,omitempty"`
+	Kecamatan   string `json:"kecamatan,omitempty"`
+	Desa        string `json:"desa,omitempty"`
+	IDProvinsi  string `json:"id_provinsi,omitempty"`
+	IDKotaKab   string `json:"id_kota_kab,omitempty"`
+	IDKecamatan string `json:"id_kecamatan,omitempty"`
+	IDDesa      string `json:"id_desa,omitempty"`
 }
 
 // FeedPhotoResponse for feed photo data
@@ -164,6 +177,10 @@ type FaskesListProperties struct {
 	NamaKotaKab     string    `json:"nama_kota_kab,omitempty"`
 	NamaKecamatan   string    `json:"nama_kecamatan,omitempty"`
 	NamaDesa        string    `json:"nama_desa,omitempty"`
+	IDProvinsi      string    `json:"id_provinsi,omitempty"`
+	IDKotaKab       string    `json:"id_kota_kab,omitempty"`
+	IDKecamatan     string    `json:"id_kecamatan,omitempty"`
+	IDDesa          string    `json:"id_desa,omitempty"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }
 
@@ -209,6 +226,7 @@ type InfrastrukturListProperties struct {
 	NamaKabupaten    string    `json:"nama_kabupaten,omitempty"`
 	StatusAkses      string    `json:"status_akses,omitempty"`
 	StatusPenanganan string    `json:"status_penanganan,omitempty"`
+	Bailey           string    `json:"bailey,omitempty"`
 	Progress         int       `json:"progress"`
 	UpdatedAt        time.Time `json:"updated_at"`
 }

@@ -95,6 +95,10 @@ func (h *FaskesHandler) GetFaskes(c *gin.Context) {
 		namaKotaKab := ""
 		namaKecamatan := ""
 		namaDesa := ""
+		idProvinsi := ""
+		idKotaKab := ""
+		idKecamatan := ""
+		idDesa := ""
 		if f.Alamat != nil {
 			parts := []string{}
 			if desa, ok := f.Alamat["nama_desa"].(string); ok && desa != "" {
@@ -110,6 +114,28 @@ func (h *FaskesHandler) GetFaskes(c *gin.Context) {
 			}
 			if prov, ok := f.Alamat["nama_provinsi"].(string); ok && prov != "" {
 				namaProvinsi = prov
+			}
+			// Extract ID wilayah fields
+			if id, ok := f.Alamat["id_provinsi"].(string); ok && id != "" {
+				idProvinsi = id
+			}
+			if id, ok := f.Alamat["id_kota_kab"].(string); ok && id != "" {
+				idKotaKab = id
+			}
+			if id, ok := f.Alamat["id_kecamatan"].(string); ok && id != "" {
+				idKecamatan = id
+				// Derive id_provinsi and id_kota_kab from id_kecamatan if not set
+				// Format: id_kecamatan = "11.01.06" -> id_provinsi = "11", id_kota_kab = "11.01"
+				idParts := strings.Split(id, ".")
+				if len(idParts) >= 2 && idProvinsi == "" {
+					idProvinsi = idParts[0]
+				}
+				if len(idParts) >= 2 && idKotaKab == "" {
+					idKotaKab = idParts[0] + "." + idParts[1]
+				}
+			}
+			if id, ok := f.Alamat["id_desa"].(string); ok && id != "" {
+				idDesa = id
 			}
 			alamatSingkat = strings.Join(parts, ", ")
 		}
@@ -142,6 +168,10 @@ func (h *FaskesHandler) GetFaskes(c *gin.Context) {
 				NamaKotaKab:     namaKotaKab,
 				NamaKecamatan:   namaKecamatan,
 				NamaDesa:        namaDesa,
+				IDProvinsi:      idProvinsi,
+				IDKotaKab:       idKotaKab,
+				IDKecamatan:     idKecamatan,
+				IDDesa:          idDesa,
 				UpdatedAt:       f.UpdatedAt,
 			},
 		}

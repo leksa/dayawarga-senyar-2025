@@ -269,7 +269,8 @@ func getSubmittedAt(submittedAt *time.Time, createdAt time.Time) time.Time {
 }
 
 // extractRegionFromRawData extracts region info from ODK raw_data
-// Uses calc_nama_* fields (calculated by XLSForm using jr:choice-name)
+// Uses calc_nama_* fields for names and sel_* fields for IDs (BPS codes)
+// Also checks grp_relasi group for feed forms that store region data there
 func extractRegionFromRawData(rawData model.JSONB) *dto.FeedRegion {
 	if rawData == nil {
 		return nil
@@ -281,7 +282,7 @@ func extractRegionFromRawData(rawData model.JSONB) *dto.FeedRegion {
 	region := &dto.FeedRegion{}
 	hasData := false
 
-	// Use calc_nama_* fields which contain the actual names (not BPS codes)
+	// Use calc_nama_* fields which contain the actual names
 	if v, ok := data["calc_nama_provinsi"].(string); ok && v != "" {
 		region.Provinsi = v
 		hasData = true
@@ -297,6 +298,53 @@ func extractRegionFromRawData(rawData model.JSONB) *dto.FeedRegion {
 	if v, ok := data["calc_nama_desa"].(string); ok && v != "" {
 		region.Desa = v
 		hasData = true
+	}
+
+	// Extract ID codes from sel_* fields (BPS codes from ODK selection)
+	// First try root level (location/faskes forms)
+	if v, ok := data["sel_provinsi"].(string); ok && v != "" {
+		region.IDProvinsi = v
+		hasData = true
+	}
+	if v, ok := data["sel_kota_kab"].(string); ok && v != "" {
+		region.IDKotaKab = v
+		hasData = true
+	}
+	if v, ok := data["sel_kecamatan"].(string); ok && v != "" {
+		region.IDKecamatan = v
+		hasData = true
+	}
+	if v, ok := data["sel_desa"].(string); ok && v != "" {
+		region.IDDesa = v
+		hasData = true
+	}
+
+	// Also check grp_relasi for feed forms that might store sel_* there
+	if grpRelasi, ok := data["grp_relasi"].(map[string]interface{}); ok {
+		if region.IDProvinsi == "" {
+			if v, ok := grpRelasi["sel_provinsi"].(string); ok && v != "" {
+				region.IDProvinsi = v
+				hasData = true
+			}
+		}
+		if region.IDKotaKab == "" {
+			if v, ok := grpRelasi["sel_kota_kab"].(string); ok && v != "" {
+				region.IDKotaKab = v
+				hasData = true
+			}
+		}
+		if region.IDKecamatan == "" {
+			if v, ok := grpRelasi["sel_kecamatan"].(string); ok && v != "" {
+				region.IDKecamatan = v
+				hasData = true
+			}
+		}
+		if region.IDDesa == "" {
+			if v, ok := grpRelasi["sel_desa"].(string); ok && v != "" {
+				region.IDDesa = v
+				hasData = true
+			}
+		}
 	}
 
 	if !hasData {

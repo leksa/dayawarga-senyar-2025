@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from 'vue'
 import { Locate, Layers, MapPin, ChevronDown, X, Plus, Minus } from 'lucide-vue-next'
+import StatsBox from '@/components/StatsBox.vue'
 import { useLocations } from '@/composables/useLocations'
 import { useFaskes } from '@/composables/useFaskes'
 import { useInfrastruktur } from '@/composables/useInfrastruktur'
@@ -46,139 +47,175 @@ let currentTileLayer: any = null
 const showRegionFilter = ref(false)
 const filterLevel = ref<'provinsi' | 'kotakab' | 'kecamatan' | 'desa'>('provinsi')
 
-// Pending filter values (before clicking Apply)
-const pendingProvinsi = ref<string>('')
-const pendingKotaKab = ref<string>('')
-const pendingKecamatan = ref<string>('')
-const pendingDesa = ref<string>('')
+// Region option type with ID and display name
+interface RegionOption {
+  id: string   // BPS code (e.g., "11.16" for Aceh Tamiang)
+  name: string // Display name
+}
+
+// Pending filter values (before clicking Apply) - store both ID and name
+const pendingProvinsi = ref<RegionOption | null>(null)
+const pendingKotaKab = ref<RegionOption | null>(null)
+const pendingKecamatan = ref<RegionOption | null>(null)
+const pendingDesa = ref<RegionOption | null>(null)
 
 // Applied filter values (after clicking Apply)
-const appliedProvinsi = ref<string>('')
-const appliedKotaKab = ref<string>('')
-const appliedKecamatan = ref<string>('')
-const appliedDesa = ref<string>('')
+const appliedProvinsi = ref<RegionOption | null>(null)
+const appliedKotaKab = ref<RegionOption | null>(null)
+const appliedKecamatan = ref<RegionOption | null>(null)
+const appliedDesa = ref<RegionOption | null>(null)
 
 // Available options for each level (dynamically populated from data)
-const availableKotaKab = ref<string[]>([])
-const availableKecamatan = ref<string[]>([])
-const availableDesa = ref<string[]>([])
+const availableKotaKab = ref<RegionOption[]>([])
+const availableKecamatan = ref<RegionOption[]>([])
+const availableDesa = ref<RegionOption[]>([])
 
 // Collect unique region values from all markers
+// Uses ID codes as keys, stores {id, name} for each region
 const collectRegionData = () => {
-  const kotaKabSet = new Set<string>()
-  const kecamatanMap = new Map<string, Set<string>>()
-  const desaMap = new Map<string, Set<string>>()
+  // Map: ID code -> RegionOption {id, name}
+  const kotaKabMap = new Map<string, RegionOption>()
+  // Map: kota/kab ID -> Map<kecamatan ID, RegionOption>
+  const kecamatanMap = new Map<string, Map<string, RegionOption>>()
+  // Map: kecamatan ID -> Map<desa ID, RegionOption>
+  const desaMap = new Map<string, Map<string, RegionOption>>()
 
-  // From location markers
+  // From location markers (have ID codes)
   markers.value.forEach(m => {
-    if (m.namaKotaKab) kotaKabSet.add(m.namaKotaKab)
-    if (m.namaKotaKab && m.namaKecamatan) {
-      if (!kecamatanMap.has(m.namaKotaKab)) kecamatanMap.set(m.namaKotaKab, new Set())
-      kecamatanMap.get(m.namaKotaKab)!.add(m.namaKecamatan)
+    if (m.idKotaKab && m.namaKotaKab) {
+      if (!kotaKabMap.has(m.idKotaKab)) {
+        kotaKabMap.set(m.idKotaKab, { id: m.idKotaKab, name: m.namaKotaKab })
+      }
     }
-    if (m.namaKecamatan && m.namaDesa) {
-      if (!desaMap.has(m.namaKecamatan)) desaMap.set(m.namaKecamatan, new Set())
-      desaMap.get(m.namaKecamatan)!.add(m.namaDesa)
+    if (m.idKotaKab && m.idKecamatan && m.namaKecamatan) {
+      if (!kecamatanMap.has(m.idKotaKab)) kecamatanMap.set(m.idKotaKab, new Map())
+      if (!kecamatanMap.get(m.idKotaKab)!.has(m.idKecamatan)) {
+        kecamatanMap.get(m.idKotaKab)!.set(m.idKecamatan, { id: m.idKecamatan, name: m.namaKecamatan })
+      }
+    }
+    if (m.idKecamatan && m.idDesa && m.namaDesa) {
+      if (!desaMap.has(m.idKecamatan)) desaMap.set(m.idKecamatan, new Map())
+      if (!desaMap.get(m.idKecamatan)!.has(m.idDesa)) {
+        desaMap.get(m.idKecamatan)!.set(m.idDesa, { id: m.idDesa, name: m.namaDesa })
+      }
     }
   })
 
-  // From faskes markers
+  // From faskes markers (have ID codes)
   faskesMarkers.value.forEach(m => {
-    if (m.namaKotaKab) kotaKabSet.add(m.namaKotaKab)
-    if (m.namaKotaKab && m.namaKecamatan) {
-      if (!kecamatanMap.has(m.namaKotaKab)) kecamatanMap.set(m.namaKotaKab, new Set())
-      kecamatanMap.get(m.namaKotaKab)!.add(m.namaKecamatan)
+    if (m.idKotaKab && m.namaKotaKab) {
+      if (!kotaKabMap.has(m.idKotaKab)) {
+        kotaKabMap.set(m.idKotaKab, { id: m.idKotaKab, name: m.namaKotaKab })
+      }
     }
-    if (m.namaKecamatan && m.namaDesa) {
-      if (!desaMap.has(m.namaKecamatan)) desaMap.set(m.namaKecamatan, new Set())
-      desaMap.get(m.namaKecamatan)!.add(m.namaDesa)
+    if (m.idKotaKab && m.idKecamatan && m.namaKecamatan) {
+      if (!kecamatanMap.has(m.idKotaKab)) kecamatanMap.set(m.idKotaKab, new Map())
+      if (!kecamatanMap.get(m.idKotaKab)!.has(m.idKecamatan)) {
+        kecamatanMap.get(m.idKotaKab)!.set(m.idKecamatan, { id: m.idKecamatan, name: m.namaKecamatan })
+      }
+    }
+    if (m.idKecamatan && m.idDesa && m.namaDesa) {
+      if (!desaMap.has(m.idKecamatan)) desaMap.set(m.idKecamatan, new Map())
+      if (!desaMap.get(m.idKecamatan)!.has(m.idDesa)) {
+        desaMap.get(m.idKecamatan)!.set(m.idDesa, { id: m.idDesa, name: m.namaDesa })
+      }
     }
   })
 
-  // From feeds
+  // From feeds (now have ID codes from API)
   feedsWithCoords.value.forEach(f => {
-    if (f.region?.kota_kab) kotaKabSet.add(f.region.kota_kab)
-    if (f.region?.kota_kab && f.region?.kecamatan) {
-      if (!kecamatanMap.has(f.region.kota_kab)) kecamatanMap.set(f.region.kota_kab, new Set())
-      kecamatanMap.get(f.region.kota_kab)!.add(f.region.kecamatan)
+    if (f.region?.id_kota_kab && f.region?.kota_kab) {
+      if (!kotaKabMap.has(f.region.id_kota_kab)) {
+        kotaKabMap.set(f.region.id_kota_kab, { id: f.region.id_kota_kab, name: f.region.kota_kab })
+      }
     }
-    if (f.region?.kecamatan && f.region?.desa) {
-      if (!desaMap.has(f.region.kecamatan)) desaMap.set(f.region.kecamatan, new Set())
-      desaMap.get(f.region.kecamatan)!.add(f.region.desa)
+    if (f.region?.id_kota_kab && f.region?.id_kecamatan && f.region?.kecamatan) {
+      if (!kecamatanMap.has(f.region.id_kota_kab)) kecamatanMap.set(f.region.id_kota_kab, new Map())
+      if (!kecamatanMap.get(f.region.id_kota_kab)!.has(f.region.id_kecamatan)) {
+        kecamatanMap.get(f.region.id_kota_kab)!.set(f.region.id_kecamatan, { id: f.region.id_kecamatan, name: f.region.kecamatan })
+      }
+    }
+    if (f.region?.id_kecamatan && f.region?.id_desa && f.region?.desa) {
+      if (!desaMap.has(f.region.id_kecamatan)) desaMap.set(f.region.id_kecamatan, new Map())
+      if (!desaMap.get(f.region.id_kecamatan)!.has(f.region.id_desa)) {
+        desaMap.get(f.region.id_kecamatan)!.set(f.region.id_desa, { id: f.region.id_desa, name: f.region.desa })
+      }
     }
   })
 
-  return { kotaKabSet, kecamatanMap, desaMap }
+  return { kotaKabMap, kecamatanMap, desaMap }
 }
 
 // Update available kota/kab when provinsi selected
 const updateAvailableKotaKab = () => {
-  const { kotaKabSet } = collectRegionData()
-  availableKotaKab.value = Array.from(kotaKabSet).sort()
+  const { kotaKabMap } = collectRegionData()
+  availableKotaKab.value = Array.from(kotaKabMap.values()).sort((a, b) => a.name.localeCompare(b.name))
 }
 
 // Update available kecamatan when kota/kab selected
-const updateAvailableKecamatan = (kotaKab: string) => {
+const updateAvailableKecamatan = (kotaKabId: string) => {
   const { kecamatanMap } = collectRegionData()
-  const kecSet = kecamatanMap.get(kotaKab)
-  availableKecamatan.value = kecSet ? Array.from(kecSet).sort() : []
+  const kecMap = kecamatanMap.get(kotaKabId)
+  if (kecMap) {
+    availableKecamatan.value = Array.from(kecMap.values()).sort((a, b) => a.name.localeCompare(b.name))
+  } else {
+    availableKecamatan.value = []
+  }
 }
 
 // Update available desa when kecamatan selected
-const updateAvailableDesa = (kecamatan: string) => {
+const updateAvailableDesa = (kecamatanId: string) => {
   const { desaMap } = collectRegionData()
-  const desaSet = desaMap.get(kecamatan)
-  availableDesa.value = desaSet ? Array.from(desaSet).sort() : []
+  const desMap = desaMap.get(kecamatanId)
+  if (desMap) {
+    availableDesa.value = Array.from(desMap.values()).sort((a, b) => a.name.localeCompare(b.name))
+  } else {
+    availableDesa.value = []
+  }
 }
 
 // Filter label for display (shows applied filter)
 const filterLabel = computed(() => {
-  if (appliedDesa.value) return appliedDesa.value
-  if (appliedKecamatan.value) return appliedKecamatan.value
-  if (appliedKotaKab.value) return appliedKotaKab.value
-  if (appliedProvinsi.value) return appliedProvinsi.value
+  if (appliedDesa.value) return appliedDesa.value.name
+  if (appliedKecamatan.value) return appliedKecamatan.value.name
+  if (appliedKotaKab.value) return appliedKotaKab.value.name
+  if (appliedProvinsi.value) return appliedProvinsi.value.name
   return 'Semua Wilayah'
 })
 
 const hasActiveFilter = computed(() => {
-  return appliedProvinsi.value !== '' || appliedKotaKab.value !== '' || appliedKecamatan.value !== '' || appliedDesa.value !== ''
+  return appliedProvinsi.value !== null || appliedKotaKab.value !== null || appliedKecamatan.value !== null || appliedDesa.value !== null
 })
 
 // Handle province selection
-const selectProvinsi = (provinsi: string) => {
+const selectProvinsi = (provinsi: RegionOption) => {
   pendingProvinsi.value = provinsi
-  pendingKotaKab.value = ''
-  pendingKecamatan.value = ''
-  pendingDesa.value = ''
-  if (provinsi === 'Aceh') {
-    updateAvailableKotaKab()
-    filterLevel.value = 'kotakab'
-  }
+  pendingKotaKab.value = null
+  pendingKecamatan.value = null
+  pendingDesa.value = null
+  updateAvailableKotaKab()
+  filterLevel.value = 'kotakab'
 }
 
 // Handle kota/kab selection
-const selectKotaKab = (kotaKab: string) => {
+const selectKotaKab = (kotaKab: RegionOption) => {
   pendingKotaKab.value = kotaKab
-  pendingKecamatan.value = ''
-  pendingDesa.value = ''
-  if (kotaKab) {
-    updateAvailableKecamatan(kotaKab)
-    filterLevel.value = 'kecamatan'
-  }
+  pendingKecamatan.value = null
+  pendingDesa.value = null
+  updateAvailableKecamatan(kotaKab.id)
+  filterLevel.value = 'kecamatan'
 }
 
 // Handle kecamatan selection
-const selectKecamatan = (kecamatan: string) => {
+const selectKecamatan = (kecamatan: RegionOption) => {
   pendingKecamatan.value = kecamatan
-  pendingDesa.value = ''
-  if (kecamatan) {
-    updateAvailableDesa(kecamatan)
-    filterLevel.value = 'desa'
-  }
+  pendingDesa.value = null
+  updateAvailableDesa(kecamatan.id)
+  filterLevel.value = 'desa'
 }
 
 // Handle desa selection
-const selectDesa = (desa: string) => {
+const selectDesa = (desa: RegionOption) => {
   pendingDesa.value = desa
 }
 
@@ -193,14 +230,14 @@ const applyFilter = () => {
 
 // Clear filter
 const clearFilter = () => {
-  pendingProvinsi.value = ''
-  pendingKotaKab.value = ''
-  pendingKecamatan.value = ''
-  pendingDesa.value = ''
-  appliedProvinsi.value = ''
-  appliedKotaKab.value = ''
-  appliedKecamatan.value = ''
-  appliedDesa.value = ''
+  pendingProvinsi.value = null
+  pendingKotaKab.value = null
+  pendingKecamatan.value = null
+  pendingDesa.value = null
+  appliedProvinsi.value = null
+  appliedKotaKab.value = null
+  appliedKecamatan.value = null
+  appliedDesa.value = null
   availableKotaKab.value = []
   availableKecamatan.value = []
   availableDesa.value = []
@@ -211,16 +248,16 @@ const clearFilter = () => {
 const goBackLevel = () => {
   if (filterLevel.value === 'desa') {
     filterLevel.value = 'kecamatan'
-    pendingDesa.value = ''
+    pendingDesa.value = null
   } else if (filterLevel.value === 'kecamatan') {
     filterLevel.value = 'kotakab'
-    pendingKecamatan.value = ''
-    pendingDesa.value = ''
+    pendingKecamatan.value = null
+    pendingDesa.value = null
   } else if (filterLevel.value === 'kotakab') {
     filterLevel.value = 'provinsi'
-    pendingKotaKab.value = ''
-    pendingKecamatan.value = ''
-    pendingDesa.value = ''
+    pendingKotaKab.value = null
+    pendingKecamatan.value = null
+    pendingDesa.value = null
   }
 }
 
@@ -240,8 +277,8 @@ const toggleRegionFilter = () => {
     else filterLevel.value = 'provinsi'
     // Update available options
     if (appliedProvinsi.value) updateAvailableKotaKab()
-    if (appliedKotaKab.value) updateAvailableKecamatan(appliedKotaKab.value)
-    if (appliedKecamatan.value) updateAvailableDesa(appliedKecamatan.value)
+    if (appliedKotaKab.value) updateAvailableKecamatan(appliedKotaKab.value.id)
+    if (appliedKecamatan.value) updateAvailableDesa(appliedKecamatan.value.id)
   }
   showRegionFilter.value = !showRegionFilter.value
 }
@@ -451,7 +488,8 @@ onMounted(async () => {
   const L = await import('leaflet')
 
   // Center on Aceh (Siklon Senyar affected area)
-  map = L.map(mapContainer.value).setView([4.7, 97.5], 8)
+  // Disable default zoom control since we have custom controls
+  map = L.map(mapContainer.value, { zoomControl: false }).setView([4.7, 97.5], 8)
 
   // Add default tile layer
   currentTileLayer = L.tileLayer(tileLayers.street.url, {
@@ -540,9 +578,8 @@ watch(() => props.showFeeds, async (show) => {
   }
 })
 
-// Computed filtered location markers based on region filter
+// Computed filtered location markers based on region filter (ID-based matching)
 const filteredLocationMarkers = computed(() => {
-  // Access reactive values directly for proper reactivity
   const prov = appliedProvinsi.value
   const kab = appliedKotaKab.value
   const kec = appliedKecamatan.value
@@ -554,35 +591,17 @@ const filteredLocationMarkers = computed(() => {
   }
 
   return markers.value.filter(m => {
-    const normalize = (s?: string) => (s || '').toLowerCase().trim()
-
-    if (desa) {
-      const mDesa = normalize(m.namaDesa)
-      const fDesa = normalize(desa)
-      return mDesa.includes(fDesa) || fDesa.includes(mDesa)
-    }
-    if (kec) {
-      const mKec = normalize(m.namaKecamatan)
-      const fKec = normalize(kec)
-      return mKec.includes(fKec) || fKec.includes(mKec)
-    }
-    if (kab) {
-      const mKab = normalize(m.namaKotaKab)
-      const fKab = normalize(kab)
-      return mKab.includes(fKab) || fKab.includes(mKab)
-    }
-    if (prov) {
-      const mProv = normalize(m.namaProvinsi)
-      const fProv = normalize(prov)
-      return mProv.includes(fProv) || fProv.includes(mProv)
-    }
+    // Match by ID code (exact match, most specific filter wins)
+    if (desa) return m.idDesa === desa.id
+    if (kec) return m.idKecamatan === kec.id
+    if (kab) return m.idKotaKab === kab.id
+    if (prov) return m.idProvinsi === prov.id
     return true
   })
 })
 
-// Computed filtered faskes markers based on region filter
+// Computed filtered faskes markers based on region filter (ID-based matching)
 const filteredFaskesMarkers = computed(() => {
-  // Access reactive values directly for proper reactivity
   const prov = appliedProvinsi.value
   const kab = appliedKotaKab.value
   const kec = appliedKecamatan.value
@@ -594,35 +613,18 @@ const filteredFaskesMarkers = computed(() => {
   }
 
   return faskesMarkers.value.filter(m => {
-    const normalize = (s?: string) => (s || '').toLowerCase().trim()
-
-    if (desa) {
-      const mDesa = normalize(m.namaDesa)
-      const fDesa = normalize(desa)
-      return mDesa.includes(fDesa) || fDesa.includes(mDesa)
-    }
-    if (kec) {
-      const mKec = normalize(m.namaKecamatan)
-      const fKec = normalize(kec)
-      return mKec.includes(fKec) || fKec.includes(mKec)
-    }
-    if (kab) {
-      const mKab = normalize(m.namaKotaKab)
-      const fKab = normalize(kab)
-      return mKab.includes(fKab) || fKab.includes(mKab)
-    }
-    if (prov) {
-      const mProv = normalize(m.namaProvinsi)
-      const fProv = normalize(prov)
-      return mProv.includes(fProv) || fProv.includes(mProv)
-    }
+    // Match by ID code (exact match, most specific filter wins)
+    if (desa) return m.idDesa === desa.id
+    if (kec) return m.idKecamatan === kec.id
+    if (kab) return m.idKotaKab === kab.id
+    if (prov) return m.idProvinsi === prov.id
     return true
   })
 })
 
 // Computed filtered infrastruktur markers based on region filter
+// Note: infrastruktur only has kabupaten level, uses name matching as fallback
 const filteredInfrastrukturMarkers = computed(() => {
-  // Access reactive values directly for proper reactivity
   const kab = appliedKotaKab.value
 
   // No filter - return all
@@ -630,17 +632,18 @@ const filteredInfrastrukturMarkers = computed(() => {
     return infrastrukturMarkers.value
   }
 
+  // Infrastruktur uses namaKabupaten, fall back to name matching
   return infrastrukturMarkers.value.filter(m => {
     const normalize = (s?: string) => (s || '').toLowerCase().trim()
     const mKab = normalize(m.namaKabupaten)
-    const fKab = normalize(kab)
+    const fKab = normalize(kab.name)
     return mKab.includes(fKab) || fKab.includes(mKab)
   })
 })
 
 // Computed filtered feeds based on region filter
+// Uses ID-based matching when available, falls back to name matching
 const filteredFeeds = computed(() => {
-  // Access reactive values directly for proper reactivity
   const prov = appliedProvinsi.value
   const kab = appliedKotaKab.value
   const kec = appliedKecamatan.value
@@ -651,31 +654,121 @@ const filteredFeeds = computed(() => {
     return feedsWithCoords.value
   }
 
-  return feedsWithCoords.value.filter(f => {
-    const normalize = (s?: string) => (s || '').toLowerCase().trim()
+  const normalize = (s?: string) => (s || '').toLowerCase().trim()
 
+  return feedsWithCoords.value.filter(f => {
+    // Try ID-based matching first, fall back to name matching
     if (desa) {
+      if (f.region?.id_desa) return f.region.id_desa === desa.id
+      // Fallback to name matching
       const mDesa = normalize(f.region?.desa)
-      const fDesa = normalize(desa)
+      const fDesa = normalize(desa.name)
       return mDesa.includes(fDesa) || fDesa.includes(mDesa)
     }
     if (kec) {
+      if (f.region?.id_kecamatan) return f.region.id_kecamatan === kec.id
       const mKec = normalize(f.region?.kecamatan)
-      const fKec = normalize(kec)
+      const fKec = normalize(kec.name)
       return mKec.includes(fKec) || fKec.includes(mKec)
     }
     if (kab) {
+      if (f.region?.id_kota_kab) return f.region.id_kota_kab === kab.id
       const mKab = normalize(f.region?.kota_kab)
-      const fKab = normalize(kab)
+      const fKab = normalize(kab.name)
       return mKab.includes(fKab) || fKab.includes(mKab)
     }
     if (prov) {
+      if (f.region?.id_provinsi) return f.region.id_provinsi === prov.id
       const mProv = normalize(f.region?.provinsi)
-      const fProv = normalize(prov)
+      const fProv = normalize(prov.name)
       return mProv.includes(fProv) || fProv.includes(mProv)
     }
     return true
   })
+})
+
+// Computed stats for StatsBox based on filtered data
+const poskoStats = computed(() => {
+  const filtered = filteredLocationMarkers.value
+  return {
+    count: filtered.length,
+    totalPengungsi: filtered.reduce((sum, m) => sum + (m.totalJiwa || 0), 0),
+    jumlahKK: filtered.reduce((sum, m) => sum + (m.jumlahKK || 0), 0),
+    jumlahPerempuan: filtered.reduce((sum, m) => sum + (m.jumlahPerempuan || 0), 0),
+    jumlahLaki: filtered.reduce((sum, m) => sum + (m.jumlahLaki || 0), 0),
+    jumlahBalita: filtered.reduce((sum, m) => sum + (m.jumlahBalita || 0), 0),
+    kebutuhanAirLiter: filtered.reduce((sum, m) => sum + (m.kebutuhanAirLiter || 0), 0)
+  }
+})
+
+const faskesStats = computed(() => {
+  const filtered = filteredFaskesMarkers.value
+  const normalize = (s?: string) => (s || '').toLowerCase().trim()
+
+  // Count by jenis_faskes
+  const rumahSakit = filtered.filter(m => normalize(m.jenisFaskes) === 'rumah_sakit' || normalize(m.jenisFaskes) === 'rumah sakit').length
+  const puskesmas = filtered.filter(m => normalize(m.jenisFaskes) === 'puskesmas').length
+  const poskoKesDarurat = filtered.filter(m => normalize(m.jenisFaskes) === 'posko_kes_darurat' || normalize(m.jenisFaskes) === 'posko kesehatan darurat').length
+
+  // Count not operational by type
+  const rsNotOperational = filtered.filter(m =>
+    (normalize(m.jenisFaskes) === 'rumah_sakit' || normalize(m.jenisFaskes) === 'rumah sakit') &&
+    normalize(m.statusFaskes) !== 'operasional'
+  ).length
+  const puskesmasNotOperational = filtered.filter(m =>
+    normalize(m.jenisFaskes) === 'puskesmas' &&
+    normalize(m.statusFaskes) !== 'operasional'
+  ).length
+
+  return {
+    count: filtered.length,
+    rumahSakit,
+    puskesmas,
+    poskoKesDarurat,
+    rsNotOperational,
+    puskesmasNotOperational
+  }
+})
+
+const infrastrukturStats = computed(() => {
+  const filtered = filteredInfrastrukturMarkers.value
+  const normalize = (s?: string) => (s || '').toLowerCase().trim()
+
+  // Count by jenis and status_penanganan
+  const jalanSudahDitangani = filtered.filter(m =>
+    normalize(m.jenis) === 'jalan' &&
+    normalize(m.statusPenanganan) === 'sudah_ditangani'
+  ).length
+  const jalanSedangDitangani = filtered.filter(m =>
+    normalize(m.jenis) === 'jalan' &&
+    normalize(m.statusPenanganan) === 'sedang_ditangani'
+  ).length
+  const jembatanSudahDitangani = filtered.filter(m =>
+    normalize(m.jenis) === 'jembatan' &&
+    normalize(m.statusPenanganan) === 'sudah_ditangani'
+  ).length
+  const jembatanSedangDitangani = filtered.filter(m =>
+    normalize(m.jenis) === 'jembatan' &&
+    normalize(m.statusPenanganan) === 'sedang_ditangani'
+  ).length
+
+  // Count bailey status
+  const baileyTerpasang = filtered.filter(m =>
+    normalize(m.bailey) === 'terpasang'
+  ).length
+  const baileySedangDipasang = filtered.filter(m =>
+    normalize(m.bailey) === 'dalam_proses'
+  ).length
+
+  return {
+    count: filtered.length,
+    jalanSudahDitangani,
+    jalanSedangDitangani,
+    jembatanSudahDitangani,
+    jembatanSedangDitangani,
+    baileyTerpasang,
+    baileySedangDipasang
+  }
 })
 
 // Watch for filtered location marker changes and update map
@@ -936,19 +1029,19 @@ defineExpose({
           <!-- Breadcrumb / Current Selection -->
           <div v-if="filterLevel !== 'provinsi'" class="px-3 py-2 bg-gray-50 border-b border-gray-200">
             <div class="flex items-center gap-1 text-xs text-gray-500 flex-wrap">
-              <button class="hover:text-blue-600" @click="filterLevel = 'provinsi'; pendingKotaKab = ''; pendingKecamatan = ''; pendingDesa = ''">
-                {{ pendingProvinsi || 'Provinsi' }}
+              <button class="hover:text-blue-600" @click="filterLevel = 'provinsi'; pendingKotaKab = null; pendingKecamatan = null; pendingDesa = null">
+                {{ pendingProvinsi?.name || 'Provinsi' }}
               </button>
               <span v-if="pendingKotaKab">›</span>
-              <button v-if="pendingKotaKab" class="hover:text-blue-600" @click="filterLevel = 'kecamatan'; pendingKecamatan = ''; pendingDesa = ''">
-                {{ pendingKotaKab }}
+              <button v-if="pendingKotaKab" class="hover:text-blue-600" @click="filterLevel = 'kecamatan'; pendingKecamatan = null; pendingDesa = null">
+                {{ pendingKotaKab.name }}
               </button>
               <span v-if="pendingKecamatan">›</span>
-              <button v-if="pendingKecamatan" class="hover:text-blue-600" @click="filterLevel = 'desa'; pendingDesa = ''">
-                {{ pendingKecamatan }}
+              <button v-if="pendingKecamatan" class="hover:text-blue-600" @click="filterLevel = 'desa'; pendingDesa = null">
+                {{ pendingKecamatan.name }}
               </button>
               <span v-if="pendingDesa">›</span>
-              <span v-if="pendingDesa" class="font-medium text-gray-700">{{ pendingDesa }}</span>
+              <span v-if="pendingDesa" class="font-medium text-gray-700">{{ pendingDesa.name }}</span>
             </div>
           </div>
 
@@ -972,8 +1065,8 @@ defineExpose({
             <template v-if="filterLevel === 'provinsi'">
               <button
                 class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2"
-                :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingProvinsi === 'Aceh' }"
-                @click="selectProvinsi('Aceh')"
+                :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingProvinsi?.id === '11' }"
+                @click="selectProvinsi({ id: '11', name: 'Aceh' })"
               >
                 <MapPin class="w-4 h-4" />
                 Aceh
@@ -984,19 +1077,19 @@ defineExpose({
             <template v-else-if="filterLevel === 'kotakab'">
               <button
                 class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600"
-                :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingKotaKab === '' }"
-                @click="pendingKotaKab = ''; pendingKecamatan = ''; pendingDesa = ''"
+                :class="{ 'bg-blue-50 text-blue-600 font-medium': !pendingKotaKab }"
+                @click="pendingKotaKab = null; pendingKecamatan = null; pendingDesa = null"
               >
                 Semua Kota/Kabupaten
               </button>
               <button
                 v-for="kota in availableKotaKab"
-                :key="kota"
+                :key="kota.id"
                 class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600"
-                :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingKotaKab === kota }"
+                :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingKotaKab?.id === kota.id }"
                 @click="selectKotaKab(kota)"
               >
-                {{ kota }}
+                {{ kota.name }}
               </button>
               <div v-if="availableKotaKab.length === 0" class="px-3 py-4 text-sm text-gray-400 text-center">
                 Tidak ada data
@@ -1007,19 +1100,19 @@ defineExpose({
             <template v-else-if="filterLevel === 'kecamatan'">
               <button
                 class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600"
-                :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingKecamatan === '' }"
-                @click="pendingKecamatan = ''; pendingDesa = ''"
+                :class="{ 'bg-blue-50 text-blue-600 font-medium': !pendingKecamatan }"
+                @click="pendingKecamatan = null; pendingDesa = null"
               >
                 Semua Kecamatan
               </button>
               <button
                 v-for="kec in availableKecamatan"
-                :key="kec"
+                :key="kec.id"
                 class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600"
-                :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingKecamatan === kec }"
+                :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingKecamatan?.id === kec.id }"
                 @click="selectKecamatan(kec)"
               >
-                {{ kec }}
+                {{ kec.name }}
               </button>
               <div v-if="availableKecamatan.length === 0" class="px-3 py-4 text-sm text-gray-400 text-center">
                 Tidak ada data kecamatan
@@ -1030,19 +1123,19 @@ defineExpose({
             <template v-else-if="filterLevel === 'desa'">
               <button
                 class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600"
-                :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingDesa === '' }"
-                @click="pendingDesa = ''"
+                :class="{ 'bg-blue-50 text-blue-600 font-medium': !pendingDesa }"
+                @click="pendingDesa = null"
               >
                 Semua Desa
               </button>
               <button
                 v-for="desa in availableDesa"
-                :key="desa"
+                :key="desa.id"
                 class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600"
-                :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingDesa === desa }"
+                :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingDesa?.id === desa.id }"
                 @click="selectDesa(desa)"
               >
-                {{ desa }}
+                {{ desa.name }}
               </button>
               <div v-if="availableDesa.length === 0" class="px-3 py-4 text-sm text-gray-400 text-center">
                 Tidak ada data desa
@@ -1065,6 +1158,33 @@ defineExpose({
 
     <!-- Map container -->
     <div ref="mapContainer" class="w-full h-full"></div>
+
+    <!-- Stats Box (bottom-left) -->
+    <StatsBox
+      :show-posko="showMarkers"
+      :show-faskes="showFaskes"
+      :show-infrastruktur="showInfrastruktur"
+      :posko-count="poskoStats.count"
+      :total-pengungsi="poskoStats.totalPengungsi"
+      :jumlah-kk="poskoStats.jumlahKK"
+      :jumlah-perempuan="poskoStats.jumlahPerempuan"
+      :jumlah-laki="poskoStats.jumlahLaki"
+      :jumlah-balita="poskoStats.jumlahBalita"
+      :kebutuhan-air-liter="poskoStats.kebutuhanAirLiter"
+      :faskes-count="faskesStats.count"
+      :faskes-rumah-sakit="faskesStats.rumahSakit"
+      :faskes-puskesmas="faskesStats.puskesmas"
+      :faskes-posko-kes-darurat="faskesStats.poskoKesDarurat"
+      :faskes-rs-not-operational="faskesStats.rsNotOperational"
+      :faskes-puskesmas-not-operational="faskesStats.puskesmasNotOperational"
+      :infrastruktur-count="infrastrukturStats.count"
+      :infra-jalan-sudah-ditangani="infrastrukturStats.jalanSudahDitangani"
+      :infra-jalan-sedang-ditangani="infrastrukturStats.jalanSedangDitangani"
+      :infra-jembatan-sudah-ditangani="infrastrukturStats.jembatanSudahDitangani"
+      :infra-jembatan-sedang-ditangani="infrastrukturStats.jembatanSedangDitangani"
+      :infra-bailey-terpasang="infrastrukturStats.baileyTerpasang"
+      :infra-bailey-sedang-dipasang="infrastrukturStats.baileySedangDipasang"
+    />
 
     <!-- Map controls -->
     <div class="absolute right-4 bottom-24 z-[1000] flex flex-col gap-2">

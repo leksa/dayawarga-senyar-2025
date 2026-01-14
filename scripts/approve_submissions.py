@@ -8,6 +8,18 @@ import os
 import sys
 import argparse
 import requests
+from pathlib import Path
+
+# Load .env file if exists
+ENV_FILE = Path(__file__).parent.parent / ".env"
+if ENV_FILE.exists():
+    with open(ENV_FILE) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#') and '=' in line:
+                key, value = line.split('=', 1)
+                value = value.strip().strip('"').strip("'")
+                os.environ.setdefault(key.strip(), value)
 
 # Configuration
 ODK_BASE_URL = os.getenv('ODK_CENTRAL_URL', 'https://data.dayawarga.com')

@@ -225,16 +225,17 @@ Jika Anda menemukan bug atau memiliki ide fitur baru:
 
 ## Next release in a week
 
-~~0. bug fixing: Email problem with 3rdparty service~~
-~~1. Tambah form ODK, Sync dan tampilan untuk verifikasi Fasilitas Kesehatan (data available Tim Tanggap Darurat Kemenkes)~~
+0. ~~bug fixing: Email problem with 3rdparty service~~
+1. ~~Tambah form ODK, Sync dan tampilan untuk verifikasi Fasilitas Kesehatan (data available Tim Tanggap Darurat Kemenkes)~~
 2. Tambah form ODK, Sync dan tampilan untuk verifikasi titik jembatan (data available tim survei Kementerian PU)
-~~3. Feed Updates bisa koordinat bebas untuk laporan relawan di mana saja~~
-~~4. Feed Updates tampil di peta dgn foto visual situasi~~
+3. ~~Feed Updates bisa koordinat bebas untuk laporan relawan di mana saja~~
+4. ~~Feed Updates tampil di peta dgn foto visual situasi~~
+5. Halaman repo data terupdate (sync daily) dalam csv/json.
 
 ## Kontak Developer
 
 - **GitHub Issues:** [github.com/leksa/dayawarga-senyar-2025/issues](https://github.com/leksa/dayawarga-senyar-2025/issues)
-- **Email:** [dayawarga@gmail.com](mailto:dayawarga@gmail.com)
+- **Email:** [dayawarga@gmail.com](mailto:leksa.rizal@gmail.com)
 - **Website:** [dayawarga.com](https://dayawarga.com)
 
 ## License

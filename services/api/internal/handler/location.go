@@ -82,6 +82,10 @@ func (h *LocationHandler) GetLocations(c *gin.Context) {
 		namaKotaKab := ""
 		namaKecamatan := ""
 		namaDesa := ""
+		idProvinsi := ""
+		idKotaKab := ""
+		idKecamatan := ""
+		idDesa := ""
 		if loc.Alamat != nil {
 			parts := []string{}
 			// Check both "nama_desa" and "desa" keys
@@ -112,18 +116,91 @@ func (h *LocationHandler) GetLocations(c *gin.Context) {
 			} else if prov, ok := loc.Alamat["provinsi"].(string); ok && prov != "" {
 				namaProvinsi = prov
 			}
+			// Extract ID wilayah fields
+			if id, ok := loc.Alamat["id_provinsi"].(string); ok && id != "" {
+				idProvinsi = id
+			}
+			if id, ok := loc.Alamat["id_kota_kab"].(string); ok && id != "" {
+				idKotaKab = id
+			}
+			if id, ok := loc.Alamat["id_kecamatan"].(string); ok && id != "" {
+				idKecamatan = id
+			}
+			if id, ok := loc.Alamat["id_desa"].(string); ok && id != "" {
+				idDesa = id
+			}
 			alamatSingkat = strings.Join(parts, ", ")
 		}
 
 		// Get jumlah_kk and total_jiwa from data_pengungsi
 		jumlahKK := 0
 		totalJiwa := 0
+		jumlahPerempuan := 0
+		jumlahLaki := 0
+		jumlahBalita := 0
 		if loc.DataPengungsi != nil {
 			if v, ok := loc.DataPengungsi["jumlah_kk"].(float64); ok {
 				jumlahKK = int(v)
 			}
 			if v, ok := loc.DataPengungsi["total_jiwa"].(float64); ok {
 				totalJiwa = int(v)
+			}
+			// Sum all female categories: dewasa_perempuan, remaja_perempuan, anak_perempuan, balita_perempuan, bayi_perempuan
+			if v, ok := loc.DataPengungsi["dewasa_perempuan"].(float64); ok {
+				jumlahPerempuan += int(v)
+			}
+			if v, ok := loc.DataPengungsi["remaja_perempuan"].(float64); ok {
+				jumlahPerempuan += int(v)
+			}
+			if v, ok := loc.DataPengungsi["anak_perempuan"].(float64); ok {
+				jumlahPerempuan += int(v)
+			}
+			if v, ok := loc.DataPengungsi["balita_perempuan"].(float64); ok {
+				jumlahPerempuan += int(v)
+			}
+			if v, ok := loc.DataPengungsi["bayi_perempuan"].(float64); ok {
+				jumlahPerempuan += int(v)
+			}
+			// Sum all male categories: dewasa_laki, remaja_laki, anak_laki, balita_laki, bayi_laki
+			if v, ok := loc.DataPengungsi["dewasa_laki"].(float64); ok {
+				jumlahLaki += int(v)
+			}
+			if v, ok := loc.DataPengungsi["remaja_laki"].(float64); ok {
+				jumlahLaki += int(v)
+			}
+			if v, ok := loc.DataPengungsi["anak_laki"].(float64); ok {
+				jumlahLaki += int(v)
+			}
+			if v, ok := loc.DataPengungsi["balita_laki"].(float64); ok {
+				jumlahLaki += int(v)
+			}
+			if v, ok := loc.DataPengungsi["bayi_laki"].(float64); ok {
+				jumlahLaki += int(v)
+			}
+			// Sum balita: balita_perempuan + balita_laki + bayi_perempuan + bayi_laki
+			if v, ok := loc.DataPengungsi["balita_perempuan"].(float64); ok {
+				jumlahBalita += int(v)
+			}
+			if v, ok := loc.DataPengungsi["balita_laki"].(float64); ok {
+				jumlahBalita += int(v)
+			}
+			if v, ok := loc.DataPengungsi["bayi_perempuan"].(float64); ok {
+				jumlahBalita += int(v)
+			}
+			if v, ok := loc.DataPengungsi["bayi_laki"].(float64); ok {
+				jumlahBalita += int(v)
+			}
+		}
+
+		// Get kebutuhan_air from fasilitas
+		kebutuhanAir := ""
+		kebutuhanAirLiter := 0
+		if loc.Fasilitas != nil {
+			if v, ok := loc.Fasilitas["ketersediaan_air"].(string); ok {
+				kebutuhanAir = v
+			}
+			if v, ok := loc.Fasilitas["kebutuhan_air"].(float64); ok {
+				kebutuhanAirLiter = int(v)
 			}
 		}
 
@@ -157,10 +234,19 @@ func (h *LocationHandler) GetLocations(c *gin.Context) {
 				NamaKotaKab:     namaKotaKab,
 				NamaKecamatan:   namaKecamatan,
 				NamaDesa:        namaDesa,
+				IDProvinsi:      idProvinsi,
+				IDKotaKab:       idKotaKab,
+				IDKecamatan:     idKecamatan,
+				IDDesa:          idDesa,
 				JumlahKK:        jumlahKK,
 				TotalJiwa:       totalJiwa,
-				BaselineSumber:  baselineSumber,
-				UpdatedAt:       loc.UpdatedAt,
+				JumlahPerempuan: jumlahPerempuan,
+				JumlahLaki:      jumlahLaki,
+				JumlahBalita:      jumlahBalita,
+				KebutuhanAir:      kebutuhanAir,
+				KebutuhanAirLiter: kebutuhanAirLiter,
+				BaselineSumber:    baselineSumber,
+				UpdatedAt:         loc.UpdatedAt,
 			},
 		}
 	}

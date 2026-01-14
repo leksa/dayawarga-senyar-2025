@@ -66,6 +66,10 @@ export function useFaskes() {
       namaKotaKab: f.properties.nama_kota_kab,
       namaKecamatan: f.properties.nama_kecamatan,
       namaDesa: f.properties.nama_desa,
+      idProvinsi: f.properties.id_provinsi,
+      idKotaKab: f.properties.id_kota_kab,
+      idKecamatan: f.properties.id_kecamatan,
+      idDesa: f.properties.id_desa,
       updatedAt: f.properties.updated_at,
     }))
   })

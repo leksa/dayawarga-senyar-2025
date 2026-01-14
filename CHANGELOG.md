@@ -5,6 +5,25 @@ All notable changes to Dayawarga Senyar will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-01-14
+
+### Added
+- Bailey stats di StatsBox infrastruktur (Bailey Terpasang, Bailey Sedang Dipasang)
+- Field `bailey` di API response infrastruktur list
+- Detail statistik Faskes (Rumah Sakit, Puskesmas, Posko Kes Darurat, tidak beroperasi)
+- Detail statistik Infrastruktur (Jalan/Jembatan Sudah/Sedang Ditangani)
+- Kebutuhan Air dalam liter di StatsBox Posko
+- Region filter berbasis ID (BPS code) untuk filtering yang lebih akurat
+
+### Changed
+- Label "Balita" menjadi "Bayi & Balita" di StatsBox Posko
+- Hapus default Leaflet zoom control (custom zoom buttons)
+- Cleanup scripts folder - hanya menyimpan essential scripts untuk crontab/automation
+
+### Fixed
+- Progress infrastruktur default berdasarkan status_penanganan (belum=0, sedang=50, sudah=100)
+- Data inconsistency penanganan_detail "Tuntas" dengan status_penanganan "belum_ditangani"
+
 ## [1.1.0] - 2025-01-08
 
 ### Added

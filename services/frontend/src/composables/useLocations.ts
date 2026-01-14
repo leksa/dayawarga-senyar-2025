@@ -64,8 +64,17 @@ export function useLocations() {
       namaKotaKab: loc.properties.nama_kota_kab,
       namaKecamatan: loc.properties.nama_kecamatan,
       namaDesa: loc.properties.nama_desa,
+      idProvinsi: loc.properties.id_provinsi,
+      idKotaKab: loc.properties.id_kota_kab,
+      idKecamatan: loc.properties.id_kecamatan,
+      idDesa: loc.properties.id_desa,
       jumlahKK: loc.properties.jumlah_kk,
       totalJiwa: loc.properties.total_jiwa,
+      jumlahPerempuan: loc.properties.jumlah_perempuan,
+      jumlahLaki: loc.properties.jumlah_laki,
+      jumlahBalita: loc.properties.jumlah_balita,
+      kebutuhanAir: loc.properties.kebutuhan_air,
+      kebutuhanAirLiter: loc.properties.kebutuhan_air_liter,
       updatedAt: loc.properties.updated_at,
     }))
   })

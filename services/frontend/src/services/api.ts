@@ -17,8 +17,17 @@ export interface LocationFeature {
     nama_kota_kab?: string
     nama_kecamatan?: string
     nama_desa?: string
+    id_provinsi?: string
+    id_kota_kab?: string
+    id_kecamatan?: string
+    id_desa?: string
     jumlah_kk: number
     total_jiwa: number
+    jumlah_perempuan: number
+    jumlah_laki: number
+    jumlah_balita: number
+    kebutuhan_air?: string
+    kebutuhan_air_liter: number
     updated_at: string
   }
 }
@@ -69,6 +78,10 @@ export interface FeedRegion {
   kota_kab?: string
   kecamatan?: string
   desa?: string
+  id_provinsi?: string
+  id_kota_kab?: string
+  id_kecamatan?: string
+  id_desa?: string
 }
 
 export interface Feed {
@@ -190,6 +203,10 @@ export interface FaskesFeature {
     nama_kota_kab?: string
     nama_kecamatan?: string
     nama_desa?: string
+    id_provinsi?: string
+    id_kota_kab?: string
+    id_kecamatan?: string
+    id_desa?: string
     updated_at: string
   }
 }
@@ -258,6 +275,7 @@ export interface InfrastrukturFeature {
     nama_kabupaten?: string
     status_akses?: string
     status_penanganan?: string
+    bailey?: string
     progress: number
     updated_at: string
   }

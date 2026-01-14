@@ -83,11 +83,8 @@ watch(() => props.marker, async (newMarker) => {
 
     if (photosRes.success && photosRes.data) {
       photos.value = photosRes.data
-      console.log('Photos loaded:', photosRes.data)
-      console.log('Cached photos:', photosRes.data.filter((p: any) => p.is_cached && p.url))
     } else {
       photos.value = []
-      console.log('No photos or error:', photosRes)
     }
   } catch (e) {
     console.error('Failed to fetch location detail:', e)

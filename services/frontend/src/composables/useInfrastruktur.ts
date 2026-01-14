@@ -60,6 +60,7 @@ export function useInfrastruktur() {
       statusJln: i.properties.status_jln,
       statusAkses: i.properties.status_akses,
       statusPenanganan: i.properties.status_penanganan,
+      bailey: i.properties.bailey,
       progress: i.properties.progress,
       lat: i.geometry.coordinates[1],
       lng: i.geometry.coordinates[0],

@@ -109,6 +109,7 @@ func (h *InfrastrukturHandler) GetInfrastruktur(c *gin.Context) {
 				NamaKabupaten:    infra.NamaKabupaten,
 				StatusAkses:      infra.StatusAkses,
 				StatusPenanganan: infra.StatusPenanganan,
+				Bailey:           infra.Bailey,
 				Progress:         infra.Progress,
 				UpdatedAt:        infra.UpdatedAt,
 			},
