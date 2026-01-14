@@ -50,6 +50,9 @@ type Location struct {
 	Akses         JSONB `json:"akses,omitempty" gorm:"type:jsonb"`
 	RawData       JSONB `json:"raw_data,omitempty" gorm:"type:jsonb;column:raw_data"`
 
+	// Source info
+	BaselineSumber string `json:"baseline_sumber" gorm:"column:baseline_sumber"`
+
 	// Metadata
 	SubmitterName *string    `json:"submitter_name,omitempty" gorm:"column:submitter_name"`
 	SubmittedAt   *time.Time `json:"submitted_at,omitempty" gorm:"column:submitted_at"`

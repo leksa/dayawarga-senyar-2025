@@ -209,9 +209,9 @@ func (h *LocationHandler) GetLocations(c *gin.Context) {
 			odkSubmissionID = *loc.ODKSubmissionID
 		}
 
-		// Get baseline_sumber from identitas
-		baselineSumber := ""
-		if loc.Identitas != nil {
+		// Get baseline_sumber - prefer dedicated column, fallback to identitas JSONB
+		baselineSumber := loc.BaselineSumber
+		if baselineSumber == "" && loc.Identitas != nil {
 			if v, ok := loc.Identitas["baseline_sumber"].(string); ok {
 				baselineSumber = v
 			}
