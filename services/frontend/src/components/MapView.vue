@@ -1357,10 +1357,6 @@ defineExpose({
   font-size: 12px;
   color: #374151;
   line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 .feed-popup-new .popup-region {
