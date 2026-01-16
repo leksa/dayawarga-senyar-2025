@@ -150,9 +150,28 @@ const odkCentralImage = '/images/odk-central-dashboard.png'
             </div>
           </div>
 
-          <p class="text-gray-600">
+          <p class="text-gray-600 mb-8">
             Kami percaya kerja besar menghadapi bencana hanya mungkin dilakukan jika dibangun bersama, dengan peran yang beragam dan saling melengkapi.
           </p>
+
+          <!-- Embedded Google Form -->
+          <div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+            <div class="bg-gray-50 border-b border-gray-200 px-6 py-4">
+              <h3 class="text-lg font-semibold text-gray-900">Formulir Pendaftaran Relawan</h3>
+              <p class="text-sm text-gray-500 mt-1">Isi formulir di bawah ini untuk bergabung sebagai relawan Dayawarga</p>
+            </div>
+            <iframe
+              src="https://docs.google.com/forms/d/e/1FAIpQLSeVhCrjjkQSDoGeoqBCCBZtwOv6E-6sytbDiVHok9uJxorvYA/viewform?embedded=true"
+              width="100%"
+              height="800"
+              frameborder="0"
+              marginheight="0"
+              marginwidth="0"
+              class="w-full"
+            >
+              Memuat formulir...
+            </iframe>
+          </div>
         </section>
 
         <!-- CTA -->
