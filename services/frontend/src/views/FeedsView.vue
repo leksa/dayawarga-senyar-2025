@@ -188,6 +188,7 @@ const categoryColors: Record<string, 'default' | 'success' | 'warning' | 'danger
   kebutuhan: 'warning',
   informasi: 'outline',
   'follow-up': 'danger',
+  'info_bantuan': 'success',
 }
 
 const typeColors: Record<string, 'default' | 'success' | 'warning' | 'danger' | 'outline'> = {
@@ -404,6 +405,7 @@ const allCategories = [
   { value: 'informasi', label: 'Informasi' },
   { value: 'kebutuhan', label: 'Kebutuhan' },
   { value: 'follow-up', label: 'Follow-up' },
+  { value: 'info_bantuan', label: 'Info Bantuan' },
 ]
 </script>
 
