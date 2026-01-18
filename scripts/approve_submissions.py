@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Script to approve pending submissions in ODK Central
-Usage: python approve_submissions.py [--dry-run] [--limit N]
+Supports multiple forms: posko, feeds, faskes
+Usage: python approve_submissions.py [--dry-run] [--limit N] [--form-id FORM]
 """
 
 import os
@@ -24,9 +25,15 @@ if ENV_FILE.exists():
 # Configuration
 ODK_BASE_URL = os.getenv('ODK_CENTRAL_URL', 'https://data.dayawarga.com')
 ODK_PROJECT_ID = os.getenv('ODK_PROJECT_ID', '3')
-ODK_FORM_ID = os.getenv('ODK_FORM_ID', 'form_posko_v1')
 ODK_EMAIL = os.getenv('ODK_EMAIL', '')
 ODK_PASSWORD = os.getenv('ODK_PASSWORD', '')
+
+# All forms to process
+ALL_FORMS = [
+    'form_posko_v1',
+    'form_feed_v1',
+    'form_faskes_v1',
+]
 
 
 class ODKCentralClient:
@@ -78,11 +85,68 @@ class ODKCentralClient:
             return {'success': False, 'error': response.text, 'status': response.status_code}
 
 
+def process_form(client, project_id, form_id, dry_run=False, limit=0, include_edited=False):
+    """Process a single form and approve pending submissions"""
+    print(f"\n{'─' * 50}")
+    print(f"Form: {form_id}")
+    print('─' * 50)
+
+    # Get submissions
+    submissions = client.get_submissions(project_id, form_id)
+
+    if not submissions:
+        print(f"  No submissions found (or form doesn't exist)")
+        return 0, 0
+
+    # Filter pending (null review state) and optionally edited
+    pending = [s for s in submissions if s.get('reviewState') is None]
+    edited = [s for s in submissions if s.get('reviewState') == 'edited']
+
+    print(f"  Total: {len(submissions)}, Pending: {len(pending)}, Edited: {len(edited)}")
+
+    # Combine based on flags
+    to_approve = pending.copy()
+    if include_edited:
+        to_approve.extend(edited)
+
+    if len(to_approve) == 0:
+        print(f"  ✓ No submissions to approve")
+        return 0, 0
+
+    # Determine how many to process
+    to_process = to_approve if limit == 0 else to_approve[:limit]
+
+    if dry_run:
+        print(f"  [DRY RUN] Would approve {len(to_process)} submissions")
+        return len(to_process), 0
+
+    # Approve submissions
+    success_count = 0
+    error_count = 0
+
+    for sub in to_process:
+        instance_id = sub.get('instanceId')
+        result = client.set_review_state(project_id, form_id, instance_id, 'approved')
+
+        if result.get('success'):
+            success_count += 1
+        else:
+            error_count += 1
+            print(f"  ✗ {instance_id[:36]}... - {result.get('error', 'Unknown')[:50]}")
+
+    if success_count > 0:
+        print(f"  ✓ Approved {success_count} submissions")
+    if error_count > 0:
+        print(f"  ✗ Failed {error_count} submissions")
+
+    return success_count, error_count
+
+
 def main():
     parser = argparse.ArgumentParser(description='Approve pending submissions in ODK Central')
     parser.add_argument('--dry-run', action='store_true', help='Show what would be approved without doing it')
-    parser.add_argument('--limit', type=int, default=0, help='Limit number of approvals (0 = all)')
-    parser.add_argument('--form-id', type=str, default=ODK_FORM_ID, help='Form ID to process')
+    parser.add_argument('--limit', type=int, default=0, help='Limit number of approvals per form (0 = all)')
+    parser.add_argument('--form-id', type=str, default=None, help='Process specific form only (default: all forms)')
     parser.add_argument('--project-id', type=str, default=ODK_PROJECT_ID, help='Project ID')
     parser.add_argument('--include-edited', action='store_true', help='Also approve submissions with edited state')
     args = parser.parse_args()
@@ -101,7 +165,7 @@ def main():
 
     # Connect
     print(f"\nConnecting to: {ODK_BASE_URL}")
-    print(f"Project: {args.project_id}, Form: {args.form_id}")
+    print(f"Project: {args.project_id}")
 
     client = ODKCentralClient(ODK_BASE_URL, ODK_EMAIL, ODK_PASSWORD)
 
@@ -111,59 +175,28 @@ def main():
 
     print("Authenticated successfully!")
 
-    # Get submissions
-    print("\nFetching submissions...")
-    submissions = client.get_submissions(args.project_id, args.form_id)
-    print(f"Total submissions: {len(submissions)}")
+    # Determine which forms to process
+    forms_to_process = [args.form_id] if args.form_id else ALL_FORMS
 
-    # Filter pending (null review state) and optionally edited
-    pending = [s for s in submissions if s.get('reviewState') is None]
-    edited = [s for s in submissions if s.get('reviewState') == 'edited']
-    print(f"Pending (null): {len(pending)}")
-    print(f"Edited: {len(edited)}")
+    # Process each form
+    total_success = 0
+    total_errors = 0
 
-    # Combine based on flags
-    to_approve = pending.copy()
-    if args.include_edited:
-        to_approve.extend(edited)
-        print(f"Including edited submissions: {len(edited)}")
-
-    if len(to_approve) == 0:
-        print("\nNo submissions to approve!")
-        return
-
-    # Determine how many to process
-    to_process = to_approve if args.limit == 0 else to_approve[:args.limit]
-    print(f"\nWill process: {len(to_process)} submissions")
-
-    if args.dry_run:
-        print("\n[DRY RUN] Would approve:")
-        for i, sub in enumerate(to_process[:10]):
-            print(f"  {i+1}. {sub.get('instanceId')}")
-        if len(to_process) > 10:
-            print(f"  ... and {len(to_process) - 10} more")
-        print("\nTo approve for real, remove --dry-run flag")
-        return
-
-    # Approve submissions
-    print("\nApproving submissions...")
-    success_count = 0
-    error_count = 0
-
-    for i, sub in enumerate(to_process):
-        instance_id = sub.get('instanceId')
-        result = client.set_review_state(args.project_id, args.form_id, instance_id, 'approved')
-
-        if result.get('success'):
-            success_count += 1
-            print(f"✓ [{i+1}/{len(to_process)}] {instance_id[:36]}...")
-        else:
-            error_count += 1
-            print(f"✗ [{i+1}/{len(to_process)}] {instance_id[:36]}... - {result.get('error', 'Unknown error')[:50]}")
+    for form_id in forms_to_process:
+        success, errors = process_form(
+            client,
+            args.project_id,
+            form_id,
+            dry_run=args.dry_run,
+            limit=args.limit,
+            include_edited=args.include_edited
+        )
+        total_success += success
+        total_errors += errors
 
     # Summary
     print("\n" + "=" * 60)
-    print(f"SUMMARY: {success_count} approved, {error_count} errors")
+    print(f"TOTAL: {total_success} approved, {total_errors} errors")
     print("=" * 60)
 
 
