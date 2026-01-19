@@ -192,6 +192,12 @@ func (c *Client) GetApprovedSubmissions() ([]map[string]interface{}, error) {
 	return c.GetSubmissionsRaw(filter, 0, 0)
 }
 
+// GetApprovedSubmissionsSince fetches approved submissions updated after a specific time
+func (c *Client) GetApprovedSubmissionsSince(since time.Time) ([]map[string]interface{}, error) {
+	filter := fmt.Sprintf("__system/reviewState eq 'approved' and __system/updatedAt gt %s", since.UTC().Format(time.RFC3339))
+	return c.GetSubmissionsRaw(filter, 0, 0)
+}
+
 // GetAllSubmissions fetches all submissions with pagination
 func (c *Client) GetAllSubmissions() ([]map[string]interface{}, error) {
 	var allSubmissions []map[string]interface{}
