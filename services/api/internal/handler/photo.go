@@ -218,6 +218,19 @@ func (h *PhotoHandler) CleanupOrphaned(c *gin.Context) {
 
 // GetFeedPhotoFile serves the actual feed photo file
 func (h *PhotoHandler) GetFeedPhotoFile(c *gin.Context) {
+	// Set CORS headers explicitly for image responses (needed for html2canvas)
+	origin := c.GetHeader("Origin")
+	allowedOrigins := map[string]bool{
+		"https://dayawarga.com":     true,
+		"https://www.dayawarga.com": true,
+		"http://localhost:5173":     true,
+		"http://localhost:3000":     true,
+	}
+	if allowedOrigins[origin] {
+		c.Header("Access-Control-Allow-Origin", origin)
+		c.Header("Access-Control-Allow-Credentials", "true")
+	}
+
 	photoIDStr := c.Param("id")
 	photoID, err := uuid.Parse(photoIDStr)
 	if err != nil {

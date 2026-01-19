@@ -23,28 +23,28 @@ const categoryConfig = computed(() => {
       bg: '#DC2626',
       bgDark: '#991B1B',
       accent: '#FECACA',
-      overlay: 'rgba(153, 27, 27, 0.7)'
+      overlay: 'rgba(153, 27, 27, 0.25)'
     },
     'informasi': {
       label: 'INFORMASI',
       bg: '#1E40AF',
       bgDark: '#1E3A8A',
       accent: '#BFDBFE',
-      overlay: 'rgba(30, 58, 138, 0.7)'
+      overlay: 'rgba(30, 58, 138, 0.25)'
     },
     'follow-up': {
       label: 'FOLLOW UP',
       bg: '#B45309',
       bgDark: '#92400E',
       accent: '#FDE68A',
-      overlay: 'rgba(146, 64, 14, 0.7)'
+      overlay: 'rgba(146, 64, 14, 0.25)'
     },
     'info_bantuan': {
       label: 'TERIMA BANTUAN',
       bg: '#047857',
       bgDark: '#065F46',
       accent: '#A7F3D0',
-      overlay: 'rgba(6, 95, 70, 0.7)'
+      overlay: 'rgba(6, 95, 70, 0.25)'
     },
   }
   return configs[props.category] || {
@@ -52,7 +52,7 @@ const categoryConfig = computed(() => {
     bg: '#DC2626',
     bgDark: '#991B1B',
     accent: '#FECACA',
-    overlay: 'rgba(153, 27, 27, 0.7)'
+    overlay: 'rgba(153, 27, 27, 0.25)'
   }
 })
 
@@ -255,11 +255,11 @@ const truncatedContent = computed(() => {
   color: rgba(255,255,255,0.7);
 }
 
-/* Photo Section - Full width at top */
+/* Photo Section - Full width at top with 3:2 aspect ratio */
 .photo-section {
   position: relative;
   width: 100%;
-  height: 220px;
+  aspect-ratio: 3 / 2;
   overflow: hidden;
 }
 
@@ -267,6 +267,7 @@ const truncatedContent = computed(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
   filter: contrast(1.05) saturate(1.1);
 }
 
@@ -274,7 +275,6 @@ const truncatedContent = computed(() => {
   position: absolute;
   inset: 0;
   background: var(--overlay);
-  mix-blend-mode: multiply;
 }
 
 /* Category/Date overlay on photo */
