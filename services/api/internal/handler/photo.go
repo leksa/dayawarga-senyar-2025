@@ -238,9 +238,41 @@ func (h *PhotoHandler) GetFeedPhotoFile(c *gin.Context) {
 		return
 	}
 
-	// If S3 URL, redirect to it directly
+	// If S3 URL, proxy the image to avoid CORS issues with html2canvas
 	if strings.HasPrefix(storagePath, "http") {
-		c.Redirect(http.StatusFound, storagePath)
+		// Fetch the image from S3
+		resp, err := http.Get(storagePath)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "failed to fetch image from storage",
+			})
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			c.JSON(http.StatusNotFound, gin.H{
+				"success": false,
+				"error":   "image not found in storage",
+			})
+			return
+		}
+
+		// Forward content type from S3 response
+		contentType := resp.Header.Get("Content-Type")
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
+
+		// Set cache headers for better performance
+		c.Header("Content-Type", contentType)
+		c.Header("Cache-Control", "public, max-age=86400") // Cache for 1 day
+
+		c.Stream(func(w io.Writer) bool {
+			io.Copy(w, resp.Body)
+			return false
+		})
 		return
 	}
 
