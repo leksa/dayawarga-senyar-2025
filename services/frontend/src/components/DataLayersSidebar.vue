@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { Megaphone, ExternalLink, Info, Map, BookOpen, Users, Newspaper, HandHelping, Gift } from 'lucide-vue-next'
+import { Home, Package, Cross, Megaphone, ExternalLink, Info, Map, CloudRain, Mountain, Construction, UtensilsCrossed, BookOpen, Users, Newspaper, HandHelping, Gift } from 'lucide-vue-next'
 import Checkbox from './ui/Checkbox.vue'
 import { useSidebar } from '@/composables/useSidebar'
 
