@@ -687,11 +687,11 @@ const closePhotoModal = () => {
         <p class="text-sm text-gray-500">Belum ada informasi untuk desa ini.</p>
       </div>
 
-      <!-- Statistik Bencana Desa -->
+      <!-- Status Posko di Desa -->
       <div class="p-4 border-b border-gray-200">
         <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
           <BarChart3 class="w-4 h-4" />
-          Statistik Bencana
+          Status Posko di Desa
         </h3>
         <div class="grid grid-cols-2 gap-4">
           <div>
