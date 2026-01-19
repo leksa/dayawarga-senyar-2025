@@ -35,6 +35,15 @@ ALL_FORMS = [
     'form_faskes_v1',
 ]
 
+# Submitters to skip from auto-approve (comma-separated in env, or default list)
+# These submissions require manual review
+SKIP_SUBMITTERS_ENV = os.getenv('ODK_SKIP_SUBMITTERS', '')
+SKIP_SUBMITTERS = [
+    'Laporan Warga - DW',  # Default: skip submissions from public reports
+]
+if SKIP_SUBMITTERS_ENV:
+    SKIP_SUBMITTERS = [s.strip() for s in SKIP_SUBMITTERS_ENV.split(',') if s.strip()]
+
 
 class ODKCentralClient:
     def __init__(self, base_url: str, email: str, password: str):
@@ -85,6 +94,13 @@ class ODKCentralClient:
             return {'success': False, 'error': response.text, 'status': response.status_code}
 
 
+def should_skip_submitter(submission):
+    """Check if submission should be skipped based on submitter name"""
+    submitter = submission.get('submitter', {})
+    display_name = submitter.get('displayName', '')
+    return display_name in SKIP_SUBMITTERS
+
+
 def process_form(client, project_id, form_id, dry_run=False, limit=0, include_edited=False):
     """Process a single form and approve pending submissions"""
     print(f"\n{'─' * 50}")
@@ -96,7 +112,7 @@ def process_form(client, project_id, form_id, dry_run=False, limit=0, include_ed
 
     if not submissions:
         print(f"  No submissions found (or form doesn't exist)")
-        return 0, 0
+        return 0, 0, 0
 
     # Filter pending (null review state) and optionally edited
     pending = [s for s in submissions if s.get('reviewState') is None]
@@ -111,14 +127,25 @@ def process_form(client, project_id, form_id, dry_run=False, limit=0, include_ed
 
     if len(to_approve) == 0:
         print(f"  ✓ No submissions to approve")
-        return 0, 0
+        return 0, 0, 0
+
+    # Filter out submissions from skip list
+    skipped_submitters = [s for s in to_approve if should_skip_submitter(s)]
+    to_approve = [s for s in to_approve if not should_skip_submitter(s)]
+
+    if skipped_submitters:
+        print(f"  ⊘ Skipped {len(skipped_submitters)} (submitter in skip list)")
+
+    if len(to_approve) == 0:
+        print(f"  ✓ No submissions to approve after filtering")
+        return 0, 0, len(skipped_submitters)
 
     # Determine how many to process
     to_process = to_approve if limit == 0 else to_approve[:limit]
 
     if dry_run:
         print(f"  [DRY RUN] Would approve {len(to_process)} submissions")
-        return len(to_process), 0
+        return len(to_process), 0, len(skipped_submitters)
 
     # Approve submissions
     success_count = 0
@@ -139,7 +166,7 @@ def process_form(client, project_id, form_id, dry_run=False, limit=0, include_ed
     if error_count > 0:
         print(f"  ✗ Failed {error_count} submissions")
 
-    return success_count, error_count
+    return success_count, error_count, len(skipped_submitters)
 
 
 def main():
@@ -175,15 +202,20 @@ def main():
 
     print("Authenticated successfully!")
 
+    # Show skip list if any
+    if SKIP_SUBMITTERS:
+        print(f"Skip list: {', '.join(SKIP_SUBMITTERS)}")
+
     # Determine which forms to process
     forms_to_process = [args.form_id] if args.form_id else ALL_FORMS
 
     # Process each form
     total_success = 0
     total_errors = 0
+    total_skipped = 0
 
     for form_id in forms_to_process:
-        success, errors = process_form(
+        success, errors, skipped = process_form(
             client,
             args.project_id,
             form_id,
@@ -193,10 +225,11 @@ def main():
         )
         total_success += success
         total_errors += errors
+        total_skipped += skipped
 
     # Summary
     print("\n" + "=" * 60)
-    print(f"TOTAL: {total_success} approved, {total_errors} errors")
+    print(f"TOTAL: {total_success} approved, {total_skipped} skipped, {total_errors} errors")
     print("=" * 60)
 
 
