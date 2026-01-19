@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { HelpCircle, Clock } from 'lucide-vue-next'
+import { HelpCircle, Clock, Menu, X } from 'lucide-vue-next'
 import { api } from '@/services/api'
+import { useSidebar } from '@/composables/useSidebar'
 
+const { isOpen: isSidebarOpen, toggle: toggleSidebar } = useSidebar()
 const lastSyncTime = ref<string>('')
 
 const formatDateTime = (isoString: string): string => {
@@ -27,8 +29,17 @@ onMounted(async () => {
 
 <template>
   <header class="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-2 md:px-4">
-    <!-- Left: Logo -->
+    <!-- Left: Burger menu + Logo -->
     <div class="flex items-center gap-2">
+      <!-- Burger menu button (visible on screens smaller than lg:1024px) -->
+      <button
+        @click="toggleSidebar"
+        class="lg:hidden p-2 -ml-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+        :aria-label="isSidebarOpen ? 'Tutup menu' : 'Buka menu'"
+      >
+        <X v-if="isSidebarOpen" class="w-6 h-6" />
+        <Menu v-else class="w-6 h-6" />
+      </button>
       <!-- Logo -->
       <RouterLink to="/" class="flex items-center gap-2 md:gap-3 hover:opacity-80 transition-opacity">
         <img src="/logo.png" alt="Dayawarga Logo" class="w-8 h-8 md:w-10 md:h-10 object-contain" />

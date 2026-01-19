@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 
+// Module-level singleton state for mobile sidebar
 const isOpen = ref(false)
 
 export function useSidebar() {

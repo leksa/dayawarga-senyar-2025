@@ -256,6 +256,12 @@ const formattedFeeds = computed(() => {
     type: feed.type ?? '',
     coordinates: feed.coordinates,
     photos: feed.photos ?? [],
+    // Region info for desa detail
+    desaId: feed.region?.id_desa,
+    desaName: feed.region?.desa,
+    kecamatan: feed.region?.kecamatan,
+    kotaKab: feed.region?.kota_kab,
+    provinsi: feed.region?.provinsi,
   }))
 })
 
@@ -266,22 +272,37 @@ const getPhotoUrl = (photo: FeedPhoto) => {
 }
 
 // Navigate to map with coordinates and show popup
-const goToMapWithFeed = (feed: { id: string, coordinates?: [number, number], locationId?: string, faskesId?: string }) => {
-  // Priority: coordinates > location > faskes
-  if (feed.coordinates) {
-    router.push({
-      path: '/',
-      query: {
-        lat: feed.coordinates[1].toString(),
-        lng: feed.coordinates[0].toString(),
-        zoom: '18',
-        feed: feed.id
-      }
-    })
-  } else if (feed.locationId) {
+const goToMapWithFeed = (feed: {
+  id: string,
+  coordinates?: [number, number],
+  locationId?: string,
+  faskesId?: string,
+  desaId?: string,
+  desaName?: string,
+  kecamatan?: string,
+  kotaKab?: string
+}) => {
+  // Priority: location > faskes > coordinates (with desa info for free geolocation feeds)
+  if (feed.locationId) {
     router.push({ path: '/', query: { location: feed.locationId } })
   } else if (feed.faskesId) {
     router.push({ path: '/', query: { faskes: feed.faskesId } })
+  } else if (feed.coordinates) {
+    // Free geolocation feed - include desa info if available
+    const query: Record<string, string> = {
+      lat: feed.coordinates[1].toString(),
+      lng: feed.coordinates[0].toString(),
+      zoom: '18',
+      feed: feed.id
+    }
+    // Add desa info for showing desa detail panel
+    if (feed.desaId && feed.desaName) {
+      query.desa = feed.desaId
+      query.desa_name = feed.desaName
+      if (feed.kecamatan) query.kecamatan = feed.kecamatan
+      if (feed.kotaKab) query.kotakab = feed.kotaKab
+    }
+    router.push({ path: '/', query })
   }
 }
 
@@ -362,10 +383,37 @@ const handleSearch = () => {
   fetchFeeds()
 }
 
-// Watch filter changes
+// Watch filter changes (but not triggered by route sync)
+const isRouteSyncing = ref(false)
+
 watch([selectedCategory, selectedTag], () => {
-  fetchFeeds()
+  if (!isRouteSyncing.value) {
+    fetchFeeds()
+  }
 })
+
+// Watch route query changes to sync filters when navigating via sidebar links
+watch(() => route.query, (newQuery) => {
+  isRouteSyncing.value = true
+
+  const newCategory = (newQuery.category as string) || ''
+  const newTag = (newQuery.tag as string) || ''
+  const newSearch = (newQuery.search as string) || ''
+
+  // Check if any filter actually changed
+  const categoryChanged = selectedCategory.value !== newCategory
+  const tagChanged = selectedTag.value !== newTag
+  const searchChanged = searchQuery.value !== newSearch
+
+  if (categoryChanged || tagChanged || searchChanged) {
+    selectedCategory.value = newCategory
+    selectedTag.value = newTag
+    searchQuery.value = newSearch
+    fetchFeeds()
+  }
+
+  isRouteSyncing.value = false
+}, { immediate: false })
 
 // Initialize from route query
 onMounted(() => {
@@ -398,14 +446,15 @@ const allTags = [
   { value: 'internet', label: 'Internet' },
   { value: 'sinyal_selular', label: 'Sinyal Selular' },
   { value: 'sanitasi_mck', label: 'Sanitasi MCK' },
+  { value: 'lainnya', label: 'Lainnya' },
 ]
 
 // Predefined categories
 const allCategories = [
   { value: 'informasi', label: 'Informasi' },
-  { value: 'kebutuhan', label: 'Kebutuhan' },
+  { value: 'kebutuhan', label: 'Butuh Bantuan' },
   { value: 'follow-up', label: 'Follow-up' },
-  { value: 'info_bantuan', label: 'Info Bantuan' },
+  { value: 'info_bantuan', label: 'Terima Bantuan' },
 ]
 </script>
 
@@ -698,7 +747,7 @@ const allCategories = [
               v-for="update in formattedFeeds"
               :key="update.id"
               class="bg-white rounded-lg border border-gray-200 p-3 md:p-4 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer"
-              @click="goToMapWithFeed({ id: update.id, coordinates: update.coordinates, locationId: update.locationId, faskesId: update.faskesId })"
+              @click="goToMapWithFeed({ id: update.id, coordinates: update.coordinates, locationId: update.locationId, faskesId: update.faskesId, desaId: update.desaId, desaName: update.desaName, kecamatan: update.kecamatan, kotaKab: update.kotaKab })"
             >
               <div class="flex gap-3">
                 <!-- Photo on the left -->
@@ -754,6 +803,15 @@ const allCategories = [
                     </template>
                   </div>
 
+                  <!-- Region info (like in map popup) -->
+                  <div v-if="update.desaName || update.kecamatan || update.kotaKab" class="text-xs text-gray-500 mb-2">
+                    <span v-if="update.desaName">{{ update.desaName }}</span>
+                    <span v-if="update.desaName && update.kecamatan"> • </span>
+                    <span v-if="update.kecamatan">{{ update.kecamatan }}</span>
+                    <span v-if="(update.desaName || update.kecamatan) && update.kotaKab"> • </span>
+                    <span v-if="update.kotaKab">{{ update.kotaKab }}</span>
+                  </div>
+
                   <p class="text-sm text-gray-600 mb-2 leading-relaxed line-clamp-2">{{ update.content }}</p>
                   <div class="flex flex-wrap gap-1.5">
                     <Badge :variant="categoryColors[update.category] || 'outline'" class="text-xs">
@@ -761,12 +819,12 @@ const allCategories = [
                     </Badge>
                     <template v-if="update.type">
                       <Badge
-                        v-for="t in update.type.split(',')"
+                        v-for="t in update.type.split(/[\s,]+/).filter((tag: string) => tag)"
                         :key="t"
-                        :variant="typeColors[t.trim()] || 'outline'"
+                        :variant="typeColors[t] || 'outline'"
                         class="text-xs"
                       >
-                        {{ formatTagDisplay(t.trim()) }}
+                        {{ formatTagDisplay(t) }}
                       </Badge>
                     </template>
                   </div>
