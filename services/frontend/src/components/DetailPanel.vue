@@ -270,11 +270,48 @@ const formatRelativeTime = (dateStr: string | undefined) => {
   return `${diffDays} hari yang lalu`
 }
 
-// Category and type colors
+// Category colors and labels
 const categoryColors: Record<string, 'default' | 'success' | 'warning' | 'danger' | 'outline'> = {
   kebutuhan: 'warning',
   informasi: 'outline',
   'follow-up': 'danger',
+  'info_bantuan': 'success',
+}
+
+const categoryLabels: Record<string, string> = {
+  kebutuhan: 'Butuh Bantuan',
+  informasi: 'Informasi',
+  'follow-up': 'Follow-up',
+  'info_bantuan': 'Terima Bantuan',
+}
+
+const tagLabels: Record<string, string> = {
+  'sar': 'SAR',
+  'ambulan': 'Ambulan',
+  'medis': 'Medis',
+  'transport_roda4': 'Transport Roda 4',
+  'transport_roda2': 'Transport Roda 2',
+  'air_bersih': 'Air Bersih',
+  'sembako': 'Sembako',
+  'psikososial': 'Psikososial',
+  'sekolah_darurat': 'Sekolah Darurat',
+  'dapur_umum': 'Dapur Umum',
+  'keamanan': 'Keamanan',
+  'listrik': 'Listrik',
+  'internet': 'Internet',
+  'sinyal_selular': 'Sinyal Selular',
+  'sanitasi_mck': 'Sanitasi MCK',
+  'lainnya': 'Lainnya',
+}
+
+// Helper to get category label
+const getCategoryLabel = (category: string): string => {
+  return categoryLabels[category] || category
+}
+
+// Helper to get tag label
+const getTagLabel = (tag: string): string => {
+  return tagLabels[tag] || tag
 }
 
 const handleShowMoreUpdates = () => {
@@ -589,7 +626,7 @@ const closePhotoModal = () => {
             <!-- Badges -->
             <div class="flex flex-wrap gap-1.5">
               <Badge :variant="categoryColors[feed.category] || 'outline'" class="text-xs">
-                {{ feed.category }}
+                {{ getCategoryLabel(feed.category) }}
               </Badge>
               <Badge
                 v-for="tag in (feed.type || '').split(/[\s,]+/).filter((t: string) => t)"
@@ -597,7 +634,7 @@ const closePhotoModal = () => {
                 variant="outline"
                 class="text-xs"
               >
-                {{ tag }}
+                {{ getTagLabel(tag) }}
               </Badge>
             </div>
           </div>
@@ -622,14 +659,14 @@ const closePhotoModal = () => {
         <p class="text-sm text-gray-600 mb-3">{{ latestFeed.content }}</p>
         <div class="flex flex-wrap gap-2 mb-3">
           <Badge :variant="categoryColors[latestFeed.category] || 'outline'">
-            {{ latestFeed.category }}
+            {{ getCategoryLabel(latestFeed.category) }}
           </Badge>
           <Badge
             v-for="tag in (latestFeed.type || '').split(/[\s,]+/).filter((t: string) => t)"
             :key="tag"
             variant="outline"
           >
-            {{ tag }}
+            {{ getTagLabel(tag) }}
           </Badge>
         </div>
         <button
@@ -723,14 +760,14 @@ const closePhotoModal = () => {
         <p class="text-sm text-gray-600 mb-3">{{ latestFeed.content }}</p>
         <div class="flex flex-wrap gap-2 mb-3">
           <Badge :variant="categoryColors[latestFeed.category] || 'outline'">
-            {{ latestFeed.category }}
+            {{ getCategoryLabel(latestFeed.category) }}
           </Badge>
           <Badge
             v-for="tag in (latestFeed.type || '').split(/[\s,]+/).filter((t: string) => t)"
             :key="tag"
             variant="outline"
           >
-            {{ tag }}
+            {{ getTagLabel(tag) }}
           </Badge>
         </div>
         <button

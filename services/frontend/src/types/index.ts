@@ -6,8 +6,23 @@ export interface MapMarker {
   lng: number
   status?: string
   alamatSingkat?: string
+  // Region info
+  namaProvinsi?: string
+  namaKotaKab?: string
+  namaKecamatan?: string
+  namaDesa?: string
+  idProvinsi?: string
+  idKotaKab?: string
+  idKecamatan?: string
+  idDesa?: string
+  // Statistics
   jumlahKK?: number
   totalJiwa?: number
+  jumlahPerempuan?: number
+  jumlahLaki?: number
+  jumlahBalita?: number
+  kebutuhanAir?: number
+  kebutuhanAirLiter?: number
   updatedAt?: string
 }
 

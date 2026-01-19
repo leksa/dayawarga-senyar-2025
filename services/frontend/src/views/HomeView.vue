@@ -1,24 +1,67 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import DataLayersSidebar from '@/components/DataLayersSidebar.vue'
 import MapView from '@/components/MapView.vue'
 import DetailPanel from '@/components/DetailPanel.vue'
 import { api } from '@/services/api'
+import { useLocations } from '@/composables/useLocations'
 import type { MapMarker } from '@/types'
+
+// Desa info interface
+interface DesaInfo {
+  id: string
+  name: string
+  kecamatan?: string
+  idKecamatan?: string
+  kotaKab?: string
+  idKotaKab?: string
+  provinsi?: string
+  idProvinsi?: string
+  lat: number
+  lng: number
+  feedId?: string
+}
 
 const router = useRouter()
 const route = useRoute()
+const { markers: locationMarkers } = useLocations()
 
 const mapViewRef = ref<InstanceType<typeof MapView> | null>(null)
 const showDetail = ref(false)
 const selectedMarker = ref<MapMarker | null>(null)
 const selectedFaskes = ref<any | null>(null)
 const selectedInfrastruktur = ref<any | null>(null)
+const selectedDesa = ref<DesaInfo | null>(null)
 const showPoskoMarkers = ref(true)
 const showFaskesMarkers = ref(false)
 const showInfrastrukturMarkers = ref(false)
 const showFeedsMarkers = ref(false)
+
+// Calculate desa statistics from location markers
+const desaStats = computed(() => {
+  if (!selectedDesa.value) return null
+
+  // Filter markers by desa ID or name
+  const filteredMarkers = locationMarkers.value.filter(m => {
+    if (m.idDesa === selectedDesa.value?.id) return true
+    if (m.namaDesa && selectedDesa.value?.name) {
+      return m.namaDesa.toLowerCase() === selectedDesa.value.name.toLowerCase()
+    }
+    return false
+  })
+
+  return {
+    poskoCount: filteredMarkers.length,
+    totalPengungsi: filteredMarkers.reduce((sum, m) => sum + (m.totalJiwa || 0), 0),
+    jumlahKK: filteredMarkers.reduce((sum, m) => sum + (m.jumlahKK || 0), 0),
+    jumlahPerempuan: filteredMarkers.reduce((sum, m) => sum + (m.jumlahPerempuan || 0), 0),
+    jumlahLaki: filteredMarkers.reduce((sum, m) => sum + (m.jumlahLaki || 0), 0),
+    jumlahBalita: filteredMarkers.reduce((sum, m) => sum + (m.jumlahBalita || 0), 0),
+    kebutuhanAirLiter: filteredMarkers.reduce((sum, m) => sum + (m.kebutuhanAirLiter || 0), 0),
+    feedCount: 0 // Will be updated from DetailPanel
+  }
+})
 
 // Handle URL query params for map navigation and detail panel
 onMounted(() => {
@@ -30,7 +73,7 @@ watch(() => route.query, () => {
 })
 
 const checkQueryParams = async () => {
-  const { lat, lng, zoom, location, faskes, infrastruktur, feed } = route.query
+  const { lat, lng, zoom, location, faskes, infrastruktur, feed, desa, desa_name, kecamatan, kotakab } = route.query
 
   // Handle map navigation with optional feed popup
   if (lat && lng && mapViewRef.value) {
@@ -45,6 +88,21 @@ const checkQueryParams = async () => {
         setTimeout(() => {
           mapViewRef.value?.showFeedPopup(feed as string, latitude, longitude)
         }, 1600)
+      }
+
+      // If desa info is provided, show desa detail panel
+      if (desa && desa_name) {
+        setTimeout(() => {
+          showDesaDetail({
+            id: desa as string,
+            name: desa_name as string,
+            kecamatan: kecamatan as string,
+            kotaKab: kotakab as string,
+            lat: latitude,
+            lng: longitude,
+            feedId: feed as string
+          })
+        }, 1800)
       }
     }
   }
@@ -164,6 +222,7 @@ const handleMarkerClick = (marker: MapMarker) => {
   selectedMarker.value = marker
   selectedFaskes.value = null
   selectedInfrastruktur.value = null
+  selectedDesa.value = null
   showDetail.value = true
 }
 
@@ -171,6 +230,7 @@ const handleFaskesClick = (marker: any) => {
   selectedFaskes.value = marker
   selectedMarker.value = null
   selectedInfrastruktur.value = null
+  selectedDesa.value = null
   showDetail.value = true
 }
 
@@ -178,11 +238,30 @@ const handleInfrastrukturClick = (marker: any) => {
   selectedInfrastruktur.value = marker
   selectedMarker.value = null
   selectedFaskes.value = null
+  selectedDesa.value = null
   showDetail.value = true
+}
+
+// Show desa detail panel
+const showDesaDetail = (desaInfo: DesaInfo) => {
+  selectedDesa.value = desaInfo
+  selectedMarker.value = null
+  selectedFaskes.value = null
+  selectedInfrastruktur.value = null
+  showDetail.value = true
+}
+
+// Handle show desa detail event from MapView
+const handleShowDesaDetail = (desaInfo: DesaInfo) => {
+  showDesaDetail(desaInfo)
 }
 
 const showLocationUpdates = (locationId: string) => {
   router.push({ path: '/feeds', query: { search: locationId } })
+}
+
+const showDesaFeeds = (_desaId: string, desaName: string) => {
+  router.push({ path: '/feeds', query: { search: desaName } })
 }
 
 const closeDetailPanel = () => {
@@ -190,6 +269,7 @@ const closeDetailPanel = () => {
   selectedMarker.value = null
   selectedFaskes.value = null
   selectedInfrastruktur.value = null
+  selectedDesa.value = null
 }
 
 const handleLayerToggle = (layerId: string, enabled: boolean) => {
@@ -216,6 +296,7 @@ const handleLayerToggle = (layerId: string, enabled: boolean) => {
       @show-location-detail="showLocationDetail"
       @show-faskes-detail="showFaskesDetail"
       @show-infrastruktur-detail="showInfrastrukturDetail"
+      @show-desa-detail="handleShowDesaDetail"
       :show-markers="showPoskoMarkers"
       :show-faskes="showFaskesMarkers"
       :show-infrastruktur="showInfrastrukturMarkers"
@@ -226,8 +307,11 @@ const handleLayerToggle = (layerId: string, enabled: boolean) => {
       :marker="selectedMarker"
       :faskes="selectedFaskes"
       :infrastruktur="selectedInfrastruktur"
+      :desa="selectedDesa"
+      :desa-stats="desaStats"
       @close="closeDetailPanel"
       @show-location-updates="showLocationUpdates"
+      @show-desa-feeds="showDesaFeeds"
     />
   </div>
 </template>

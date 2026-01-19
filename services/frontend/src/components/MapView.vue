@@ -6,8 +6,6 @@ import { useLocations } from '@/composables/useLocations'
 import { useFaskes } from '@/composables/useFaskes'
 import { useInfrastruktur } from '@/composables/useInfrastruktur'
 import { api, type Feed } from '@/services/api'
-import type { MapMarker } from '@/types'
-
 const props = withDefaults(defineProps<{
   showMarkers?: boolean
   showFaskes?: boolean
@@ -20,14 +18,15 @@ const props = withDefaults(defineProps<{
   showFeeds: true
 })
 
-const emit = defineEmits<{
-  'marker-click': [marker: MapMarker]
-  'faskes-click': [marker: any]
-  'infrastruktur-click': [marker: any]
-  'show-location-detail': [locationId: string]
-  'show-faskes-detail': [faskesId: string]
-  'show-infrastruktur-detail': [infrastrukturId: string]
-}>()
+const emit = defineEmits([
+  'marker-click',
+  'faskes-click',
+  'infrastruktur-click',
+  'show-location-detail',
+  'show-faskes-detail',
+  'show-infrastruktur-detail',
+  'show-desa-detail'
+])
 
 const { markers, fetchLocations, loading, lastUpdate } = useLocations()
 const { markers: faskesMarkers, fetchFaskes } = useFaskes()
@@ -321,6 +320,37 @@ const formatTimestamp = (isoString: string): string => {
   return `${day}/${month} ${hours}:${minutes}`
 }
 
+// Category labels for display
+const categoryLabels: Record<string, string> = {
+  kebutuhan: 'Butuh Bantuan',
+  informasi: 'Informasi',
+  'follow-up': 'Follow-up',
+  'info_bantuan': 'Terima Bantuan',
+}
+
+// Tag labels for display
+const tagLabels: Record<string, string> = {
+  'sar': 'SAR',
+  'ambulan': 'Ambulan',
+  'medis': 'Medis',
+  'transport_roda4': 'Transport Roda 4',
+  'transport_roda2': 'Transport Roda 2',
+  'air_bersih': 'Air Bersih',
+  'sembako': 'Sembako',
+  'psikososial': 'Psikososial',
+  'sekolah_darurat': 'Sekolah Darurat',
+  'dapur_umum': 'Dapur Umum',
+  'keamanan': 'Keamanan',
+  'listrik': 'Listrik',
+  'internet': 'Internet',
+  'sinyal_selular': 'Sinyal Selular',
+  'sanitasi_mck': 'Sanitasi MCK',
+  'lainnya': 'Lainnya',
+}
+
+const getCategoryLabel = (category: string): string => categoryLabels[category] || category
+const getTagLabel = (tag: string): string => tagLabels[tag] || tag
+
 // Build popup content for feed
 const buildFeedPopupContent = (feed: Feed): string => {
   // Photo at top (full width)
@@ -349,6 +379,14 @@ const buildFeedPopupContent = (feed: Feed): string => {
       <span class="location-icon">🏥</span>
       <span class="location-name">${feed.faskes_name}</span>
       <span class="faskes-badge">Faskes</span>
+      ${gmapsLink}
+    </div>`
+  } else if (feed.region?.desa) {
+    // Free geolocation feed with desa info - make clickable for desa detail
+    const desaId = feed.region.id_desa || feed.region.desa
+    locationHtml = `<div class="popup-location clickable" data-desa-id="${desaId}" data-desa-name="${feed.region.desa}" data-kecamatan="${feed.region.kecamatan || ''}" data-kotakab="${feed.region.kota_kab || ''}" data-feed-id="${feed.id}" data-lat="${feed.coordinates?.[1] || ''}" data-lng="${feed.coordinates?.[0] || ''}">
+      <span class="location-icon">🏘️</span>
+      <span class="location-name">Desa ${feed.region.desa}</span>
       ${gmapsLink}
     </div>`
   } else {
@@ -381,19 +419,20 @@ const buildFeedPopupContent = (feed: Feed): string => {
 
   // Category badge
   const categoryClass = feed.category === 'kebutuhan' ? 'cat-kebutuhan' :
-    feed.category === 'follow-up' ? 'cat-followup' : 'cat-info'
+    feed.category === 'follow-up' ? 'cat-followup' :
+    feed.category === 'info_bantuan' ? 'cat-info-bantuan' : 'cat-info'
 
   // Type/tags badges
   let tagsHtml = ''
   if (feed.type) {
     const tags = feed.type.split(/[\s,]+/).filter(t => t)
-    tagsHtml = tags.map(tag => `<span class="popup-tag">${tag}</span>`).join('')
+    tagsHtml = tags.map(tag => `<span class="popup-tag">${getTagLabel(tag)}</span>`).join('')
   }
 
   // Bottom row: date, category, tags
   const bottomHtml = `<div class="popup-bottom">
     <span class="popup-date">${formatTimestamp(feed.submitted_at)}</span>
-    <span class="popup-category ${categoryClass}">${feed.category}</span>
+    <span class="popup-category ${categoryClass}">${getCategoryLabel(feed.category)}</span>
     ${tagsHtml}
   </div>`
 
@@ -465,6 +504,7 @@ const setupPopupClickHandlers = () => {
     const target = e.target as HTMLElement
     const locationEl = target.closest('[data-location-id]') as HTMLElement
     const faskesEl = target.closest('[data-faskes-id]') as HTMLElement
+    const desaEl = target.closest('[data-desa-id]') as HTMLElement
 
     if (locationEl) {
       const locationId = locationEl.dataset.locationId
@@ -476,6 +516,27 @@ const setupPopupClickHandlers = () => {
       const faskesId = faskesEl.dataset.faskesId
       if (faskesId) {
         emit('show-faskes-detail', faskesId)
+        map?.closePopup()
+      }
+    } else if (desaEl) {
+      const desaId = desaEl.dataset.desaId
+      const desaName = desaEl.dataset.desaName
+      const kecamatan = desaEl.dataset.kecamatan
+      const kotakab = desaEl.dataset.kotakab
+      const feedId = desaEl.dataset.feedId
+      const lat = parseFloat(desaEl.dataset.lat || '0')
+      const lng = parseFloat(desaEl.dataset.lng || '0')
+
+      if (desaId && desaName) {
+        emit('show-desa-detail', {
+          id: desaId,
+          name: desaName,
+          kecamatan: kecamatan || undefined,
+          kotaKab: kotakab || undefined,
+          lat,
+          lng,
+          feedId: feedId || undefined
+        })
         map?.closePopup()
       }
     }
@@ -1001,8 +1062,8 @@ defineExpose({
       <span class="text-sm text-gray-600">Memuat data...</span>
     </div>
 
-    <!-- Region Filter (top-left) -->
-    <div class="absolute top-4 left-4 z-[1000]">
+    <!-- Region Filter (top-right) -->
+    <div class="absolute top-4 right-4 z-[1000]">
       <div class="relative">
         <!-- Filter Button -->
         <button
@@ -1024,7 +1085,7 @@ defineExpose({
         <!-- Dropdown Menu -->
         <div
           v-if="showRegionFilter"
-          class="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 min-w-[250px] max-h-[450px] overflow-hidden flex flex-col"
+          class="absolute top-full right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 min-w-[250px] max-h-[450px] overflow-hidden flex flex-col"
         >
           <!-- Breadcrumb / Current Selection -->
           <div v-if="filterLevel !== 'provinsi'" class="px-3 py-2 bg-gray-50 border-b border-gray-200">
@@ -1400,6 +1461,11 @@ defineExpose({
 .feed-popup-new .popup-category.cat-info {
   background: #f3f4f6;
   color: #374151;
+}
+
+.feed-popup-new .popup-category.cat-info-bantuan {
+  background: #d1fae5;
+  color: #065f46;
 }
 
 .feed-popup-new .popup-tag {

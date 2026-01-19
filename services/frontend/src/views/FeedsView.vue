@@ -219,6 +219,17 @@ const formatTimestamp = (isoString: string): string => {
   return `${day}-${month}-${year} ${hours}:${minutes}`
 }
 
+// Format category display
+const formatCategoryDisplay = (category: string): string => {
+  const categoryMap: Record<string, string> = {
+    'kebutuhan': 'Butuh Bantuan',
+    'informasi': 'Informasi',
+    'follow-up': 'Follow-up',
+    'info_bantuan': 'Terima Bantuan',
+  }
+  return categoryMap[category] || category
+}
+
 // Format tag display
 const formatTagDisplay = (tag: string): string => {
   const tagMap: Record<string, string> = {
@@ -236,6 +247,8 @@ const formatTagDisplay = (tag: string): string => {
     'listrik': 'Listrik',
     'internet': 'Internet',
     'sinyal_selular': 'Sinyal Selular',
+    'sanitasi_mck': 'Sanitasi MCK',
+    'lainnya': 'Lainnya',
   }
   return tagMap[tag] || tag
 }
@@ -815,7 +828,7 @@ const allCategories = [
                   <p class="text-sm text-gray-600 mb-2 leading-relaxed line-clamp-2">{{ update.content }}</p>
                   <div class="flex flex-wrap gap-1.5">
                     <Badge :variant="categoryColors[update.category] || 'outline'" class="text-xs">
-                      {{ update.category }}
+                      {{ formatCategoryDisplay(update.category) }}
                     </Badge>
                     <template v-if="update.type">
                       <Badge
