@@ -45,9 +45,89 @@ type SyncResult struct {
 	ErrorDetails []string  `json:"error_details,omitempty"`
 }
 
-// SyncAll performs a full synchronization of all approved submissions
+// SyncAll performs incremental synchronization of approved submissions
+// Uses lastSyncTime to only fetch submissions updated since last sync
 // Groups submissions by entity_id and only processes the latest submission per entity
 func (s *SyncService) SyncAll() (*SyncResult, error) {
+	result := &SyncResult{
+		StartTime: time.Now(),
+	}
+
+	// Update sync state to "syncing"
+	s.updateSyncState("syncing", nil)
+
+	// Load entity mapping from ODK (for proper entity ID resolution)
+	if err := s.loadEntityMapping(); err != nil {
+		log.Printf("Warning: could not load entity mapping: %v", err)
+	}
+
+	// Get last sync time for incremental sync
+	syncState, err := s.GetSyncState()
+	if err != nil {
+		log.Printf("Warning: could not get sync state: %v", err)
+	}
+
+	// Fetch submissions - incremental if we have last sync time
+	var submissions []map[string]interface{}
+	if syncState != nil && syncState.LastSyncTime != nil {
+		// Incremental sync: fetch only submissions updated since last sync
+		submissions, err = s.odkClient.GetApprovedSubmissionsSince(*syncState.LastSyncTime)
+		if err != nil {
+			errMsg := fmt.Sprintf("failed to fetch submissions: %v", err)
+			s.updateSyncState("error", &errMsg)
+			return nil, fmt.Errorf(errMsg)
+		}
+		log.Printf("Incremental sync: fetched %d submissions updated since %s", len(submissions), syncState.LastSyncTime.Format(time.RFC3339))
+	} else {
+		// Full sync: fetch all approved submissions
+		submissions, err = s.odkClient.GetApprovedSubmissions()
+		if err != nil {
+			errMsg := fmt.Sprintf("failed to fetch submissions: %v", err)
+			s.updateSyncState("error", &errMsg)
+			return nil, fmt.Errorf(errMsg)
+		}
+		log.Printf("Full sync: fetched %d submissions from ODK Central", len(submissions))
+	}
+
+	result.TotalFetched = len(submissions)
+
+	// If no new submissions, return early
+	if len(submissions) == 0 {
+		result.EndTime = time.Now()
+		result.Duration = result.EndTime.Sub(result.StartTime).String()
+		s.updateSyncStateSuccess(0)
+		log.Printf("Sync completed: no new submissions to process")
+		return result, nil
+	}
+
+	// Group submissions by entity_id and keep only the latest per entity
+	latestByEntity := s.groupByEntityLatest(submissions)
+	log.Printf("Grouped into %d unique entities", len(latestByEntity))
+
+	// Process each entity's latest submission
+	for entityID, submission := range latestByEntity {
+		if err := s.processEntitySubmission(entityID, submission, result); err != nil {
+			result.Errors++
+			result.ErrorDetails = append(result.ErrorDetails, err.Error())
+			log.Printf("Error processing entity %s: %v", entityID, err)
+		}
+	}
+
+	result.EndTime = time.Now()
+	result.Duration = result.EndTime.Sub(result.StartTime).String()
+
+	// Update sync state
+	s.updateSyncStateSuccess(result.TotalFetched)
+
+	log.Printf("Sync completed: %d fetched, %d entities, %d created, %d updated, %d errors",
+		result.TotalFetched, len(latestByEntity), result.Created, result.Updated, result.Errors)
+
+	return result, nil
+}
+
+// SyncAllFull performs a full synchronization of all approved submissions (ignores lastSyncTime)
+// Use this for initial sync or when you need to re-sync everything
+func (s *SyncService) SyncAllFull() (*SyncResult, error) {
 	result := &SyncResult{
 		StartTime: time.Now(),
 	}
@@ -69,7 +149,7 @@ func (s *SyncService) SyncAll() (*SyncResult, error) {
 	}
 
 	result.TotalFetched = len(submissions)
-	log.Printf("Fetched %d submissions from ODK Central", result.TotalFetched)
+	log.Printf("Full sync: fetched %d submissions from ODK Central", result.TotalFetched)
 
 	// Group submissions by entity_id and keep only the latest per entity
 	latestByEntity := s.groupByEntityLatest(submissions)

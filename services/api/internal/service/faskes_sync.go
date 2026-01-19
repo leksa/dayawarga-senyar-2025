@@ -29,7 +29,8 @@ func NewFaskesSyncService(db *gorm.DB, odkClient *odk.Client, formID string) *Fa
 	}
 }
 
-// SyncAll performs a full synchronization of all approved faskes submissions
+// SyncAll performs incremental synchronization of approved faskes submissions
+// Uses lastSyncTime to only fetch submissions updated since last sync
 func (s *FaskesSyncService) SyncAll() (*SyncResult, error) {
 	result := &SyncResult{
 		StartTime: time.Now(),
@@ -38,16 +39,44 @@ func (s *FaskesSyncService) SyncAll() (*SyncResult, error) {
 	// Update sync state to "syncing"
 	s.updateSyncState("syncing", nil)
 
-	// Fetch all approved submissions
-	submissions, err := s.odkClient.GetApprovedSubmissions()
+	// Get last sync time for incremental sync
+	syncState, err := s.GetSyncState()
 	if err != nil {
-		errMsg := fmt.Sprintf("failed to fetch faskes submissions: %v", err)
-		s.updateSyncState("error", &errMsg)
-		return nil, fmt.Errorf(errMsg)
+		log.Printf("Warning: could not get sync state: %v", err)
+	}
+
+	// Fetch submissions - incremental if we have last sync time
+	var submissions []map[string]interface{}
+	if syncState != nil && syncState.LastSyncTime != nil {
+		// Incremental sync: fetch only submissions updated since last sync
+		submissions, err = s.odkClient.GetApprovedSubmissionsSince(*syncState.LastSyncTime)
+		if err != nil {
+			errMsg := fmt.Sprintf("failed to fetch faskes submissions: %v", err)
+			s.updateSyncState("error", &errMsg)
+			return nil, fmt.Errorf(errMsg)
+		}
+		log.Printf("Faskes incremental sync: fetched %d submissions updated since %s", len(submissions), syncState.LastSyncTime.Format(time.RFC3339))
+	} else {
+		// Full sync: fetch all approved submissions
+		submissions, err = s.odkClient.GetApprovedSubmissions()
+		if err != nil {
+			errMsg := fmt.Sprintf("failed to fetch faskes submissions: %v", err)
+			s.updateSyncState("error", &errMsg)
+			return nil, fmt.Errorf(errMsg)
+		}
+		log.Printf("Faskes full sync: fetched %d submissions from ODK Central", len(submissions))
 	}
 
 	result.TotalFetched = len(submissions)
-	log.Printf("Fetched %d faskes submissions from ODK Central", result.TotalFetched)
+
+	// If no new submissions, return early
+	if len(submissions) == 0 {
+		result.EndTime = time.Now()
+		result.Duration = result.EndTime.Sub(result.StartTime).String()
+		s.updateSyncStateSuccess(0)
+		log.Printf("Faskes sync completed: no new submissions to process")
+		return result, nil
+	}
 
 	// Filter to get only latest submission per entity (sel_faskes)
 	// ODK submissions are append-only with update mode, so we need the latest per entity

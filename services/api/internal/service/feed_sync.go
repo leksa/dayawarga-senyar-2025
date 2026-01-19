@@ -42,7 +42,8 @@ type FeedSyncResult struct {
 	ErrorDetails []string  `json:"error_details,omitempty"`
 }
 
-// SyncAll performs a full synchronization of all approved feed submissions
+// SyncAll performs incremental synchronization of approved feed submissions
+// Uses lastSyncTime to only fetch submissions updated since last sync
 func (s *FeedSyncService) SyncAll() (*FeedSyncResult, error) {
 	result := &FeedSyncResult{
 		StartTime: time.Now(),
@@ -51,16 +52,44 @@ func (s *FeedSyncService) SyncAll() (*FeedSyncResult, error) {
 	// Update sync state to "syncing"
 	s.updateSyncState("syncing", nil)
 
-	// Fetch all approved submissions
-	submissions, err := s.odkClient.GetApprovedSubmissions()
+	// Get last sync time for incremental sync
+	syncState, err := s.GetSyncState()
 	if err != nil {
-		errMsg := fmt.Sprintf("failed to fetch feed submissions: %v", err)
-		s.updateSyncState("error", &errMsg)
-		return nil, fmt.Errorf(errMsg)
+		log.Printf("Warning: could not get sync state: %v", err)
+	}
+
+	// Fetch submissions - incremental if we have last sync time
+	var submissions []map[string]interface{}
+	if syncState != nil && syncState.LastSyncTime != nil {
+		// Incremental sync: fetch only submissions updated since last sync
+		submissions, err = s.odkClient.GetApprovedSubmissionsSince(*syncState.LastSyncTime)
+		if err != nil {
+			errMsg := fmt.Sprintf("failed to fetch feed submissions: %v", err)
+			s.updateSyncState("error", &errMsg)
+			return nil, fmt.Errorf(errMsg)
+		}
+		log.Printf("Feed incremental sync: fetched %d submissions updated since %s", len(submissions), syncState.LastSyncTime.Format(time.RFC3339))
+	} else {
+		// Full sync: fetch all approved submissions
+		submissions, err = s.odkClient.GetApprovedSubmissions()
+		if err != nil {
+			errMsg := fmt.Sprintf("failed to fetch feed submissions: %v", err)
+			s.updateSyncState("error", &errMsg)
+			return nil, fmt.Errorf(errMsg)
+		}
+		log.Printf("Feed full sync: fetched %d submissions from ODK Central", len(submissions))
 	}
 
 	result.TotalFetched = len(submissions)
-	log.Printf("Fetched %d feed submissions from ODK Central", result.TotalFetched)
+
+	// If no new submissions, return early
+	if len(submissions) == 0 {
+		result.EndTime = time.Now()
+		result.Duration = result.EndTime.Sub(result.StartTime).String()
+		s.updateSyncStateSuccess(0)
+		log.Printf("Feed sync completed: no new submissions to process")
+		return result, nil
+	}
 
 	// Process each submission
 	for _, submission := range submissions {
