@@ -28,6 +28,11 @@ const router = createRouter({
       name: 'belakang-layar',
       component: () => import('@/views/BelakangLayarView.vue'),
     },
+    {
+      path: '/share-preview',
+      name: 'share-preview',
+      component: () => import('@/views/SharePreview.vue'),
+    },
   ],
 })
 

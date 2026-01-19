@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, watch, computed, createApp, h, nextTick } from 'vue'
 import { Locate, Layers, MapPin, ChevronDown, X, Plus, Minus } from 'lucide-vue-next'
+import html2canvas from 'html2canvas'
 import StatsBox from '@/components/StatsBox.vue'
+import ShareImageTemplate from '@/components/ShareImageTemplate.vue'
 import { useLocations } from '@/composables/useLocations'
 import { useFaskes } from '@/composables/useFaskes'
 import { useInfrastruktur } from '@/composables/useInfrastruktur'
@@ -429,15 +431,22 @@ const buildFeedPopupContent = (feed: Feed): string => {
     tagsHtml = tags.map(tag => `<span class="popup-tag">${getTagLabel(tag)}</span>`).join('')
   }
 
-  // Bottom row: date, category, tags
+  // Bottom row: date, category, tags, download button
+  // Note: We expose handlePopupDownload to window for onclick handling in popup
   const bottomHtml = `<div class="popup-bottom">
-    <span class="popup-date">${formatTimestamp(feed.submitted_at)}</span>
-    <span class="popup-category ${categoryClass}">${getCategoryLabel(feed.category)}</span>
-    ${tagsHtml}
+    <div class="popup-bottom-left">
+      <span class="popup-date">${formatTimestamp(feed.submitted_at)}</span>
+      <span class="popup-category ${categoryClass}">${getCategoryLabel(feed.category)}</span>
+      ${tagsHtml}
+    </div>
+    <button class="popup-download-btn" data-feed-id="${feed.id}" onclick="window.__mapViewDownload && window.__mapViewDownload('${feed.id}')" title="Download gambar untuk share">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+      <span>SHARE</span>
+    </button>
   </div>`
 
   return `
-    <div class="feed-popup-new">
+    <div class="feed-popup-new" id="feed-popup-${feed.id}">
       ${photoHtml}
       ${locationHtml}
       ${submitterHtml}
@@ -498,10 +507,111 @@ const getInfrastrukturIcon = (jenis: string) => {
   return infrastrukturIcons[jenis] || { color: '#D97706', icon: '🛣️' }
 }
 
+// Handle download from popup using ShareImageTemplate
+const handlePopupDownload = async (feedId: string) => {
+  // Find the feed data - first try local array, then fetch from API
+  let feed = feedsWithCoords.value.find(f => f.id === feedId)
+
+  if (!feed) {
+    try {
+      const response = await api.getFeeds({ limit: 100 })
+      if (response.success && response.data) {
+        feed = response.data.find(f => f.id === feedId)
+      }
+    } catch (e) {
+      console.error('Failed to fetch feed:', e)
+    }
+  }
+
+  if (!feed) {
+    console.error('Feed not found:', feedId)
+    return
+  }
+
+  try {
+    // Create a temporary container for the template
+    const container = document.createElement('div')
+    container.style.position = 'absolute'
+    container.style.left = '-9999px'
+    container.style.top = '0'
+    document.body.appendChild(container)
+
+    // Prepare feed data for template
+    const photoUrl = feed.photos && feed.photos.length > 0
+      ? getFeedPhotoUrl(feed.photos[0].id)
+      : undefined
+    const tags = feed.type ? feed.type.split(',').map(t => t.trim()).filter(t => t) : []
+    const submitter = `${feed.username ?? 'anonymous'}${feed.organization ? ` - ${feed.organization}` : ''}`
+
+    // Create and mount the ShareImageTemplate component
+    const app = createApp({
+      render() {
+        return h(ShareImageTemplate, {
+          category: feed.category || 'informasi',
+          photo: photoUrl,
+          kabupaten: feed.region?.kota_kab,
+          kecamatan: feed.region?.kecamatan,
+          desa: feed.region?.desa,
+          submitter: submitter,
+          content: feed.content || '',
+          tags: tags,
+          timestamp: formatTimestamp(feed.submitted_at),
+        })
+      },
+    })
+
+    app.mount(container)
+
+    // Wait for images to load and component to render
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    // Find the share-card element
+    const element = container.querySelector('.share-card') as HTMLElement
+    if (!element) {
+      throw new Error('Template element not found')
+    }
+
+    const canvas = await html2canvas(element, {
+      backgroundColor: null,
+      scale: 2,
+      logging: false,
+      useCORS: true,
+      allowTaint: true,
+    })
+
+    // Convert to blob and download
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `dayawarga-update-${feedId.substring(0, 8)}.jpg`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+      }
+    }, 'image/jpeg', 0.95)
+
+    // Cleanup
+    app.unmount()
+    document.body.removeChild(container)
+  } catch (error) {
+    console.error('Failed to capture popup:', error)
+  }
+}
+
 // Setup click handlers for popup location links
 const setupPopupClickHandlers = () => {
+  // Handle clicks on popup elements (location, faskes, desa links)
+  // Note: Download button is handled via inline onclick to avoid double-triggering
   document.addEventListener('click', (e) => {
     const target = e.target as HTMLElement
+
+    // Early exit for non-popup clicks
+    if (!target.closest('.feed-popup-new')) return
+
     const locationEl = target.closest('[data-location-id]') as HTMLElement
     const faskesEl = target.closest('[data-faskes-id]') as HTMLElement
     const desaEl = target.closest('[data-desa-id]') as HTMLElement
@@ -545,6 +655,10 @@ const setupPopupClickHandlers = () => {
 
 onMounted(async () => {
   if (!mapContainer.value) return
+
+  // Expose handlePopupDownload to window for onclick handling in Leaflet popups
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (window as any).__mapViewDownload = handlePopupDownload
 
   const L = await import('leaflet')
 
@@ -1431,9 +1545,39 @@ defineExpose({
   background: #f9fafb;
   border-top: 1px solid #e5e7eb;
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.feed-popup-new .popup-bottom-left {
+  display: flex;
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
+}
+
+.feed-popup-new .popup-download-btn {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: #6b7280;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.feed-popup-new .popup-download-btn:hover {
+  background: #e5e7eb;
+  color: #3b82f6;
+}
+
+.feed-popup-new .popup-download-btn:active {
+  transform: scale(0.95);
 }
 
 .feed-popup-new .popup-date {

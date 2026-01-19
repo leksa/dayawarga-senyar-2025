@@ -3,6 +3,7 @@ import { ref, watch, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Search, MapPin, Download, Filter, Image, Navigation, Megaphone, ChevronDown, X } from 'lucide-vue-next'
 import DataLayersSidebar from '@/components/DataLayersSidebar.vue'
+import ShareButton from '@/components/ShareButton.vue'
 import Input from '@/components/ui/Input.vue'
 import Badge from '@/components/ui/Badge.vue'
 import Button from '@/components/ui/Button.vue'
@@ -267,6 +268,7 @@ const formattedFeeds = computed(() => {
     content: feed.content,
     category: feed.category,
     type: feed.type ?? '',
+    tags: feed.type ? feed.type.split(',').map(t => t.trim()).filter(t => t) : [],
     coordinates: feed.coordinates,
     photos: feed.photos ?? [],
     // Region info for desa detail
@@ -275,6 +277,8 @@ const formattedFeeds = computed(() => {
     kecamatan: feed.region?.kecamatan,
     kotaKab: feed.region?.kota_kab,
     provinsi: feed.region?.provinsi,
+    // Submitter for share template
+    submitter: `${feed.username ?? 'anonymous'}${feed.organization ? ` - ${feed.organization}` : ''}`,
   }))
 })
 
@@ -759,6 +763,7 @@ const allCategories = [
             <div
               v-for="update in formattedFeeds"
               :key="update.id"
+              :id="`feed-item-${update.id}`"
               class="bg-white rounded-lg border border-gray-200 p-3 md:p-4 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer"
               @click="goToMapWithFeed({ id: update.id, coordinates: update.coordinates, locationId: update.locationId, faskesId: update.faskesId, desaId: update.desaId, desaName: update.desaName, kecamatan: update.kecamatan, kotaKab: update.kotaKab })"
             >
@@ -786,14 +791,30 @@ const allCategories = [
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center justify-between mb-1">
                     <span class="text-xs text-gray-500">{{ update.timestamp }}</span>
-                    <!-- Navigate to map indicator -->
-                    <div
-                      v-if="update.coordinates || update.locationId || update.faskesId"
-                      class="flex items-center gap-1 text-xs text-blue-500"
-                      title="Klik untuk lihat di peta"
-                    >
-                      <Navigation class="w-3.5 h-3.5" />
-                      <span class="hidden sm:inline">Peta</span>
+                    <!-- Action buttons -->
+                    <div class="flex items-center gap-2">
+                      <!-- Download image button -->
+                      <ShareButton
+                        :feed-id="update.id"
+                        :category="update.category"
+                        :photo="update.photos.length > 0 ? getPhotoUrl(update.photos[0]) : undefined"
+                        :kabupaten="update.kotaKab"
+                        :kecamatan="update.kecamatan"
+                        :desa="update.desaName"
+                        :submitter="update.submitter"
+                        :content="update.content"
+                        :tags="update.tags"
+                        :timestamp="update.timestamp"
+                      />
+                      <!-- Navigate to map indicator -->
+                      <div
+                        v-if="update.coordinates || update.locationId || update.faskesId"
+                        class="flex items-center gap-1 text-xs text-blue-500"
+                        title="Klik untuk lihat di peta"
+                      >
+                        <Navigation class="w-3.5 h-3.5" />
+                        <span class="hidden sm:inline">Peta</span>
+                      </div>
                     </div>
                   </div>
                   <div class="text-xs text-blue-600 font-medium mb-1">
