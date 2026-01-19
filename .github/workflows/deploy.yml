@@ -86,9 +86,10 @@ jobs:
             echo "Starting deployment..."
             cd /opt/dayawarga
 
-            # Pull latest changes
+            # Pull latest changes (reset local changes to avoid conflicts)
             echo "Pulling latest code..."
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
 
             # Update S3 configuration in .env
             echo "Updating S3 configuration..."
