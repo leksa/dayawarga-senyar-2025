@@ -255,11 +255,11 @@ const truncatedContent = computed(() => {
   color: rgba(255,255,255,0.7);
 }
 
-/* Photo Section - Full width at top */
+/* Photo Section - Full width at top with 3:2 aspect ratio */
 .photo-section {
   position: relative;
   width: 100%;
-  height: 220px;
+  aspect-ratio: 3 / 2;
   overflow: hidden;
 }
 
@@ -267,6 +267,7 @@ const truncatedContent = computed(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
   filter: contrast(1.05) saturate(1.1);
 }
 
