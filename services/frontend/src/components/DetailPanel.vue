@@ -1,22 +1,51 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import { X, Phone, User, ChevronDown, ChevronUp, ChevronRight, Clock, MapPin, Users, Home, Wifi, Navigation, Camera, ArrowLeft, Construction, Wrench } from 'lucide-vue-next'
+import { X, Phone, User, ChevronDown, ChevronUp, ChevronRight, Clock, MapPin, Users, Home, Wifi, Navigation, Camera, ArrowLeft, Construction, Wrench, BarChart3, ExternalLink } from 'lucide-vue-next'
 import Badge from './ui/Badge.vue'
-import Button from './ui/Button.vue'
 import PhotoModal from './PhotoModal.vue'
 import type { MapMarker } from '@/types'
-import { api, type LocationDetail, type FaskesDetail, type InfrastrukturDetail, type Feed, type Photo } from '@/services/api'
+import { api, type LocationDetail, type FaskesDetail, type InfrastrukturDetail, type Feed, type Photo, type FeedPhoto } from '@/services/api'
+
+// Desa info interface for village-level detail panel
+interface DesaInfo {
+  id: string        // id_desa (BPS code)
+  name: string      // nama desa
+  kecamatan?: string
+  idKecamatan?: string
+  kotaKab?: string
+  idKotaKab?: string
+  provinsi?: string
+  idProvinsi?: string
+  lat: number
+  lng: number
+  feedId?: string   // original feed ID that triggered this view
+}
+
+// Desa statistics interface
+interface DesaStats {
+  poskoCount: number
+  totalPengungsi: number
+  jumlahKK: number
+  jumlahPerempuan: number
+  jumlahLaki: number
+  jumlahBalita: number
+  kebutuhanAirLiter: number
+  feedCount: number
+}
 
 interface Props {
   marker: MapMarker | null
   faskes?: any | null
   infrastruktur?: any | null
+  desa?: DesaInfo | null
+  desaStats?: DesaStats | null
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<{
   close: []
   'show-location-updates': [locationId: string]
+  'show-desa-feeds': [desaId: string, desaName: string]
 }>()
 
 const locationDetail = ref<LocationDetail | null>(null)
@@ -27,13 +56,19 @@ const loading = ref(false)
 
 // Photo state
 const photos = ref<Photo[]>([])
-const viewMode = ref<'detail' | 'gallery'>('detail')
+const viewMode = ref<'detail' | 'gallery' | 'feeds'>('detail')
 const selectedPhotoUrl = ref<string | null>(null)
 const isModalOpen = ref(false)
 
-// Check if we are showing faskes, infrastruktur, or location
+// Desa state
+const desaFeeds = ref<Feed[]>([])
+const desaPhotos = ref<FeedPhoto[]>([])
+const loadingDesaData = ref(false)
+
+// Check if we are showing faskes, infrastruktur, desa, or location
 const isFaskesView = computed(() => !!props.faskes)
 const isInfrastrukturView = computed(() => !!props.infrastruktur)
+const isDesaView = computed(() => !!props.desa && !props.marker && !props.faskes && !props.infrastruktur)
 
 // Collapsible sections state
 const expandedSections = ref<Record<string, boolean>>({
@@ -133,6 +168,55 @@ watch(() => props.infrastruktur, async (newInfrastruktur) => {
   }
 }, { immediate: true })
 
+// Fetch desa feeds and photos when desa prop changes
+watch(() => props.desa, async (newDesa) => {
+  if (!newDesa) {
+    desaFeeds.value = []
+    desaPhotos.value = []
+    latestFeed.value = null
+    viewMode.value = 'detail'
+    return
+  }
+
+  loadingDesaData.value = true
+  viewMode.value = 'detail'
+  try {
+    // Fetch feeds for this desa
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+    const feedsRes = await api.getFeeds({
+      desa: newDesa.name,
+      since: thirtyDaysAgo.toISOString(),
+      limit: 50
+    })
+
+    if (feedsRes.success && feedsRes.data) {
+      desaFeeds.value = feedsRes.data
+      // Get latest feed
+      if (feedsRes.data.length > 0) {
+        latestFeed.value = feedsRes.data[0]
+      } else {
+        latestFeed.value = null
+      }
+      // Collect all photos from feeds
+      const allPhotos: FeedPhoto[] = []
+      feedsRes.data.forEach(feed => {
+        if (feed.photos && feed.photos.length > 0) {
+          feed.photos.forEach(photo => {
+            allPhotos.push(photo)
+          })
+        }
+      })
+      desaPhotos.value = allPhotos
+    }
+  } catch (e) {
+    console.error('Failed to fetch desa feeds:', e)
+  } finally {
+    loadingDesaData.value = false
+  }
+}, { immediate: true })
+
 // Format status badge
 const statusVariant = computed(() => {
   const status = locationDetail.value?.status || props.marker?.status
@@ -199,6 +283,22 @@ const handleShowMoreUpdates = () => {
   }
 }
 
+// Handle showing more feeds for desa
+const handleShowDesaFeeds = () => {
+  viewMode.value = 'feeds'
+}
+
+// Back to detail from feeds view
+const backToDetailFromFeeds = () => {
+  viewMode.value = 'detail'
+}
+
+// Format number with thousand separator
+const formatNumber = (num: number | undefined): string => {
+  if (num === undefined || num === null) return '-'
+  return num.toLocaleString('id-ID')
+}
+
 // Helper to display Yes/No
 const formatYesNo = (value: unknown) => {
   if (value === 'yes' || value === true) return 'Ya'
@@ -227,8 +327,17 @@ const faskesPhotos = computed(() => {
   }))
 })
 
-// Combined photos for display (location or faskes)
+// Combined photos for display (location, faskes, or desa)
 const displayPhotos = computed(() => {
+  if (isDesaView.value) {
+    // For desa, return photos from feeds
+    return desaPhotos.value.map(p => ({
+      id: p.id,
+      filename: p.filename,
+      photo_type: p.type || 'feed',
+      url: p.url,
+    }))
+  }
   if (isFaskesView.value) return faskesPhotos.value
   return cachedPhotos.value
 })
@@ -240,6 +349,10 @@ const getPhotoUrl = (photo: Photo | { id: string; url?: string }) => {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1'
     const baseUrl = apiUrl.replace(/\/api\/v1$/, '')
     return `${baseUrl}${photo.url}`
+  }
+  // For desa view (feed photos), use feed photo URL
+  if (isDesaView.value) {
+    return api.getFeedPhotoUrl(photo.id)
   }
   return api.getPhotoUrl(photo.id)
 }
@@ -268,17 +381,17 @@ const closePhotoModal = () => {
 <template>
   <!-- Mobile backdrop (covers area behind panel, clicking closes it) -->
   <div
-    v-if="marker || faskes || infrastruktur"
+    v-if="marker || faskes || infrastruktur || desa"
     class="fixed inset-0 left-14 bg-black/30 z-[1100] lg:hidden"
     @click="emit('close')"
   />
 
   <aside
-    v-if="marker || faskes || infrastruktur"
+    v-if="marker || faskes || infrastruktur || desa"
     class="fixed inset-y-0 left-14 right-0 lg:h-full lg:relative lg:inset-auto lg:w-96 bg-white border-l border-gray-200 flex flex-col overflow-hidden z-[1200] lg:z-auto lg:border-t-0"
   >
     <!-- Header for Location/Posko -->
-    <div v-if="!isFaskesView && !isInfrastrukturView" class="p-3 lg:p-4 border-b border-gray-200">
+    <div v-if="!isFaskesView && !isInfrastrukturView && !isDesaView" class="p-3 lg:p-4 border-b border-gray-200">
       <div class="flex items-start justify-between gap-2">
         <div class="flex-1 min-w-0">
           <h2 class="text-base lg:text-lg font-semibold text-gray-900 truncate">{{ marker?.name }}</h2>
@@ -338,8 +451,26 @@ const closePhotoModal = () => {
       </div>
     </div>
 
+    <!-- Header for Desa -->
+    <div v-if="isDesaView && viewMode !== 'feeds'" class="p-3 lg:p-4 border-b border-gray-200">
+      <div class="flex items-start justify-between gap-2">
+        <div class="flex-1 min-w-0">
+          <h2 class="text-base lg:text-lg font-semibold text-gray-900 truncate">Desa {{ desa?.name }}</h2>
+          <div class="text-sm text-gray-500 mt-1">
+            {{ desa?.kecamatan ? `Kec. ${desa.kecamatan}` : '' }}{{ desa?.kotaKab ? `, ${desa.kotaKab}` : '' }}
+          </div>
+        </div>
+        <button
+          class="p-1 hover:bg-gray-100 rounded"
+          @click="emit('close')"
+        >
+          <X class="w-5 h-5 text-gray-400" />
+        </button>
+      </div>
+    </div>
+
     <!-- Photo Section (when photos available and in detail mode) -->
-    <div v-if="!loading && displayPhotos.length > 0 && viewMode === 'detail'" class="relative">
+    <div v-if="!loading && !loadingDesaData && displayPhotos.length > 0 && viewMode === 'detail'" class="relative">
       <div
         class="cursor-pointer group"
         @click="openPhotoGallery"
@@ -400,12 +531,183 @@ const closePhotoModal = () => {
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="flex-1 flex items-center justify-center">
+    <div v-if="loading || loadingDesaData" class="flex-1 flex items-center justify-center">
       <span class="text-gray-500">Memuat data...</span>
     </div>
 
+    <!-- Feeds Timeline View (for Desa) -->
+    <div v-if="!loading && !loadingDesaData && viewMode === 'feeds' && isDesaView" class="flex-1 flex flex-col overflow-hidden">
+      <!-- Feeds Header -->
+      <div class="p-4 border-b border-gray-200 flex items-center gap-3">
+        <button
+          class="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+          @click="backToDetailFromFeeds"
+        >
+          <ArrowLeft class="w-5 h-5 text-gray-600" />
+        </button>
+        <h3 class="font-semibold text-gray-900">Informasi Desa {{ desa?.name }} ({{ desaFeeds.length }})</h3>
+      </div>
+
+      <!-- Feeds Timeline -->
+      <div class="flex-1 overflow-y-auto">
+        <div v-if="desaFeeds.length === 0" class="p-8 text-center text-gray-500">
+          Belum ada informasi untuk desa ini.
+        </div>
+        <div v-else class="divide-y divide-gray-100">
+          <div
+            v-for="feed in desaFeeds"
+            :key="feed.id"
+            class="p-4 hover:bg-gray-50"
+          >
+            <!-- Photo if available -->
+            <div v-if="feed.photos && feed.photos.length > 0" class="mb-3">
+              <img
+                :src="api.getFeedPhotoUrl(feed.photos[0].id)"
+                :alt="feed.photos[0].filename"
+                class="w-full h-32 object-cover rounded-lg"
+                loading="lazy"
+              />
+              <div v-if="feed.photos.length > 1" class="text-xs text-gray-400 mt-1">
+                +{{ feed.photos.length - 1 }} foto lainnya
+              </div>
+            </div>
+
+            <!-- Timestamp -->
+            <div class="flex items-center gap-2 mb-1">
+              <Clock class="w-3.5 h-3.5 text-gray-400" />
+              <span class="text-xs text-gray-500">{{ formatDate(feed.submitted_at) }}</span>
+            </div>
+
+            <!-- Submitter -->
+            <div class="text-xs text-blue-600 font-medium mb-2">
+              {{ feed.username || 'Anonim' }}{{ feed.organization ? ` - ${feed.organization}` : '' }}
+            </div>
+
+            <!-- Content -->
+            <p class="text-sm text-gray-700 mb-2 leading-relaxed">{{ feed.content }}</p>
+
+            <!-- Badges -->
+            <div class="flex flex-wrap gap-1.5">
+              <Badge :variant="categoryColors[feed.category] || 'outline'" class="text-xs">
+                {{ feed.category }}
+              </Badge>
+              <Badge
+                v-for="tag in (feed.type || '').split(/[\s,]+/).filter((t: string) => t)"
+                :key="tag"
+                variant="outline"
+                class="text-xs"
+              >
+                {{ tag }}
+              </Badge>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content (Detail View) - Desa -->
+    <div v-if="!loading && !loadingDesaData && viewMode === 'detail' && isDesaView" class="flex-1 overflow-y-auto">
+      <!-- Latest Update for this desa -->
+      <div v-if="latestFeed" class="p-4 border-b border-gray-200 bg-blue-50">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+          <span class="text-xs font-medium text-gray-600">Update Terbaru</span>
+        </div>
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-xs text-gray-500">{{ formatDate(latestFeed.submitted_at) }}</span>
+        </div>
+        <div class="text-xs text-blue-600 font-medium mb-2">
+          {{ latestFeed.username || '-' }}{{ latestFeed.organization ? ` - ${latestFeed.organization}` : '' }}
+        </div>
+        <p class="text-sm text-gray-600 mb-3">{{ latestFeed.content }}</p>
+        <div class="flex flex-wrap gap-2 mb-3">
+          <Badge :variant="categoryColors[latestFeed.category] || 'outline'">
+            {{ latestFeed.category }}
+          </Badge>
+          <Badge
+            v-for="tag in (latestFeed.type || '').split(/[\s,]+/).filter((t: string) => t)"
+            :key="tag"
+            variant="outline"
+          >
+            {{ tag }}
+          </Badge>
+        </div>
+        <button
+          class="w-full flex items-center justify-center gap-1 py-2 text-sm text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+          @click="handleShowDesaFeeds"
+        >
+          <span>Informasi lainnya</span>
+          <ChevronRight class="w-4 h-4" />
+        </button>
+      </div>
+
+      <!-- No update message -->
+      <div v-else class="p-4 border-b border-gray-200 bg-gray-50">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+          <span class="text-xs font-medium text-gray-600">Update Terbaru</span>
+        </div>
+        <p class="text-sm text-gray-500">Belum ada informasi untuk desa ini.</p>
+      </div>
+
+      <!-- Statistik Bencana Desa -->
+      <div class="p-4 border-b border-gray-200">
+        <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <BarChart3 class="w-4 h-4" />
+          Statistik Bencana
+        </h3>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <div class="text-xs text-gray-500">Jumlah Posko</div>
+            <div class="text-sm font-medium">{{ formatNumber(desaStats?.poskoCount) }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500">Total Pengungsi</div>
+            <div class="text-sm font-medium">{{ formatNumber(desaStats?.totalPengungsi) }} Jiwa</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500">Jumlah KK</div>
+            <div class="text-sm font-medium">{{ formatNumber(desaStats?.jumlahKK) }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500">Perempuan</div>
+            <div class="text-sm font-medium">{{ formatNumber(desaStats?.jumlahPerempuan) }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500">Laki-laki</div>
+            <div class="text-sm font-medium">{{ formatNumber(desaStats?.jumlahLaki) }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500">Bayi & Balita</div>
+            <div class="text-sm font-medium">{{ formatNumber(desaStats?.jumlahBalita) }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500">Kebutuhan Air/Hari</div>
+            <div class="text-sm font-medium">{{ formatNumber(desaStats?.kebutuhanAirLiter) }} L</div>
+          </div>
+          <div>
+            <div class="text-xs text-gray-500">Jumlah Update</div>
+            <div class="text-sm font-medium">{{ formatNumber(desaStats?.feedCount) }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alamat Desa -->
+      <div class="p-4">
+        <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <MapPin class="w-4 h-4" />
+          Lokasi
+        </h3>
+        <div class="text-sm text-gray-600">
+          <p>Desa {{ desa?.name }}</p>
+          <p v-if="desa?.kecamatan">Kec. {{ desa.kecamatan }}</p>
+          <p>{{ desa?.kotaKab }}, {{ desa?.provinsi || 'Aceh' }}</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Content (Detail View) - Location/Posko -->
-    <div v-if="!loading && viewMode === 'detail' && !isFaskesView && !isInfrastrukturView" class="flex-1 overflow-y-auto">
+    <div v-if="!loading && !loadingDesaData && viewMode === 'detail' && !isFaskesView && !isInfrastrukturView && !isDesaView" class="flex-1 overflow-y-auto">
       <!-- Latest Update for this location -->
       <div v-if="latestFeed" class="p-4 border-b border-gray-200 bg-blue-50">
         <div class="flex items-center gap-2 mb-2">
@@ -419,12 +721,16 @@ const closePhotoModal = () => {
           {{ latestFeed.username || '-' }}{{ latestFeed.organization ? ` - ${latestFeed.organization}` : '' }}
         </div>
         <p class="text-sm text-gray-600 mb-3">{{ latestFeed.content }}</p>
-        <div class="flex gap-2 mb-3">
+        <div class="flex flex-wrap gap-2 mb-3">
           <Badge :variant="categoryColors[latestFeed.category] || 'outline'">
             {{ latestFeed.category }}
           </Badge>
-          <Badge v-if="latestFeed.type" variant="outline">
-            {{ latestFeed.type }}
+          <Badge
+            v-for="tag in (latestFeed.type || '').split(/[\s,]+/).filter((t: string) => t)"
+            :key="tag"
+            variant="outline"
+          >
+            {{ tag }}
           </Badge>
         </div>
         <button
@@ -1253,10 +1559,16 @@ const closePhotoModal = () => {
     </div>
 
     <!-- Footer (only in detail mode) -->
-    <div v-if="viewMode === 'detail' && !isFaskesView && !isInfrastrukturView" class="p-4 border-t border-gray-200">
-      <Button variant="primary" class="w-full">
-        Generate Report
-      </Button>
+    <div v-if="viewMode === 'detail'" class="p-4 border-t border-gray-200">
+      <a
+        href="https://s.id/KP8t1"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+      >
+        Kirim Informasi kepada kami?
+        <ExternalLink class="w-4 h-4" />
+      </a>
     </div>
 
     <!-- Photo Modal -->
