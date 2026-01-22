@@ -577,7 +577,7 @@ const handlePopupDownload = async (feedId: string) => {
       scale: 2,
       logging: false,
       useCORS: true,
-      allowTaint: true,
+      allowTaint: false,
     })
 
     // Convert to blob and download
