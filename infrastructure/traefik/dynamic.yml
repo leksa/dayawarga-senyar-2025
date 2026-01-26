@@ -45,7 +45,7 @@ http:
         servers:
           - url: "http://frontend:3000"
         healthCheck:
-          path: /
+          path: /health
           interval: 30s
           timeout: 5s
 
@@ -88,6 +88,7 @@ http:
         accessControlAllowOriginList:
           - "https://dayawarga.com"
           - "https://www.dayawarga.com"
+          - "https://admin.dayawarga.com"
         accessControlMaxAge: 43200
         addVaryHeader: true
 

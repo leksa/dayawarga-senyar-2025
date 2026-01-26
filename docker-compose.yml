@@ -113,6 +113,11 @@ services:
         - VITE_APP_VERSION=${APP_VERSION:-1.1.0}
     container_name: senyar-frontend
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     depends_on:
       - api
     networks:
@@ -123,6 +128,26 @@ services:
       - "traefik.http.routers.frontend.entrypoints=websecure"
       - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
       - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+      - "traefik.http.services.frontend.loadbalancer.healthcheck.path=/health"
+      - "traefik.http.services.frontend.loadbalancer.healthcheck.interval=30s"
+
+  # ============================================
+  # API DOCS - Docusaurus Documentation
+  # ============================================
+  api-docs:
+    build:
+      context: ./api-docs
+      dockerfile: Dockerfile
+    container_name: senyar-api-docs
+    restart: unless-stopped
+    networks:
+      - senyar-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api-docs.rule=Host(`docs.dayawarga.com`)"
+      - "traefik.http.routers.api-docs.entrypoints=websecure"
+      - "traefik.http.routers.api-docs.tls.certresolver=letsencrypt"
+      - "traefik.http.services.api-docs.loadbalancer.server.port=80"
 
   # ============================================
   # GHOST CMS - Blog Engine
@@ -177,6 +202,133 @@ services:
       - "traefik.http.routers.pgadmin.tls.certresolver=letsencrypt"
       - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
 
+  # ============================================
+  # AUTHENTIK - Identity Provider
+  # ============================================
+  authentik-postgres:
+    image: postgres:16-alpine
+    container_name: authentik-postgres
+    restart: unless-stopped
+    profiles:
+      - admin-portal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+    volumes:
+      - authentik_postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${AUTHENTIK_POSTGRES_USER:-authentik}
+      POSTGRES_PASSWORD: ${AUTHENTIK_POSTGRES_PASSWORD:?AUTHENTIK_POSTGRES_PASSWORD required}
+      POSTGRES_DB: ${AUTHENTIK_POSTGRES_DB:-authentik}
+    networks:
+      - senyar-network
+
+  authentik-redis:
+    image: redis:7-alpine
+    container_name: authentik-redis
+    restart: unless-stopped
+    profiles:
+      - admin-portal
+    command: --save 60 1 --loglevel warning
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 3s
+    volumes:
+      - authentik_redis_data:/data
+    networks:
+      - senyar-network
+
+  authentik-server:
+    image: ghcr.io/goauthentik/server:2024.12.3
+    container_name: authentik-server
+    restart: unless-stopped
+    profiles:
+      - admin-portal
+    command: server
+    environment:
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?AUTHENTIK_SECRET_KEY required}
+      AUTHENTIK_REDIS__HOST: authentik-redis
+      AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
+      AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_POSTGRES_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_POSTGRES_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_POSTGRES_PASSWORD:?AUTHENTIK_POSTGRES_PASSWORD required}
+    volumes:
+      - authentik_media:/media
+      - authentik_templates:/templates
+    depends_on:
+      authentik-postgres:
+        condition: service_healthy
+      authentik-redis:
+        condition: service_healthy
+    networks:
+      - senyar-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.authentik.rule=Host(`auth.dayawarga.com`)"
+      - "traefik.http.routers.authentik.entrypoints=websecure"
+      - "traefik.http.routers.authentik.tls.certresolver=letsencrypt"
+      - "traefik.http.services.authentik.loadbalancer.server.port=9000"
+
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:2024.12.3
+    container_name: authentik-worker
+    restart: unless-stopped
+    profiles:
+      - admin-portal
+    command: worker
+    environment:
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?AUTHENTIK_SECRET_KEY required}
+      AUTHENTIK_REDIS__HOST: authentik-redis
+      AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
+      AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_POSTGRES_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_POSTGRES_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_POSTGRES_PASSWORD:?AUTHENTIK_POSTGRES_PASSWORD required}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - authentik_media:/media
+      - authentik_certs:/certs
+      - authentik_templates:/templates
+    depends_on:
+      authentik-postgres:
+        condition: service_healthy
+      authentik-redis:
+        condition: service_healthy
+    networks:
+      - senyar-network
+
+  # ============================================
+  # ADMIN PORTAL - Vue.js Admin Application
+  # ============================================
+  admin-portal:
+    build:
+      context: ./apps/admin-portal
+      dockerfile: Dockerfile
+      args:
+        - VITE_OIDC_AUTHORITY=https://auth.dayawarga.com/application/o/admin-portal/
+        - VITE_OIDC_CLIENT_ID=${ADMIN_PORTAL_OIDC_CLIENT_ID:?ADMIN_PORTAL_OIDC_CLIENT_ID required}
+        - VITE_API_BASE_URL=https://api.dayawarga.com/api/v1
+    container_name: senyar-admin-portal
+    restart: unless-stopped
+    profiles:
+      - admin-portal
+    depends_on:
+      - api
+      - authentik-server
+    networks:
+      - senyar-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.admin-portal.rule=Host(`admin.dayawarga.com`)"
+      - "traefik.http.routers.admin-portal.entrypoints=websecure"
+      - "traefik.http.routers.admin-portal.tls.certresolver=letsencrypt"
+      - "traefik.http.services.admin-portal.loadbalancer.server.port=80"
+
 networks:
   senyar-network:
     driver: bridge
@@ -187,3 +339,8 @@ volumes:
   api_storage:
   traefik_letsencrypt:
   ghost_content:
+  authentik_postgres_data:
+  authentik_redis_data:
+  authentik_media:
+  authentik_certs:
+  authentik_templates:

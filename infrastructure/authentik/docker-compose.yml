@@ -1,0 +1,119 @@
+# Authentik Identity Provider - Local Development
+# Based on official Authentik docker-compose
+# https://goauthentik.io/docs/installation/docker-compose
+
+services:
+  # ==========================================================================
+  # POSTGRESQL - Authentik Database
+  # ==========================================================================
+  authentik-postgres:
+    image: postgres:16-alpine
+    container_name: authentik-postgres
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+    volumes:
+      - authentik_postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${AUTHENTIK_POSTGRES_USER:-authentik}
+      POSTGRES_PASSWORD: ${AUTHENTIK_POSTGRES_PASSWORD:?AUTHENTIK_POSTGRES_PASSWORD required}
+      POSTGRES_DB: ${AUTHENTIK_POSTGRES_DB:-authentik}
+    networks:
+      - authentik-network
+
+  # ==========================================================================
+  # REDIS - Authentik Cache & Message Broker
+  # ==========================================================================
+  authentik-redis:
+    image: redis:7-alpine
+    container_name: authentik-redis
+    restart: unless-stopped
+    command: --save 60 1 --loglevel warning
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 3s
+    volumes:
+      - authentik_redis_data:/data
+    networks:
+      - authentik-network
+
+  # ==========================================================================
+  # AUTHENTIK SERVER - Main Application
+  # ==========================================================================
+  authentik-server:
+    image: ghcr.io/goauthentik/server:2024.12.3
+    container_name: authentik-server
+    restart: unless-stopped
+    command: server
+    environment:
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?AUTHENTIK_SECRET_KEY required}
+      AUTHENTIK_REDIS__HOST: authentik-redis
+      AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
+      AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_POSTGRES_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_POSTGRES_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_POSTGRES_PASSWORD:?AUTHENTIK_POSTGRES_PASSWORD required}
+      # Email (optional - for password reset, etc)
+      # AUTHENTIK_EMAIL__HOST: ${AUTHENTIK_EMAIL_HOST:-localhost}
+      # AUTHENTIK_EMAIL__PORT: ${AUTHENTIK_EMAIL_PORT:-25}
+      # AUTHENTIK_EMAIL__USE_TLS: ${AUTHENTIK_EMAIL_USE_TLS:-false}
+      # AUTHENTIK_EMAIL__FROM: ${AUTHENTIK_EMAIL_FROM:-authentik@localhost}
+    volumes:
+      - authentik_media:/media
+      - authentik_templates:/templates
+    ports:
+      - "${AUTHENTIK_PORT_HTTP:-9000}:9000"
+      - "${AUTHENTIK_PORT_HTTPS:-9443}:9443"
+    depends_on:
+      authentik-postgres:
+        condition: service_healthy
+      authentik-redis:
+        condition: service_healthy
+    networks:
+      - authentik-network
+
+  # ==========================================================================
+  # AUTHENTIK WORKER - Background Tasks
+  # ==========================================================================
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:2024.12.3
+    container_name: authentik-worker
+    restart: unless-stopped
+    command: worker
+    environment:
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?AUTHENTIK_SECRET_KEY required}
+      AUTHENTIK_REDIS__HOST: authentik-redis
+      AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
+      AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_POSTGRES_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_POSTGRES_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_POSTGRES_PASSWORD:?AUTHENTIK_POSTGRES_PASSWORD required}
+    # user: root  # Uncomment if you need to run as root
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - authentik_media:/media
+      - authentik_certs:/certs
+      - authentik_templates:/templates
+    depends_on:
+      authentik-postgres:
+        condition: service_healthy
+      authentik-redis:
+        condition: service_healthy
+    networks:
+      - authentik-network
+
+networks:
+  authentik-network:
+    driver: bridge
+
+volumes:
+  authentik_postgres_data:
+  authentik_redis_data:
+  authentik_media:
+  authentik_certs:
+  authentik_templates:

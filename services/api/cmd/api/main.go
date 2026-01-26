@@ -1,3 +1,23 @@
+// @title           Daya Warga API
+// @version         1.0
+// @description     API untuk sistem informasi Daya Warga - platform manajemen data posko pengungsi, fasilitas kesehatan, dan infrastruktur.
+// @termsOfService  https://dayawarga.com/terms
+
+// @contact.name   Daya Warga Team
+// @contact.url    https://dayawarga.com
+// @contact.email  support@dayawarga.com
+
+// @license.name  MIT
+// @license.url   https://opensource.org/licenses/MIT
+
+// @host      localhost:8080
+// @BasePath  /api/v1
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
+// @description Enter the token with the `Bearer ` prefix, e.g. "Bearer abcde12345"
+
 package main
 
 import (
@@ -10,6 +30,8 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	_ "github.com/leksa/datamapper-senyar/docs" // Swagger docs
+	"github.com/leksa/datamapper-senyar/internal/auth"
 	"github.com/leksa/datamapper-senyar/internal/config"
 	"github.com/leksa/datamapper-senyar/internal/handler"
 	"github.com/leksa/datamapper-senyar/internal/middleware"
@@ -19,6 +41,8 @@ import (
 	"github.com/leksa/datamapper-senyar/internal/service"
 	"github.com/leksa/datamapper-senyar/internal/sse"
 	"github.com/leksa/datamapper-senyar/internal/storage"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -68,6 +92,15 @@ func main() {
 	faskesRepo := repository.NewFaskesRepository(db)
 	infrastrukturRepo := repository.NewInfrastrukturRepository(db)
 
+	// Admin Portal repositories
+	userRepo := repository.NewUserRepository(db)
+	orgRepo := repository.NewOrganizationRepository(db)
+	groupRepo := repository.NewGroupRepository(db)
+	relawanRepo := repository.NewRelawanRepository(db)
+	projectRequestRepo := repository.NewProjectRequestRepository(db)
+	groupProjectRepo := repository.NewGroupProjectRepository(db)
+	orgChecker := repository.NewOrgCheckerWrapper(orgRepo)
+
 	// Initialize ODK client for posko form
 	odkPoskoConfig := &odk.ODKConfig{
 		BaseURL:   cfg.ODKBaseURL,
@@ -114,6 +147,17 @@ func main() {
 	faskesSyncService := service.NewFaskesSyncService(db, odkFaskesClient, cfg.ODKFaskesFormID)
 	infrastrukturSyncService := service.NewInfrastrukturSyncService(db, odkInfrastrukturClient, cfg.ODKInfrastrukturFormID)
 
+	// Admin Portal services
+	userService := service.NewUserService(userRepo)
+	orgService := service.NewOrganizationService(orgRepo)
+	groupService := service.NewGroupService(groupRepo, orgRepo)
+	relawanService := service.NewRelawanService(relawanRepo, orgRepo, groupRepo)
+	odkProjectService := service.NewODKProjectService(odkPoskoClient)
+	projectRequestService := service.NewProjectRequestService(projectRequestRepo, groupProjectRepo, groupRepo, userRepo, odkPoskoClient, db)
+	relawanODKService := service.NewRelawanODKService(relawanRepo, groupRepo, odkPoskoClient, cfg.ODKBaseURL, db)
+	userODKService := service.NewUserODKService(userRepo, odkPoskoClient, db)
+	orgODKService := service.NewOrganizationODKService(orgRepo, userRepo, odkPoskoClient, db)
+
 	// Initialize photo service (with optional S3 storage)
 	var photoService *service.PhotoService
 	if cfg.S3Enabled {
@@ -151,6 +195,7 @@ func main() {
 	}
 
 	// Initialize handlers
+	chatbotHandler := handler.NewChatbotHandler(db, locationRepo, feedRepo)
 	locationHandler := handler.NewLocationHandler(locationRepo, feedRepo)
 	feedHandler := handler.NewFeedHandler(feedRepo)
 	faskesHandler := handler.NewFaskesHandler(faskesRepo)
@@ -160,6 +205,29 @@ func main() {
 	photoHandler := handler.NewPhotoHandler(photoService)
 	sseHandler := handler.NewSSEHandler(sseHub)
 	schedulerHandler := handler.NewSchedulerHandler(autoScheduler)
+
+	// Admin Portal handlers
+	authHandler := handler.NewAuthHandler(userService)
+	userHandler := handler.NewUserHandler(userService)
+	userODKHandler := handler.NewUserODKHandler(userODKService)
+	orgHandler := handler.NewOrganizationHandler(orgService)
+	groupHandler := handler.NewGroupHandler(groupService)
+	relawanHandler := handler.NewRelawanHandler(relawanService)
+	odkHandler := handler.NewODKHandler(odkProjectService, projectRequestService)
+	relawanODKHandler := handler.NewRelawanODKHandler(relawanODKService)
+	orgODKHandler := handler.NewOrganizationODKHandler(orgODKService)
+
+	// Initialize OIDC validator for Admin Portal (if configured)
+	var oidcValidator *auth.OIDCValidator
+	if cfg.OIDCIssuerURL != "" && cfg.OIDCClientID != "" {
+		oidcValidator = auth.NewOIDCValidator(auth.OIDCConfig{
+			IssuerURL: cfg.OIDCIssuerURL,
+			ClientID:  cfg.OIDCClientID,
+		})
+		log.Printf("OIDC validator initialized: %s", cfg.OIDCIssuerURL)
+	} else {
+		log.Println("OIDC not configured - Admin Portal authentication disabled")
+	}
 
 	// Initialize middleware
 	rateLimiter := middleware.DefaultRateLimiter()
@@ -174,7 +242,7 @@ func main() {
 
 	// Configure CORS
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:3000", "https://dayawarga.com", "https://www.dayawarga.com"},
+		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:5179", "http://localhost:3000", "https://dayawarga.com", "https://www.dayawarga.com"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length", "X-Cache", "X-RateLimit-Limit", "X-RateLimit-Remaining"},
@@ -188,6 +256,9 @@ func main() {
 	// Health endpoints (no cache, no rate limit heavy)
 	r.GET("/health", healthHandler.Check)
 	r.GET("/ready", healthHandler.Ready)
+
+	// Swagger documentation
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// API v1 routes
 	v1 := r.Group("/api/v1")
@@ -231,6 +302,24 @@ func main() {
 		protected := v1.Group("")
 		protected.Use(middleware.APIKeyAuth(cfg.SyncAPIKey))
 		{
+			// Chatbot endpoints
+			chatbot := protected.Group("/chatbot")
+			{
+				chatbot.POST("/feeds", chatbotHandler.CreateFeed)
+				chatbot.POST("/locations", chatbotHandler.CreateLocation)
+				chatbot.PUT("/locations/:id", chatbotHandler.UpdateLocation)
+				chatbot.GET("/wilayah/kabupaten", chatbotHandler.GetWilayahKabupaten)
+				chatbot.GET("/wilayah/kecamatan", chatbotHandler.GetWilayahKecamatan)
+				chatbot.GET("/wilayah/desa", chatbotHandler.GetWilayahDesa)
+			}
+
+			// WhatsApp relawan validation (for chatbot)
+			wa := protected.Group("/wa")
+			{
+				wa.GET("/validate", relawanHandler.ValidateWAAccess)
+				wa.POST("/activity", relawanHandler.RecordWAActivity)
+			}
+
 			// Sync endpoints
 			protected.POST("/sync/posko", syncHandler.SyncAll)
 			protected.POST("/sync/feed", syncHandler.SyncFeeds)
@@ -262,6 +351,122 @@ func main() {
 		v1.GET("/sync/feed/status", syncHandler.GetFeedSyncStatus)
 		v1.GET("/sync/faskes/status", syncHandler.GetFaskesSyncStatus)
 		v1.GET("/sync/infrastruktur/status", syncHandler.GetInfrastrukturSyncStatus)
+
+		// ============================================
+		// Admin Portal Routes (OIDC Protected)
+		// ============================================
+		if oidcValidator != nil {
+			// Create auth middleware
+			authMiddleware := auth.Middleware(oidcValidator, userService)
+
+			// Middleware to inject org checker into context
+			orgCheckerMiddleware := func(c *gin.Context) {
+				auth.SetOrgChecker(c, orgChecker)
+				c.Next()
+			}
+
+			// Admin Portal group with OIDC auth
+			admin := v1.Group("")
+			admin.Use(authMiddleware)
+			admin.Use(orgCheckerMiddleware)
+			{
+				// Auth endpoints
+				admin.GET("/auth/me", authHandler.Me)
+
+				// Organizations - require org_admin or super_admin role
+				orgs := admin.Group("/organizations")
+				orgs.Use(auth.RequireOrgAdminOrAbove())
+				{
+					orgs.GET("", orgHandler.List)
+					orgs.POST("", auth.RequireSuperAdmin(), orgHandler.Create)
+					orgs.GET("/:id", orgHandler.GetByID)
+					orgs.PUT("/:id", orgHandler.Update)
+					orgs.DELETE("/:id", auth.RequireSuperAdmin(), orgHandler.Delete)
+					orgs.GET("/:id/stats", orgHandler.GetStats)
+					orgs.POST("/:id/members", orgHandler.AddMember)
+					orgs.DELETE("/:id/members/:user_id", orgHandler.RemoveMember)
+					orgs.PUT("/:id/members/:user_id/role", orgHandler.UpdateMemberRole)
+					// ODK Project assignment (super_admin only)
+					orgs.POST("/:id/odk-project", auth.RequireSuperAdmin(), orgODKHandler.AssignODKProject)
+					orgs.DELETE("/:id/odk-project", auth.RequireSuperAdmin(), orgODKHandler.RemoveODKProject)
+					orgs.GET("/:id/odk-info", orgODKHandler.GetODKInfo)
+				}
+
+				// Groups - require org_admin or super_admin role
+				groups := admin.Group("/groups")
+				groups.Use(auth.RequireOrgAdminOrAbove())
+				{
+					groups.GET("", groupHandler.List)
+					groups.POST("", groupHandler.Create)
+					groups.GET("/:id", groupHandler.GetByID)
+					groups.PUT("/:id", groupHandler.Update)
+					groups.DELETE("/:id", groupHandler.Delete)
+					groups.GET("/:id/stats", groupHandler.GetStats)
+					// Project request for group
+					groups.POST("/:id/project-request", odkHandler.CreateProjectRequest)
+					groups.GET("/:id/project-requests", odkHandler.GetGroupProjectRequests)
+					// Bulk create ODK app users for group
+					groups.POST("/:id/odk-app-users", relawanODKHandler.CreateGroupAppUsers)
+				}
+
+				// Relawan - require org_admin or super_admin role
+				relawan := admin.Group("/relawan")
+				relawan.Use(auth.RequireOrgAdminOrAbove())
+				{
+					relawan.GET("", relawanHandler.List)
+					relawan.GET("/stats", relawanHandler.GetStats)
+					relawan.POST("", relawanHandler.Create)
+					relawan.GET("/:id", relawanHandler.GetByID)
+					relawan.PUT("/:id", relawanHandler.Update)
+					relawan.DELETE("/:id", relawanHandler.Delete)
+					relawan.PUT("/:id/status", relawanHandler.UpdateStatus)
+					relawan.PUT("/:id/group", relawanHandler.MoveToGroup)
+					relawan.POST("/bulk/move-to-group", relawanHandler.BulkMoveToGroup)
+					// ODK App User management
+					relawan.POST("/:id/odk-app-user", relawanODKHandler.CreateAppUser)
+					relawan.DELETE("/:id/odk-app-user", relawanODKHandler.RevokeAppUser)
+					relawan.GET("/:id/odk-qr-code", relawanODKHandler.GetQRCode)
+					relawan.POST("/:id/odk-forms", relawanODKHandler.AssignForms)
+					// WhatsApp verification management
+					relawan.POST("/:id/wa-verify", relawanHandler.SetWAVerified)
+					relawan.DELETE("/:id/wa-verify", relawanHandler.RevokeWAVerified)
+					relawan.GET("/:id/wa-status", relawanHandler.GetWAStatus)
+				}
+
+				// ODK Projects (read from ODK Central)
+				odk := admin.Group("/odk")
+				odk.Use(auth.RequireOrgAdminOrAbove())
+				{
+					odk.GET("/projects", odkHandler.ListProjects)
+					odk.GET("/projects/:id", odkHandler.GetProject)
+					odk.GET("/projects/:id/forms", odkHandler.ListProjectForms)
+				}
+
+				// Admin-only endpoints
+				adminOnly := admin.Group("/admin")
+				adminOnly.Use(auth.RequireSuperAdmin())
+				{
+					// User management (super_admin only)
+					adminOnly.GET("/users", userHandler.List)
+					adminOnly.GET("/users/:id", userHandler.Get)
+					adminOnly.PUT("/users/:id", userHandler.Update)
+
+					// User ODK role management (super_admin only)
+					adminOnly.GET("/users/:id/odk-roles", userODKHandler.GetUserProjectAssignments)
+					adminOnly.POST("/users/:id/odk-roles", userODKHandler.AssignProjectRole)
+					adminOnly.DELETE("/users/:id/odk-roles/:projectId", userODKHandler.RemoveProjectRole)
+					adminOnly.GET("/users/:id/odk-qr-code", userODKHandler.GetUserQRCode)
+
+					// ODK project assignments (super_admin only)
+					adminOnly.GET("/odk-projects/:id/assignments", userODKHandler.GetProjectAssignments)
+
+					// Project request management
+					adminOnly.GET("/project-requests", odkHandler.ListProjectRequests)
+					adminOnly.GET("/project-requests/:id", odkHandler.GetProjectRequest)
+					adminOnly.PUT("/project-requests/:id", odkHandler.ReviewProjectRequest)
+				}
+			}
+		}
 	}
 
 	// Graceful shutdown
