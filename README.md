@@ -4,40 +4,71 @@ Sistem Informasi Geografis (GIS) berbasis collection dan layer data eksisting un
 
 **Live Demo:** [https://dayawarga.com](https://dayawarga.com)
 
+## Infrastructure
+
+### Production Services
+
+| Service | Domain | Description |
+|---------|--------|-------------|
+| **Main Platform** | dayawarga.com | Frontend, API, Ghost CMS |
+| **Admin Portal** | admin.dayawarga.com | Relawan management |
+| **Auth (SSO)** | auth.dayawarga.com | Authentik Identity Provider |
+| **ODK Central** | data.dayawarga.com | Data collection forms |
+| **WhatsApp Chatbot** | (internal) | Relawan chatbot service |
+
 ## Arsitektur Sistem
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Traefik (Reverse Proxy)                  │
-│                    SSL/TLS + Load Balancing                     │
-└─────────────────┬───────────────────────────────┬───────────────┘
-                  │                               │
-                  ▼                               ▼
-┌─────────────────────────────┐   ┌─────────────────────────────┐
-│      Frontend (Vue 3)       │   │      API (Go/Gin)           │
-│  - Peta Leaflet             │   │  - REST API                 │
-│  - Responsive UI            │   │  - ODK Central Sync         │
-│  - Real-time Feeds          │   │  - Photo Management         │
-└─────────────────────────────┘   └──────────────┬──────────────┘
-                                                 │
-                  ┌──────────────────────────────┼──────────────┐
-                  │                              │              │
-                  ▼                              ▼              ▼
-┌─────────────────────────┐   ┌─────────────────────────┐   ┌───────────┐
-│  PostgreSQL + PostGIS   │   │      ODK Central        │   │  Storage  │
-│  - Geospatial Data      │   │  - Form Submissions     │   │  - Photos │
-│  - Locations & Feeds    │   │  - Field Data           │   │           │
-└─────────────────────────┘   └─────────────────────────┘   └───────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              Main Platform Server                               │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                        Traefik (Reverse Proxy)                                  │
+│                    SSL/TLS + Load Balancing                                     │
+└───────┬───────────────┬───────────────┬───────────────┬───────────────┬─────────┘
+        │               │               │               │               │
+        ▼               ▼               ▼               ▼               ▼
+┌───────────────┐ ┌───────────┐ ┌───────────────┐ ┌───────────┐ ┌─────────────┐
+│   Frontend    │ │    API    │ │ Admin Portal  │ │ Authentik │ │  Ghost CMS  │
+│   (Vue 3)     │ │  (Go/Gin) │ │   (Vue 3)     │ │   (SSO)   │ │   (Blog)    │
+│ dayawarga.com │ │ api.daya..│ │ admin.daya... │ │ auth.daya.│ │ stories...  │
+└───────────────┘ └─────┬─────┘ └───────────────┘ └───────────┘ └─────────────┘
+                        │
+        ┌───────────────┼───────────────┐
+        │               │               │
+        ▼               ▼               ▼
+┌───────────────┐ ┌───────────────┐ ┌───────────┐
+│  PostgreSQL   │ │  ODK Central  │ │  Storage  │
+│  + PostGIS    │ │ data.daya...  │ │  (S3/R2)  │
+└───────────────┘ └───────────────┘ └───────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                            Chatbot Server (Separate)                            │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────────────────────────────────────────┐    │
+│  │                    WhatsApp Chatbot (Node.js + PM2)                     │    │
+│  │  - Relawan verification via API                                         │    │
+│  │  - LLM-powered conversation                                             │    │
+│  │  - Feed & Posko submission                                              │    │
+│  └─────────────────────────────────────────────────────────────────────────┘    │
+│                                    │                                            │
+│                                    ▼                                            │
+│                    ┌───────────────────────────────┐                            │
+│                    │      Dayawarga API            │                            │
+│                    │  - WA validation endpoint     │                            │
+│                    │  - Activity tracking          │                            │
+│                    └───────────────────────────────┘                            │
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Tech Stack
 
 ### Backend (services/api)
-- **Go 1.21+** dengan Gin framework
+- **Go 1.24+** dengan Gin framework
 - **PostgreSQL 16** dengan PostGIS untuk data geospasial
 - **GORM** sebagai ORM
 - Integrasi **ODK Central API** untuk sinkronisasi data lapangan
 - Scheduler otomatis untuk sync berkala
+- **OIDC Auth** via Authentik untuk Admin Portal
 
 ### Frontend (services/frontend)
 - **Vue 3** dengan Composition API
@@ -46,10 +77,27 @@ Sistem Informasi Geografis (GIS) berbasis collection dan layer data eksisting un
 - **Leaflet** untuk peta interaktif
 - **Vite** sebagai build tool
 
+### Admin Portal (apps/admin-portal)
+- **Vue 3** dengan Composition API + TypeScript
+- **shadcn-vue** untuk UI components
+- **OIDC authentication** via Authentik
+- Manajemen organisasi, grup, dan relawan
+- Integrasi ODK App User untuk QR code
+- WhatsApp verification untuk relawan
+
+### WhatsApp Chatbot (separate repo: dayawarga-chatbot)
+- **Node.js** dengan TypeScript
+- **Claude AI** untuk conversational UX
+- **SQLite** untuk session management
+- Integrasi dengan Dayawarga API untuk feed/posko submission
+- Relawan verification via Admin Portal
+
 ### Infrastructure
 - **Docker** & **Docker Compose** untuk containerization
 - **Traefik** sebagai reverse proxy dengan auto SSL
+- **Authentik** sebagai Identity Provider (SSO)
 - **GitHub Actions** untuk CI/CD
+- **PM2** untuk chatbot process management
 
 ## Struktur Direktori
 
@@ -57,33 +105,51 @@ Sistem Informasi Geografis (GIS) berbasis collection dan layer data eksisting un
 dayawarga-senyar-2025/
 ├── services/
 │   ├── api/                    # Backend Go API
-│   │   ├── cmd/
-│   │   │   ├── api/            # Main API server
-│   │   │   └── importer/       # CLI tool untuk import data
+│   │   ├── cmd/api/            # Main API server
 │   │   ├── internal/
+│   │   │   ├── auth/           # OIDC + RBAC middleware
 │   │   │   ├── handler/        # HTTP handlers
 │   │   │   ├── repository/     # Database queries
 │   │   │   ├── service/        # Business logic
 │   │   │   ├── model/          # Data models
+│   │   │   ├── odk/            # ODK Central API client
 │   │   │   └── scheduler/      # Background jobs
 │   │   └── Dockerfile
 │   │
-│   └── frontend/               # Vue.js Frontend
+│   └── frontend/               # Vue.js Public Frontend
 │       ├── src/
 │       │   ├── components/     # Vue components
 │       │   ├── views/          # Page views
-│       │   ├── services/       # API client
-│       │   └── composables/    # Vue composables
+│       │   └── services/       # API client
+│       └── Dockerfile
+│
+├── apps/
+│   └── admin-portal/           # Admin Portal (Vue.js)
+│       ├── src/
+│       │   ├── views/          # Dashboard, Org, Group, Relawan views
+│       │   ├── services/       # API client with OIDC
+│       │   ├── stores/         # Pinia stores (auth)
+│       │   └── components/     # shadcn-vue components
 │       └── Dockerfile
 │
 ├── infrastructure/
-│   ├── database/               # Database migrations
-│   └── traefik/                # Traefik configuration
+│   ├── database/migrations/    # SQL migrations
+│   ├── traefik/                # Traefik configuration
+│   └── authentik/              # Authentik IdP setup
 │
 ├── .github/workflows/          # CI/CD pipelines
-├── docker-compose.yml          # Production compose
+├── docker-compose.yml          # Production compose (with profiles)
 └── .env.example                # Environment template
 ```
+
+### Docker Compose Profiles
+
+| Profile | Services | Command |
+|---------|----------|---------|
+| (default) | traefik, postgres, api, frontend, ghost | `docker compose up -d` |
+| `admin-portal` | + authentik, admin-portal | `docker compose --profile admin-portal up -d` |
+| `tools` | + pgadmin | `docker compose --profile tools up -d` |
+| `docs` | + api-docs | `docker compose --profile docs up -d` |
 
 ## Fitur Utama
 
@@ -143,6 +209,8 @@ dayawarga-senyar-2025/
 
 ## API Endpoints
 
+### Public API (No Auth)
+
 | Method | Endpoint | Deskripsi |
 |--------|----------|-----------|
 | GET | `/api/v1/locations` | Daftar lokasi posko (GeoJSON) |
@@ -152,6 +220,25 @@ dayawarga-senyar-2025/
 | GET | `/api/v1/photos/:id/file` | Download foto |
 | POST | `/api/v1/sync/posko` | Trigger sync posko |
 | POST | `/api/v1/sync/photos` | Trigger sync foto |
+
+### Admin Portal API (OIDC Protected)
+
+| Method | Endpoint | Deskripsi |
+|--------|----------|-----------|
+| GET | `/api/v1/auth/me` | Current user info |
+| GET/POST/PUT/DELETE | `/api/v1/organizations/*` | Org management |
+| GET/POST/PUT/DELETE | `/api/v1/groups/*` | Group management |
+| GET/POST/PUT/DELETE | `/api/v1/relawan/*` | Relawan management |
+| POST | `/api/v1/relawan/:id/wa-verify` | Enable WA access |
+| DELETE | `/api/v1/relawan/:id/wa-verify` | Revoke WA access |
+| GET | `/api/v1/relawan/:id/wa-status` | WA verification status |
+
+### WhatsApp Chatbot API (API Key Protected)
+
+| Method | Endpoint | Deskripsi |
+|--------|----------|-----------|
+| GET | `/api/v1/wa/validate?phone=xxx` | Validate phone has WA access |
+| POST | `/api/v1/wa/activity` | Record chatbot activity |
 
 ## Branching Strategy
 
@@ -223,14 +310,18 @@ Jika Anda menemukan bug atau memiliki ide fitur baru:
 2. **Buat Issue baru** dengan deskripsi yang jelas
 3. **Gunakan label** yang sesuai (bug, enhancement, question, dll)
 
-## Next release in a week
+## Recent Updates
 
-0. ~~bug fixing: Email problem with 3rdparty service~~
-1. ~~Tambah form ODK, Sync dan tampilan untuk verifikasi Fasilitas Kesehatan (data available Tim Tanggap Darurat Kemenkes)~~
-2. Tambah form ODK, Sync dan tampilan untuk verifikasi titik jembatan (data available tim survei Kementerian PU)
-3. ~~Feed Updates bisa koordinat bebas untuk laporan relawan di mana saja~~
-4. ~~Feed Updates tampil di peta dgn foto visual situasi~~
-5. Halaman repo data terupdate (sync daily) dalam csv/json.
+### January 2026
+- ✅ **Admin Portal** - Full relawan management with OIDC auth
+- ✅ **WhatsApp Integration** - Chatbot validates relawan via Admin Portal
+- ✅ **ODK Integration** - App User creation with QR code for ODK Collect
+- ✅ **Dual-stream Sync** - Conflict resolution for ODK data
+
+### Roadmap
+- [ ] Tambah form ODK untuk verifikasi titik jembatan (data Kementerian PU)
+- [ ] Halaman repo data terupdate (sync daily) dalam csv/json
+- [ ] Analytics dashboard di Admin Portal
 
 ## Kontak Developer
 

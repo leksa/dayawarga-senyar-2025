@@ -37,11 +37,21 @@ docker compose up -d
 
 ## URLs
 
+### Local Development
+
 | Service | URL |
 |---------|-----|
 | User Interface | http://localhost:9000 |
 | Admin Interface | http://localhost:9000/if/admin/ |
 | Initial Setup | http://localhost:9000/if/flow/initial-setup/ |
+
+### Production
+
+| Service | URL |
+|---------|-----|
+| User Interface | https://auth.dayawarga.com |
+| Admin Interface | https://auth.dayawarga.com/if/admin/ |
+| OIDC Discovery | https://auth.dayawarga.com/application/o/admin-portal/.well-known/openid-configuration |
 
 ## OIDC Provider Setup
 
@@ -75,9 +85,18 @@ Setelah Authentik berjalan, buat OIDC Provider untuk Admin Portal:
 
 Setelah Provider dibuat, update frontend `.env`:
 
+**Local Development:**
 ```env
 VITE_OIDC_AUTHORITY=http://localhost:9000/application/o/admin-portal/
 VITE_OIDC_CLIENT_ID=<client_id_dari_provider>
+VITE_API_BASE_URL=http://localhost:8080/api/v1
+```
+
+**Production:**
+```env
+VITE_OIDC_AUTHORITY=https://auth.dayawarga.com/application/o/admin-portal/
+VITE_OIDC_CLIENT_ID=<client_id_dari_provider>
+VITE_API_BASE_URL=https://api.dayawarga.com/api/v1
 ```
 
 ## ODK Central OIDC Integration
@@ -92,13 +111,30 @@ Untuk mengintegrasikan ODK Central dengan Authentik:
 
 ### 2. Konfigurasi ODK Central
 
-Tambahkan environment variables ke ODK Central:
+Tambahkan environment variables ke ODK Central server:
 
 ```env
 OIDC_ENABLED=true
 OIDC_ISSUER_URL=https://auth.dayawarga.com/application/o/odk-central/
 OIDC_CLIENT_ID=<client_id>
 OIDC_CLIENT_SECRET=<client_secret>
+```
+
+## Production Deployment
+
+Authentik dijalankan sebagai bagian dari docker-compose dengan profile `admin-portal`:
+
+```bash
+# Di server production
+cd /opt/dayawarga
+docker compose --profile admin-portal up -d
+```
+
+Required environment variables di `.env`:
+```env
+AUTHENTIK_SECRET_KEY=<generate: openssl rand -base64 60>
+AUTHENTIK_POSTGRES_PASSWORD=<strong password>
+ADMIN_PORTAL_OIDC_CLIENT_ID=<from Authentik admin>
 ```
 
 ## Management Commands
