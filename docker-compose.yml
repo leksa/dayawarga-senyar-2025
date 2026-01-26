@@ -221,7 +221,7 @@ services:
       - authentik_postgres_data:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: ${AUTHENTIK_POSTGRES_USER:-authentik}
-      POSTGRES_PASSWORD: ${AUTHENTIK_POSTGRES_PASSWORD:?AUTHENTIK_POSTGRES_PASSWORD required}
+      POSTGRES_PASSWORD: ${AUTHENTIK_POSTGRES_PASSWORD:-}
       POSTGRES_DB: ${AUTHENTIK_POSTGRES_DB:-authentik}
     networks:
       - senyar-network
@@ -252,12 +252,12 @@ services:
       - admin-portal
     command: server
     environment:
-      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?AUTHENTIK_SECRET_KEY required}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:-}
       AUTHENTIK_REDIS__HOST: authentik-redis
       AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
       AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_POSTGRES_USER:-authentik}
       AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_POSTGRES_DB:-authentik}
-      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_POSTGRES_PASSWORD:?AUTHENTIK_POSTGRES_PASSWORD required}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_POSTGRES_PASSWORD:-}
     volumes:
       - authentik_media:/media
       - authentik_templates:/templates
@@ -283,12 +283,12 @@ services:
       - admin-portal
     command: worker
     environment:
-      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?AUTHENTIK_SECRET_KEY required}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:-}
       AUTHENTIK_REDIS__HOST: authentik-redis
       AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
       AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_POSTGRES_USER:-authentik}
       AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_POSTGRES_DB:-authentik}
-      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_POSTGRES_PASSWORD:?AUTHENTIK_POSTGRES_PASSWORD required}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_POSTGRES_PASSWORD:-}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - authentik_media:/media
@@ -311,7 +311,7 @@ services:
       dockerfile: Dockerfile
       args:
         - VITE_OIDC_AUTHORITY=https://auth.dayawarga.com/application/o/admin-portal/
-        - VITE_OIDC_CLIENT_ID=${ADMIN_PORTAL_OIDC_CLIENT_ID:?ADMIN_PORTAL_OIDC_CLIENT_ID required}
+        - VITE_OIDC_CLIENT_ID=${ADMIN_PORTAL_OIDC_CLIENT_ID:-}
         - VITE_API_BASE_URL=https://api.dayawarga.com/api/v1
     container_name: senyar-admin-portal
     restart: unless-stopped
