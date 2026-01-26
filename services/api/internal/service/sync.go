@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -268,13 +269,11 @@ func (s *SyncService) getEntityID(submission map[string]interface{}) string {
 	return odkID
 }
 
-// processEntitySubmission processes a submission for a specific entity
-// Uses entity_id for upsert: multiple submissions with same entity_id = one record in PostgreSQL
+// processEntitySubmission processes a submission for a specific entity.
+// Skips if PostgreSQL record (from WhatsApp) is newer than ODK submission.
 func (s *SyncService) processEntitySubmission(entityID string, submission map[string]interface{}, result *SyncResult) error {
-	// Get submission ID for logging
 	odkID, _ := submission["__id"].(string)
 
-	// Check review state - only process approved submissions
 	if system, ok := submission["__system"].(map[string]interface{}); ok {
 		if reviewState, ok := system["reviewState"].(string); ok && reviewState != "approved" {
 			log.Printf("Skipping non-approved submission %s (state: %s)", odkID, reviewState)
@@ -282,46 +281,65 @@ func (s *SyncService) processEntitySubmission(entityID string, submission map[st
 		}
 	}
 
-	// Map submission to location
 	location, err := MapSubmissionToLocation(submission)
 	if err != nil {
 		return fmt.Errorf("failed to map submission %s: %w", odkID, err)
 	}
 
-	// Store entity_id in raw_data for reference
 	if location.RawData == nil {
 		location.RawData = model.JSONB{}
 	}
 	location.RawData["_entity_id"] = entityID
-
-	// Update odk_submission_id to the latest submission ID
 	location.ODKSubmissionID = &odkID
 
-	// Check if location already exists by entity_id (entity-based upsert)
-	// This enables mode="update" submissions to update existing records
-	var existingLocation model.Location
-	err = s.db.Where("raw_data->>'_entity_id' = ?", entityID).First(&existingLocation).Error
+	submissionTime := s.extractSubmissionTime(submission)
 
-	if err == gorm.ErrRecordNotFound {
-		// Create new location
+	var existingLocation model.Location
+	found := false
+
+	err = s.db.Where("raw_data->>'_entity_id' = ?", entityID).First(&existingLocation).Error
+	if err == nil {
+		found = true
+	} else if err == gorm.ErrRecordNotFound {
+		err = s.db.Where("linked_entity_id = ?", entityID).First(&existingLocation).Error
+		if err == nil {
+			found = true
+			log.Printf("Found location via linked_entity_id: %s -> %s", entityID, existingLocation.Nama)
+		}
+	}
+
+	if !found {
+		odkSource := "odk"
+		location.Source = &odkSource
 		if err := s.createLocation(location); err != nil {
 			return fmt.Errorf("failed to create location for entity %s: %w", entityID, err)
 		}
 		result.Created++
 		log.Printf("Created location: %s (entity: %s, submission: %s)", location.Nama, entityID, odkID)
-	} else if err == nil {
-		// Update existing location with latest submission data
+	} else {
+		if existingLocation.Source != nil && *existingLocation.Source == "whatsapp" {
+			if existingLocation.UpdatedAt.After(submissionTime) {
+				log.Printf("CONFLICT: Skipping entity %s - PostgreSQL data is newer (pg: %s > odk: %s)",
+					entityID, existingLocation.UpdatedAt.Format(time.RFC3339), submissionTime.Format(time.RFC3339))
+				s.logConflict("location", &existingLocation.ID, existingLocation.Nama, entityID, odkID,
+					"timestamp_newer", existingLocation, submission, existingLocation.UpdatedAt, submissionTime)
+				result.Skipped++
+				return nil
+			}
+			log.Printf("CONFLICT: ODK submission is newer, will update WhatsApp record %s (pg: %s < odk: %s)",
+				existingLocation.Nama, existingLocation.UpdatedAt.Format(time.RFC3339), submissionTime.Format(time.RFC3339))
+			s.logConflict("location", &existingLocation.ID, existingLocation.Nama, entityID, odkID,
+				"source_mismatch", existingLocation, submission, existingLocation.UpdatedAt, submissionTime)
+		}
+
 		location.ID = existingLocation.ID
 		if err := s.updateLocation(location); err != nil {
 			return fmt.Errorf("failed to update location for entity %s: %w", entityID, err)
 		}
 		result.Updated++
 		log.Printf("Updated location: %s (entity: %s, submission: %s)", location.Nama, entityID, odkID)
-	} else {
-		return fmt.Errorf("database error checking entity %s: %w", entityID, err)
 	}
 
-	// Process photos
 	photos := ExtractPhotos(submission)
 	for _, photo := range photos {
 		if err := s.processPhoto(location.ID, photo); err != nil {
@@ -330,6 +348,45 @@ func (s *SyncService) processEntitySubmission(entityID string, submission map[st
 	}
 
 	return nil
+}
+
+func (s *SyncService) extractSubmissionTime(submission map[string]interface{}) time.Time {
+	if system, ok := submission["__system"].(map[string]interface{}); ok {
+		if dateStr, ok := system["submissionDate"].(string); ok {
+			if t, err := time.Parse(time.RFC3339, dateStr); err == nil {
+				return t
+			}
+		}
+	}
+	return time.Now()
+}
+
+func (s *SyncService) logConflict(entityType string, entityID *uuid.UUID, entityName, odkEntityID, odkSubmissionID,
+	conflictType string, existing model.Location, incoming map[string]interface{},
+	existingUpdatedAt, incomingSubmittedAt time.Time) {
+
+	existingJSON, _ := json.Marshal(existing)
+	incomingJSON, _ := json.Marshal(incoming)
+
+	conflict := map[string]interface{}{
+		"id":                    uuid.New(),
+		"entity_type":           entityType,
+		"entity_id":             entityID,
+		"entity_name":           entityName,
+		"odk_entity_id":         odkEntityID,
+		"odk_submission_id":     odkSubmissionID,
+		"conflict_type":         conflictType,
+		"existing_data":         string(existingJSON),
+		"incoming_data":         string(incomingJSON),
+		"existing_updated_at":   existingUpdatedAt,
+		"incoming_submitted_at": incomingSubmittedAt,
+		"status":                "pending",
+		"created_at":            time.Now(),
+	}
+
+	if err := s.db.Table("sync_conflicts").Create(&conflict).Error; err != nil {
+		log.Printf("Warning: failed to log conflict: %v", err)
+	}
 }
 
 // SyncSince performs incremental sync since last sync time

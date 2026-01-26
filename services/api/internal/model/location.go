@@ -30,11 +30,11 @@ func (j *JSONB) Scan(value interface{}) error {
 
 // Location represents a posko/shelter location
 type Location struct {
-	ID              uuid.UUID  `json:"id" gorm:"type:uuid;primary_key;default:uuid_generate_v4()"`
-	ODKSubmissionID *string    `json:"odk_submission_id,omitempty" gorm:"column:odk_submission_id"`
-	Nama            string     `json:"nama" gorm:"not null"`
-	Type            string     `json:"type" gorm:"default:'posko'"`
-	Status          string     `json:"status" gorm:"default:'operational'"`
+	ID              uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:uuid_generate_v4()"`
+	ODKSubmissionID *string   `json:"odk_submission_id,omitempty" gorm:"column:odk_submission_id"`
+	Nama            string    `json:"nama" gorm:"not null"`
+	Type            string    `json:"type" gorm:"default:'posko'"`
+	Status          string    `json:"status" gorm:"default:'operational'"`
 
 	// Geometry stored as WKT for simplicity, will be converted to GeoJSON in response
 	Latitude  *float64 `json:"latitude,omitempty" gorm:"-"`
@@ -51,7 +51,10 @@ type Location struct {
 	RawData       JSONB `json:"raw_data,omitempty" gorm:"type:jsonb;column:raw_data"`
 
 	// Source info
-	BaselineSumber string `json:"baseline_sumber" gorm:"column:baseline_sumber"`
+	BaselineSumber string  `json:"baseline_sumber" gorm:"column:baseline_sumber"`
+	Source         *string `json:"source,omitempty" gorm:"column:source;default:'odk'"`
+	LastModifiedBy *string `json:"last_modified_by,omitempty" gorm:"column:last_modified_by"`
+	LinkedEntityID *string `json:"linked_entity_id,omitempty" gorm:"column:linked_entity_id"`
 
 	// Metadata
 	SubmitterName *string    `json:"submitter_name,omitempty" gorm:"column:submitter_name"`
