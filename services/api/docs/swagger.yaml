@@ -1,0 +1,1035 @@
+basePath: /api/v1
+definitions:
+  dto.APIResponse:
+    properties:
+      data: {}
+      error:
+        $ref: '#/definitions/dto.ErrorInfo'
+      meta:
+        $ref: '#/definitions/dto.MetaInfo'
+      success:
+        type: boolean
+    type: object
+  dto.ErrorInfo:
+    properties:
+      code:
+        type: string
+      details: {}
+      message:
+        type: string
+    type: object
+  dto.FeedPhotoResponse:
+    properties:
+      filename:
+        type: string
+      id:
+        type: string
+      type:
+        type: string
+      url:
+        type: string
+    type: object
+  dto.FeedRegion:
+    properties:
+      desa:
+        type: string
+      id_desa:
+        type: string
+      id_kecamatan:
+        type: string
+      id_kota_kab:
+        type: string
+      id_provinsi:
+        type: string
+      kecamatan:
+        type: string
+      kota_kab:
+        type: string
+      provinsi:
+        type: string
+    type: object
+  dto.FeedResponse:
+    properties:
+      category:
+        type: string
+      content:
+        type: string
+      coordinates:
+        items:
+          type: number
+        type: array
+      faskes_id:
+        type: string
+      faskes_name:
+        type: string
+      id:
+        type: string
+      location_id:
+        type: string
+      location_name:
+        type: string
+      organization:
+        type: string
+      photos:
+        items:
+          $ref: '#/definitions/dto.FeedPhotoResponse'
+        type: array
+      region:
+        $ref: '#/definitions/dto.FeedRegion'
+      submitted_at:
+        type: string
+      type:
+        type: string
+      username:
+        type: string
+    type: object
+  dto.GeoJSONGeometry:
+    properties:
+      coordinates:
+        items:
+          type: number
+        type: array
+      type:
+        type: string
+    type: object
+  dto.LocationDetailResponse:
+    properties:
+      akses:
+        additionalProperties: true
+        type: object
+      alamat:
+        additionalProperties: true
+        type: object
+      baseline_sumber:
+        type: string
+      data_pengungsi:
+        additionalProperties: true
+        type: object
+      fasilitas:
+        additionalProperties: true
+        type: object
+      geometry:
+        $ref: '#/definitions/dto.LocationGeometry'
+      id:
+        type: string
+      identitas:
+        additionalProperties: true
+        type: object
+      komunikasi:
+        additionalProperties: true
+        type: object
+      meta:
+        $ref: '#/definitions/dto.LocationMeta'
+      odk_submission_id:
+        type: string
+      photos:
+        items:
+          $ref: '#/definitions/dto.PhotoResponse'
+        type: array
+      status:
+        type: string
+      type:
+        type: string
+    type: object
+  dto.LocationFeatureResponse:
+    properties:
+      geometry:
+        $ref: '#/definitions/dto.GeoJSONGeometry'
+      id:
+        type: string
+      properties:
+        $ref: '#/definitions/dto.LocationListProperties'
+      type:
+        type: string
+    type: object
+  dto.LocationGeometry:
+    properties:
+      accuracy:
+        type: number
+      altitude:
+        type: number
+      coordinates:
+        items:
+          type: number
+        type: array
+      type:
+        type: string
+    type: object
+  dto.LocationListProperties:
+    properties:
+      alamat_singkat:
+        type: string
+      baseline_sumber:
+        type: string
+      id_desa:
+        type: string
+      id_kecamatan:
+        type: string
+      id_kota_kab:
+        type: string
+      id_provinsi:
+        type: string
+      jumlah_balita:
+        type: integer
+      jumlah_kk:
+        type: integer
+      jumlah_laki:
+        type: integer
+      jumlah_perempuan:
+        type: integer
+      kebutuhan_air:
+        type: string
+      kebutuhan_air_liter:
+        type: integer
+      nama:
+        type: string
+      nama_desa:
+        type: string
+      nama_kecamatan:
+        type: string
+      nama_kota_kab:
+        type: string
+      nama_provinsi:
+        type: string
+      odk_submission_id:
+        type: string
+      status:
+        type: string
+      total_jiwa:
+        type: integer
+      type:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  dto.LocationListResponse:
+    properties:
+      features:
+        items:
+          $ref: '#/definitions/dto.LocationFeatureResponse'
+        type: array
+      type:
+        type: string
+    type: object
+  dto.LocationMeta:
+    properties:
+      submitted_at:
+        type: string
+      submitter:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  dto.MetaInfo:
+    properties:
+      limit:
+        type: integer
+      page:
+        type: integer
+      timestamp:
+        type: string
+      total:
+        type: integer
+    type: object
+  dto.PhotoResponse:
+    properties:
+      filename:
+        type: string
+      type:
+        type: string
+      url:
+        type: string
+    type: object
+  handler.HealthResponse:
+    properties:
+      services:
+        additionalProperties:
+          type: string
+        type: object
+      status:
+        type: string
+      timestamp:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@dayawarga.com
+    name: Daya Warga Team
+    url: https://dayawarga.com
+  description: API untuk sistem informasi Daya Warga - platform manajemen data posko
+    pengungsi, fasilitas kesehatan, dan infrastruktur.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: https://dayawarga.com/terms
+  title: Daya Warga API
+  version: "1.0"
+paths:
+  /api/v1/events:
+    get:
+      description: Opens an SSE connection for real-time sync and feed updates
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE stream
+          schema:
+            type: string
+      summary: Subscribe to real-time updates
+      tags:
+      - events
+  /api/v1/faskes:
+    get:
+      consumes:
+      - application/json
+      description: Returns a GeoJSON FeatureCollection of health facilities
+      parameters:
+      - description: Filter by jenis_faskes (rumah_sakit, puskesmas, klinik, posko_kes_darurat)
+        in: query
+        name: jenis_faskes
+        type: string
+      - description: Filter by status_faskes (operasional, non_aktif)
+        in: query
+        name: status_faskes
+        type: string
+      - description: Filter by kondisi_faskes
+        in: query
+        name: kondisi_faskes
+        type: string
+      - description: Search by name
+        in: query
+        name: search
+        type: string
+      - description: Bounding box (minLng,minLat,maxLng,maxLat)
+        in: query
+        name: bbox
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Get all faskes
+      tags:
+      - faskes
+  /api/v1/faskes/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Returns detailed information about a specific health facility
+      parameters:
+      - description: Faskes ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Get faskes by ID
+      tags:
+      - faskes
+  /api/v1/infrastruktur:
+    get:
+      consumes:
+      - application/json
+      description: Returns a GeoJSON FeatureCollection of infrastructure (roads and
+        bridges)
+      parameters:
+      - description: Filter by jenis (Jalan, Jembatan)
+        in: query
+        name: jenis
+        type: string
+      - description: Filter by status_jln (Nasional, Daerah)
+        in: query
+        name: status_jln
+        type: string
+      - description: Filter by status_akses (dapat_diakses, akses_terputus)
+        in: query
+        name: status_akses
+        type: string
+      - description: Filter by status_penanganan
+        in: query
+        name: status_penanganan
+        type: string
+      - description: Filter by kabupaten name
+        in: query
+        name: kabupaten
+        type: string
+      - description: Search by name
+        in: query
+        name: search
+        type: string
+      - description: Bounding box (minLng,minLat,maxLng,maxLat)
+        in: query
+        name: bbox
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Get all infrastruktur
+      tags:
+      - infrastruktur
+  /api/v1/infrastruktur/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Returns detailed information about a specific infrastructure
+      parameters:
+      - description: Infrastruktur ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Get infrastruktur by ID
+      tags:
+      - infrastruktur
+  /api/v1/infrastruktur/stats:
+    get:
+      consumes:
+      - application/json
+      description: Returns statistics about infrastructure (by jenis, status_akses,
+        etc.)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Get infrastruktur statistics
+      tags:
+      - infrastruktur
+  /api/v1/scheduler/mode/{mode}:
+    post:
+      consumes:
+      - application/json
+      description: Manually override the scheduler mode (idle, normal, active)
+      parameters:
+      - description: Mode (idle, normal, active)
+        in: path
+        name: mode
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Set scheduler mode
+      tags:
+      - scheduler
+  /api/v1/scheduler/mode/auto:
+    post:
+      consumes:
+      - application/json
+      description: Clears the manual mode override and returns to automatic scheduling
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Clear manual mode
+      tags:
+      - scheduler
+  /api/v1/scheduler/start:
+    post:
+      consumes:
+      - application/json
+      description: Starts the auto-sync scheduler
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Start scheduler
+      tags:
+      - scheduler
+  /api/v1/scheduler/status:
+    get:
+      consumes:
+      - application/json
+      description: Returns the current status of the auto-sync scheduler
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Get scheduler status
+      tags:
+      - scheduler
+  /api/v1/scheduler/stop:
+    post:
+      consumes:
+      - application/json
+      description: Stops the auto-sync scheduler
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Stop scheduler
+      tags:
+      - scheduler
+  /api/v1/scheduler/trigger:
+    post:
+      consumes:
+      - application/json
+      description: Manually triggers an immediate sync cycle
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Trigger sync
+      tags:
+      - scheduler
+  /api/v1/sync/faskes:
+    post:
+      consumes:
+      - application/json
+      description: Fetches all approved faskes submissions from ODK Central and syncs
+        to PostgreSQL
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Sync all faskes submissions
+      tags:
+      - sync
+  /api/v1/sync/faskes/hard:
+    post:
+      consumes:
+      - application/json
+      description: Syncs faskes data and deletes records that no longer exist in ODK
+        Central
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Hard sync faskes data
+      tags:
+      - sync
+  /api/v1/sync/faskes/status:
+    get:
+      consumes:
+      - application/json
+      description: Returns the current synchronization status for faskes form
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Get faskes sync status
+      tags:
+      - sync
+  /api/v1/sync/feed:
+    post:
+      consumes:
+      - application/json
+      description: Fetches all approved feed submissions from ODK Central and syncs
+        to PostgreSQL
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Sync all feed submissions
+      tags:
+      - sync
+  /api/v1/sync/feed/hard:
+    post:
+      consumes:
+      - application/json
+      description: Syncs feed data and deletes records that no longer exist in ODK
+        Central
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Hard sync feed data
+      tags:
+      - sync
+  /api/v1/sync/feed/status:
+    get:
+      consumes:
+      - application/json
+      description: Returns the current synchronization status for feed form
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Get feed sync status
+      tags:
+      - sync
+  /api/v1/sync/infrastruktur:
+    post:
+      consumes:
+      - application/json
+      description: Fetches all approved infrastruktur submissions from ODK Central
+        and syncs to PostgreSQL
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Sync all infrastruktur submissions
+      tags:
+      - sync
+  /api/v1/sync/infrastruktur/hard:
+    post:
+      consumes:
+      - application/json
+      description: Syncs infrastruktur data and deletes records that no longer exist
+        in ODK Central
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Hard sync infrastruktur data
+      tags:
+      - sync
+  /api/v1/sync/infrastruktur/status:
+    get:
+      consumes:
+      - application/json
+      description: Returns the current synchronization status for infrastruktur form
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Get infrastruktur sync status
+      tags:
+      - sync
+  /api/v1/sync/posko:
+    post:
+      consumes:
+      - application/json
+      description: Fetches all approved submissions from ODK Central and syncs to
+        PostgreSQL
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Sync all ODK submissions
+      tags:
+      - sync
+  /api/v1/sync/posko/hard:
+    post:
+      consumes:
+      - application/json
+      description: Syncs posko data and deletes records that no longer exist in ODK
+        Central
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Hard sync posko data
+      tags:
+      - sync
+  /api/v1/sync/status:
+    get:
+      consumes:
+      - application/json
+      description: Returns the current synchronization status for posko form
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Get sync status
+      tags:
+      - sync
+  /feeds:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve list of information feeds with optional filtering and
+        pagination
+      parameters:
+      - description: Filter by category
+        in: query
+        name: category
+        type: string
+      - description: Filter by type
+        in: query
+        name: type
+        type: string
+      - description: Filter by location ID
+        in: query
+        name: location_id
+        type: string
+      - description: Filter by location name
+        in: query
+        name: location_name
+        type: string
+      - description: Search in content
+        in: query
+        name: search
+        type: string
+      - description: Filter by province
+        in: query
+        name: provinsi
+        type: string
+      - description: Filter by regency/city
+        in: query
+        name: kota_kab
+        type: string
+      - description: Filter by district
+        in: query
+        name: kecamatan
+        type: string
+      - description: Filter by village
+        in: query
+        name: desa
+        type: string
+      - description: Get feeds after this timestamp
+        in: query
+        name: since
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 50
+        description: Items per page
+        in: query
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.FeedResponse'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Get all feeds
+      tags:
+      - feeds
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Returns the health status of the API and its dependencies
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.HealthResponse'
+      summary: Health check
+      tags:
+      - health
+  /locations:
+    get:
+      consumes:
+      - application/json
+      description: Returns GeoJSON FeatureCollection of locations with optional filtering
+        and pagination
+      parameters:
+      - default: 1
+        description: 'Page number (min: 1)'
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: 'Items per page (min: 1, max: 100)'
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by location type
+        enum:
+        - posko
+        - faskes
+        - jembatan
+        in: query
+        name: type
+        type: string
+      - description: Filter by status
+        enum:
+        - active
+        - inactive
+        in: query
+        name: status
+        type: string
+      - description: Search in location name
+        in: query
+        name: search
+        type: string
+      - description: 'Bounding box filter: minLng,minLat,maxLng,maxLat'
+        in: query
+        name: bbox
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.LocationListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Get all locations
+      tags:
+      - locations
+  /locations/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Returns detailed information about a specific location including
+        photos
+      parameters:
+      - description: Location UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.LocationDetailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Get location by ID
+      tags:
+      - locations
+  /locations/{id}/feeds:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve list of feeds for a specific location with pagination
+      parameters:
+      - description: Location ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 50
+        description: Items per page
+        in: query
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.APIResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.FeedResponse'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.APIResponse'
+      summary: Get feeds by location
+      tags:
+      - feeds
+  /ready:
+    get:
+      consumes:
+      - application/json
+      description: Returns whether the API is ready to handle requests
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Readiness check
+      tags:
+      - health
+securityDefinitions:
+  ApiKeyAuth:
+    description: Enter the token with the `Bearer ` prefix, e.g. "Bearer abcde12345"
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
