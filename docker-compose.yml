@@ -140,6 +140,8 @@ services:
       dockerfile: Dockerfile
     container_name: senyar-api-docs
     restart: unless-stopped
+    profiles:
+      - docs
     networks:
       - senyar-network
     labels:
