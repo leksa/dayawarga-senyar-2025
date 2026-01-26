@@ -28,6 +28,11 @@ func NewClient(config *ODKConfig) *Client {
 	}
 }
 
+// GetBaseURL returns the base URL of the ODK Central server
+func (c *Client) GetBaseURL() string {
+	return c.config.BaseURL
+}
+
 // authenticate gets a session token from ODK Central
 func (c *Client) authenticate() error {
 	// Check if token is still valid
