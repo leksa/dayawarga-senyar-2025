@@ -49,6 +49,17 @@ type Config struct {
 
 	// API Key for protected endpoints (sync, scheduler, etc.)
 	SyncAPIKey string
+
+	// OIDC Configuration (Admin Portal)
+	OIDCIssuerURL string
+	OIDCClientID  string
+
+	// Authentik API
+	AuthentikBaseURL  string
+	AuthentikAPIToken string
+
+	// App Base URL (for invitation links)
+	AppBaseURL string
 }
 
 func Load() *Config {
@@ -83,7 +94,10 @@ func Load() *Config {
 		S3Region:          getEnv("S3_REGION", "auto"),
 		S3PathPrefix:      getEnv("S3_PATH_PREFIX", ""),
 		// API Key
-		SyncAPIKey:        getEnv("SYNC_API_KEY", ""),
+		SyncAPIKey: getEnv("SYNC_API_KEY", ""),
+		// OIDC Configuration
+		OIDCIssuerURL: getEnv("OIDC_ISSUER_URL", ""),
+		OIDCClientID:  getEnv("OIDC_CLIENT_ID", ""),
 	}
 }
 
