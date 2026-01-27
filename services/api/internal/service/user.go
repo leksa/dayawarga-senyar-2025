@@ -31,7 +31,7 @@ func (s *UserService) FindOrCreateFromOIDC(ctx context.Context, claims *auth.OID
 		// User exists, update profile if needed and return
 		updated := s.updateUserFromClaims(user, claims)
 		if updated {
-			if err := s.repo.Update(ctx, user); err != nil {
+			if err := s.repo.Save(ctx, user); err != nil {
 				log.Printf("[UserService] Failed to update user profile: %v", err)
 			}
 		}
@@ -212,7 +212,7 @@ func (s *UserService) Update(ctx context.Context, id string, updates map[string]
 		user.IsActive = isActive
 	}
 
-	if err := s.repo.Update(ctx, user); err != nil {
+	if err := s.repo.Save(ctx, user); err != nil {
 		return nil, err
 	}
 
