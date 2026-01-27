@@ -4,242 +4,419 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/leksa/datamapper-senyar/internal/authentik"
+	"github.com/leksa/datamapper-senyar/internal/config"
+	"github.com/leksa/datamapper-senyar/internal/email"
 	"github.com/leksa/datamapper-senyar/internal/model"
 	"github.com/leksa/datamapper-senyar/internal/repository"
 )
 
-// InvitationService handles user invitation logic
 type InvitationService struct {
-	userRepo        *repository.UserRepository
-	orgRepo         *repository.OrganizationRepository
-	authentikClient *authentik.Client
-	appBaseURL      string // Base URL for invitation links (e.g., "http://localhost:5173")
+	userRepo *repository.UserRepository
+	orgRepo  *repository.OrganizationRepository
+	emailSvc *email.Service
+	config   *config.Config
 }
 
-// NewInvitationService creates a new invitation service
 func NewInvitationService(
 	userRepo *repository.UserRepository,
 	orgRepo *repository.OrganizationRepository,
-	authentikClient *authentik.Client,
-	appBaseURL string,
+	emailSvc *email.Service,
+	cfg *config.Config,
 ) *InvitationService {
 	return &InvitationService{
-		userRepo:        userRepo,
-		orgRepo:         orgRepo,
-		authentikClient: authentikClient,
-		appBaseURL:      appBaseURL,
+		userRepo: userRepo,
+		orgRepo:  orgRepo,
+		emailSvc: emailSvc,
+		config:   cfg,
 	}
 }
 
-// InviteUserInput represents input for inviting a user
 type InviteUserInput struct {
-	Email          string              `json:"email" binding:"required,email"`
-	Name           string              `json:"name" binding:"required"`
-	OrganizationID *uuid.UUID          `json:"organization_id,omitempty"`
-	OrgRole        model.OrgMemberRole `json:"org_role,omitempty"`
-	InvitedBy      uuid.UUID           `json:"invited_by"`
+	Email          string
+	Name           string
+	OrganizationID *uuid.UUID
+	OrgRole        model.OrgMemberRole
+	InvitedBy      uuid.UUID
 }
 
-// InviteResult contains the result of an invitation
-type InviteResult struct {
-	User           *model.User `json:"user"`
-	InvitationLink string      `json:"invitation_link,omitempty"`
-	IsNewUser      bool        `json:"is_new_user"`
+type InviteUserResult struct {
+	User           *model.User
+	InvitationLink string
+	IsNewUser      bool
+	EmailSent      bool
 }
 
-// InviteUser invites a user to the platform and optionally to an organization
-func (s *InvitationService) InviteUser(ctx context.Context, input InviteUserInput) (*InviteResult, error) {
-	// Check if user already exists
-	existingUser, err := s.userRepo.FindByEmail(ctx, input.Email)
-	if err != nil && err.Error() != "record not found" {
-		return nil, fmt.Errorf("failed to check existing user: %w", err)
-	}
+type SetPasswordResult struct {
+	User       *model.User
+	PIN        string
+	PINExpires time.Time
+}
 
-	if existingUser != nil {
-		// User exists - just add to organization if specified
-		if input.OrganizationID != nil {
-			if err := s.addUserToOrg(ctx, existingUser.ID, *input.OrganizationID, input.OrgRole); err != nil {
-				return nil, err
-			}
+type VerificationStatusResult struct {
+	Verified   bool
+	VerifiedAt *time.Time
+}
+
+func (s *InvitationService) InviteUser(ctx context.Context, input InviteUserInput) (*InviteUserResult, error) {
+	var org *model.Organization
+	if input.OrganizationID != nil {
+		var err error
+		org, err = s.orgRepo.FindByID(ctx, *input.OrganizationID)
+		if err != nil {
+			return nil, fmt.Errorf("organization not found")
 		}
-		return &InviteResult{
-			User:      existingUser,
-			IsNewUser: false,
-		}, nil
 	}
 
-	// Create new user in Authentik first
-	authentikUser, err := s.authentikClient.CreateUser(authentik.CreateUserInput{
-		Username: input.Email, // Use email as username
-		Name:     input.Name,
-		Email:    input.Email,
-		IsActive: true,
-		Path:     "users",
-	})
+	existingUser, err := s.userRepo.FindByEmail(ctx, input.Email)
+	if err == nil && existingUser != nil {
+		if existingUser.Status == model.UserStatusActive {
+			return nil, fmt.Errorf("user with this email already exists and is active")
+		}
+		return s.doResendInvitation(ctx, existingUser, org, input.InvitedBy)
+	}
+
+	token, err := generateToken(32)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create user in Authentik: %w", err)
+		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
 
-	// Get recovery link for password setup
-	recoveryLink, err := s.authentikClient.GetRecoveryLink(authentikUser.PK)
-	if err != nil {
-		log.Printf("Warning: failed to get recovery link: %v", err)
-		// Don't fail the whole operation, user can request password reset later
-	}
-
-	// Fix recovery link domain (Docker internal URL -> public URL)
-	if recoveryLink != "" {
-		recoveryLink = strings.Replace(recoveryLink, "host.docker.internal", "localhost", 1)
-	}
-
-	// Generate invitation token
-	invitationToken, err := generateSecureToken(32)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate invitation token: %w", err)
-	}
-
-	// Set expiration (7 days from now)
 	expiresAt := time.Now().Add(7 * 24 * time.Hour)
-	sentAt := time.Now()
+	now := time.Now()
 
-	// Determine user role based on org membership role
-	// If invited as org admin, set system role to org_admin
-	userRole := model.UserRoleMember
-	if input.OrgRole == model.OrgMemberRoleAdmin {
-		userRole = model.UserRoleOrgAdmin
+	var name *string
+	if input.Name != "" {
+		name = &input.Name
 	}
 
-	// Create user in our database
+	tempSubject := fmt.Sprintf("pending_%s", token[:16])
+
 	user := &model.User{
-		OIDCSubject:         authentikUser.UID,
+		ID:                  uuid.New(),
+		OIDCSubject:         tempSubject,
 		Email:               input.Email,
-		Name:                &input.Name,
-		Role:                userRole,
+		Name:                name,
+		Role:                model.UserRoleMember,
 		Status:              model.UserStatusPendingInvitation,
-		IsActive:            true,
-		InvitationToken:     &invitationToken,
+		IsActive:            false,
+		InvitationToken:     &token,
 		InvitationExpiresAt: &expiresAt,
-		InvitationSentAt:    &sentAt,
+		InvitationSentAt:    &now,
 	}
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
-		// Rollback: delete user from Authentik
-		_ = s.authentikClient.DeleteUser(authentikUser.PK)
-		return nil, fmt.Errorf("failed to create user in database: %w", err)
+		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
-	// Add to organization if specified
 	if input.OrganizationID != nil {
-		if err := s.addUserToOrg(ctx, user.ID, *input.OrganizationID, input.OrgRole); err != nil {
-			log.Printf("Warning: failed to add user to organization: %v", err)
+		role := input.OrgRole
+		if role == "" {
+			role = model.OrgMemberRoleMember
+		}
+		member := &model.OrganizationMember{
+			ID:             uuid.New(),
+			OrganizationID: *input.OrganizationID,
+			UserID:         user.ID,
+			Role:           role,
+		}
+		if err := s.orgRepo.AddMember(ctx, member); err != nil {
+			return nil, fmt.Errorf("failed to add user to organization: %w", err)
 		}
 	}
 
-	return &InviteResult{
+	inviteLink := fmt.Sprintf("%s/invite/accept?token=%s", s.config.AppBaseURL, token)
+
+	emailSent := false
+	if s.emailSvc != nil && s.emailSvc.IsConfigured() && org != nil {
+		inviter, _ := s.userRepo.FindByID(ctx, input.InvitedBy)
+		inviterName := ""
+		if inviter != nil && inviter.Name != nil {
+			inviterName = *inviter.Name
+		}
+
+		roleName := "Anggota"
+		if input.OrgRole == model.OrgMemberRoleAdmin {
+			roleName = "Admin Organisasi"
+		}
+
+		err := s.emailSvc.SendInvitation(input.Email, email.InvitationData{
+			RecipientName: input.Name,
+			InviterName:   inviterName,
+			OrgName:       org.Name,
+			Role:          roleName,
+			InviteLink:    inviteLink,
+			ExpiresIn:     "7 hari",
+		})
+		if err != nil {
+			fmt.Printf("Warning: failed to send invitation email: %v\n", err)
+		} else {
+			emailSent = true
+		}
+	}
+
+	return &InviteUserResult{
 		User:           user,
-		InvitationLink: recoveryLink,
+		InvitationLink: inviteLink,
 		IsNewUser:      true,
+		EmailSent:      emailSent,
 	}, nil
 }
 
-// ActivateUser activates a user after they set their password
-func (s *InvitationService) ActivateUser(ctx context.Context, userID uuid.UUID) error {
-	user, err := s.userRepo.FindByID(ctx, userID)
+func (s *InvitationService) doResendInvitation(ctx context.Context, user *model.User, org *model.Organization, inviterID uuid.UUID) (*InviteUserResult, error) {
+	token, err := generateToken(32)
 	if err != nil {
-		return fmt.Errorf("user not found: %w", err)
+		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
 
-	if user.Status != model.UserStatusPendingInvitation {
-		return errors.New("user is not pending invitation")
+	expiresAt := time.Now().Add(7 * 24 * time.Hour)
+	now := time.Now()
+
+	updates := map[string]interface{}{
+		"invitation_token":      token,
+		"invitation_expires_at": expiresAt,
+		"invitation_sent_at":    now,
 	}
 
-	// Clear invitation fields and set status to active
-	user.Status = model.UserStatusActive
-	user.InvitationToken = nil
-	user.InvitationExpiresAt = nil
+	updatedUser, err := s.userRepo.Update(ctx, user.ID.String(), updates)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update invitation: %w", err)
+	}
 
-	return s.userRepo.Update(ctx, user)
+	inviteLink := fmt.Sprintf("%s/invite/accept?token=%s", s.config.AppBaseURL, token)
+
+	emailSent := false
+	if s.emailSvc != nil && s.emailSvc.IsConfigured() && org != nil {
+		inviter, _ := s.userRepo.FindByID(ctx, inviterID)
+		inviterName := ""
+		if inviter != nil && inviter.Name != nil {
+			inviterName = *inviter.Name
+		}
+
+		userName := ""
+		if user.Name != nil {
+			userName = *user.Name
+		}
+
+		roleName := "Anggota"
+		if user.Role == model.UserRoleOrgAdmin {
+			roleName = "Admin Organisasi"
+		}
+
+		err := s.emailSvc.SendInvitation(user.Email, email.InvitationData{
+			RecipientName: userName,
+			InviterName:   inviterName,
+			OrgName:       org.Name,
+			Role:          roleName,
+			InviteLink:    inviteLink,
+			ExpiresIn:     "7 hari",
+		})
+		if err != nil {
+			fmt.Printf("Warning: failed to send invitation email: %v\n", err)
+		} else {
+			emailSent = true
+		}
+	}
+
+	return &InviteUserResult{
+		User:           updatedUser,
+		InvitationLink: inviteLink,
+		IsNewUser:      false,
+		EmailSent:      emailSent,
+	}, nil
 }
 
-// ResendInvitation resends an invitation email to a pending user
-func (s *InvitationService) ResendInvitation(ctx context.Context, userID uuid.UUID) (*InviteResult, error) {
+func (s *InvitationService) ResendInvitation(ctx context.Context, userID uuid.UUID) (*InviteUserResult, error) {
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("user not found: %w", err)
+		return nil, fmt.Errorf("user not found")
 	}
 
 	if user.Status != model.UserStatusPendingInvitation {
-		return nil, errors.New("user is not pending invitation")
+		return nil, fmt.Errorf("user is not pending invitation")
 	}
 
-	// Get Authentik user by email
-	authentikUser, err := s.authentikClient.GetUserByEmail(user.Email)
+	userWithOrgs, err := s.userRepo.FindWithOrganizations(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get Authentik user: %w", err)
-	}
-	if authentikUser == nil {
-		return nil, errors.New("user not found in Authentik")
+		return nil, fmt.Errorf("failed to get user organizations: %w", err)
 	}
 
-	// Get new recovery link
-	recoveryLink, err := s.authentikClient.GetRecoveryLink(authentikUser.PK)
+	var org *model.Organization
+	if len(userWithOrgs.OrganizationMemberships) > 0 {
+		org = userWithOrgs.OrganizationMemberships[0].Organization
+	}
+
+	return s.doResendInvitation(ctx, user, org, uuid.Nil)
+}
+
+func (s *InvitationService) ValidateToken(ctx context.Context, token string) (*model.User, error) {
+	user, err := s.userRepo.FindByInvitationToken(ctx, token)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get recovery link: %w", err)
+		return nil, fmt.Errorf("invalid or expired invitation token")
 	}
 
-	// Fix recovery link domain (Docker internal URL -> public URL)
-	if recoveryLink != "" {
-		recoveryLink = strings.Replace(recoveryLink, "host.docker.internal", "localhost", 1)
+	if user.IsInvitationExpired() {
+		return nil, fmt.Errorf("invitation has expired")
 	}
 
-	// Update invitation timestamps
-	newToken, _ := generateSecureToken(32)
-	expiresAt := time.Now().Add(7 * 24 * time.Hour)
-	sentAt := time.Now()
+	return user, nil
+}
 
-	user.InvitationToken = &newToken
-	user.InvitationExpiresAt = &expiresAt
-	user.InvitationSentAt = &sentAt
+func (s *InvitationService) SetPassword(ctx context.Context, token string, password string) (*SetPasswordResult, error) {
+	user, err := s.ValidateToken(ctx, token)
+	if err != nil {
+		return nil, err
+	}
 
-	if err := s.userRepo.Update(ctx, user); err != nil {
+	pin := generatePIN()
+	pinExpires := time.Now().Add(15 * time.Minute)
+
+	updates := map[string]interface{}{
+		"status":                      model.UserStatusPendingVerification,
+		"verification_pin":            pin,
+		"verification_pin_expires_at": pinExpires,
+		"invitation_token":            nil,
+		"invitation_expires_at":       nil,
+	}
+
+	updatedUser, err := s.userRepo.Update(ctx, user.ID.String(), updates)
+	if err != nil {
 		return nil, fmt.Errorf("failed to update user: %w", err)
 	}
 
-	return &InviteResult{
-		User:           user,
-		InvitationLink: recoveryLink,
-		IsNewUser:      false,
+	return &SetPasswordResult{
+		User:       updatedUser,
+		PIN:        pin,
+		PINExpires: pinExpires,
 	}, nil
 }
 
-// addUserToOrg adds a user to an organization with the specified role
-func (s *InvitationService) addUserToOrg(ctx context.Context, userID, orgID uuid.UUID, role model.OrgMemberRole) error {
-	if role == "" {
-		role = model.OrgMemberRoleAdmin // Default to admin for org leader invite
+func (s *InvitationService) VerifyPIN(ctx context.Context, pin string, phone string) (*model.User, error) {
+	user, err := s.userRepo.FindByVerificationPIN(ctx, pin)
+	if err != nil {
+		return nil, fmt.Errorf("invalid PIN")
 	}
 
-	member := &model.OrganizationMember{
-		OrganizationID: orgID,
-		UserID:         userID,
-		Role:           role,
+	if user.IsPINExpired() {
+		return nil, fmt.Errorf("PIN has expired")
 	}
 
-	return s.orgRepo.AddMember(ctx, member)
+	if user.Status != model.UserStatusPendingVerification {
+		return nil, fmt.Errorf("user is not pending verification")
+	}
+
+	now := time.Now()
+	updates := map[string]interface{}{
+		"status":                      model.UserStatusActive,
+		"is_active":                   true,
+		"verification_pin":            nil,
+		"verification_pin_expires_at": nil,
+		"verification_phone":          phone,
+		"verified_at":                 now,
+	}
+
+	updatedUser, err := s.userRepo.Update(ctx, user.ID.String(), updates)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify user: %w", err)
+	}
+
+	return updatedUser, nil
 }
 
-// generateSecureToken generates a cryptographically secure random token
-func generateSecureToken(length int) (string, error) {
+func (s *InvitationService) GetVerificationStatus(ctx context.Context, userID uuid.UUID) (*VerificationStatusResult, error) {
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	return &VerificationStatusResult{
+		Verified:   user.Status == model.UserStatusActive && user.VerifiedAt != nil,
+		VerifiedAt: user.VerifiedAt,
+	}, nil
+}
+
+func (s *InvitationService) RegeneratePIN(ctx context.Context, userID uuid.UUID) (*SetPasswordResult, error) {
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	if user.Status != model.UserStatusPendingVerification {
+		return nil, fmt.Errorf("user is not pending verification")
+	}
+
+	pin := generatePIN()
+	pinExpires := time.Now().Add(15 * time.Minute)
+
+	updates := map[string]interface{}{
+		"verification_pin":            pin,
+		"verification_pin_expires_at": pinExpires,
+	}
+
+	updatedUser, err := s.userRepo.Update(ctx, user.ID.String(), updates)
+	if err != nil {
+		return nil, fmt.Errorf("failed to regenerate PIN: %w", err)
+	}
+
+	return &SetPasswordResult{
+		User:       updatedUser,
+		PIN:        pin,
+		PINExpires: pinExpires,
+	}, nil
+}
+
+func (s *InvitationService) AcceptInvitation(ctx context.Context, token string, oidcSubject string) (*model.User, error) {
+	user, err := s.ValidateToken(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+
+	updates := map[string]interface{}{
+		"oidc_subject":          oidcSubject,
+		"status":                model.UserStatusActive,
+		"is_active":             true,
+		"invitation_token":      nil,
+		"invitation_expires_at": nil,
+	}
+
+	updatedUser, err := s.userRepo.Update(ctx, user.ID.String(), updates)
+	if err != nil {
+		return nil, fmt.Errorf("failed to accept invitation: %w", err)
+	}
+
+	return updatedUser, nil
+}
+
+func (s *InvitationService) CancelInvitation(ctx context.Context, userID string) error {
+	user, err := s.userRepo.FindByIDStr(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("user not found")
+	}
+
+	if user.Status != model.UserStatusPendingInvitation {
+		return fmt.Errorf("user is not pending invitation")
+	}
+
+	return s.userRepo.Delete(ctx, userID)
+}
+
+func generateToken(length int) (string, error) {
 	bytes := make([]byte, length)
 	if _, err := rand.Read(bytes); err != nil {
 		return "", err
 	}
 	return hex.EncodeToString(bytes), nil
+}
+
+func generatePIN() string {
+	const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+	result := make([]byte, 6)
+	rand.Read(result)
+	for i := range result {
+		result[i] = chars[int(result[i])%len(chars)]
+	}
+	return strings.ToUpper(string(result))
 }

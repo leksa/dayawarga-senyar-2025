@@ -54,8 +54,20 @@ func (r *UserRepository) Create(ctx context.Context, user *model.User) error {
 	return r.db.WithContext(ctx).Create(user).Error
 }
 
-// Update updates an existing user
-func (r *UserRepository) Update(ctx context.Context, user *model.User) error {
+func (r *UserRepository) Update(ctx context.Context, id string, updates map[string]interface{}) (*model.User, error) {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := r.db.WithContext(ctx).Model(&model.User{}).Where("id = ?", uid).Updates(updates).Error; err != nil {
+		return nil, err
+	}
+
+	return r.FindByID(ctx, uid)
+}
+
+func (r *UserRepository) Save(ctx context.Context, user *model.User) error {
 	return r.db.WithContext(ctx).Save(user).Error
 }
 
@@ -89,7 +101,40 @@ type UserFilter struct {
 	Limit    int
 }
 
-// FindAll finds all users with optional filters
+func (r *UserRepository) FindByIDStr(ctx context.Context, id string) (*model.User, error) {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, err
+	}
+	return r.FindByID(ctx, uid)
+}
+
+func (r *UserRepository) FindByInvitationToken(ctx context.Context, token string) (*model.User, error) {
+	var user model.User
+	err := r.db.WithContext(ctx).Where("invitation_token = ?", token).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *UserRepository) Delete(ctx context.Context, id string) error {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Delete(&model.User{}, "id = ?", uid).Error
+}
+
+func (r *UserRepository) FindByVerificationPIN(ctx context.Context, pin string) (*model.User, error) {
+	var user model.User
+	err := r.db.WithContext(ctx).Where("verification_pin = ?", pin).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 func (r *UserRepository) FindAll(ctx context.Context, filter UserFilter) ([]model.User, int64, error) {
 	var users []model.User
 	var total int64

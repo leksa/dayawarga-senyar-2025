@@ -10,13 +10,11 @@ import (
 	"github.com/leksa/datamapper-senyar/internal/service"
 )
 
-// InvitationHandler handles HTTP requests for user invitations
 type InvitationHandler struct {
 	invitationService *service.InvitationService
 	orgService        *service.OrganizationService
 }
 
-// NewInvitationHandler creates a new invitation handler
 func NewInvitationHandler(invitationService *service.InvitationService, orgService *service.OrganizationService) *InvitationHandler {
 	return &InvitationHandler{
 		invitationService: invitationService,
@@ -24,9 +22,7 @@ func NewInvitationHandler(invitationService *service.InvitationService, orgServi
 	}
 }
 
-// CreateOrganizationWithAdminInput represents input for creating org with admin
 type CreateOrganizationWithAdminInput struct {
-	// Organization fields
 	Name         string  `json:"name" binding:"required"`
 	Slug         string  `json:"slug"`
 	Description  *string `json:"description"`
@@ -35,14 +31,10 @@ type CreateOrganizationWithAdminInput struct {
 	Address      *string `json:"address"`
 	LogoURL      *string `json:"logo_url"`
 	ODKProjectID *int    `json:"odk_project_id"`
-
-	// Admin invitation (required)
-	AdminEmail string `json:"admin_email" binding:"required,email"`
-	AdminName  string `json:"admin_name" binding:"required"`
+	AdminEmail   string  `json:"admin_email" binding:"required,email"`
+	AdminName    string  `json:"admin_name" binding:"required"`
 }
 
-// CreateOrganizationWithAdmin creates an organization and invites an admin
-// POST /api/v1/organizations/with-admin
 func (h *InvitationHandler) CreateOrganizationWithAdmin(c *gin.Context) {
 	var input CreateOrganizationWithAdminInput
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -53,7 +45,6 @@ func (h *InvitationHandler) CreateOrganizationWithAdmin(c *gin.Context) {
 		return
 	}
 
-	// Get current user from context (set by auth middleware)
 	user := auth.GetUser(c)
 	if user == nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
@@ -63,7 +54,6 @@ func (h *InvitationHandler) CreateOrganizationWithAdmin(c *gin.Context) {
 		return
 	}
 
-	// Create organization first
 	orgInput := service.CreateOrganizationInput{
 		Name:         input.Name,
 		Slug:         input.Slug,
@@ -88,7 +78,6 @@ func (h *InvitationHandler) CreateOrganizationWithAdmin(c *gin.Context) {
 		return
 	}
 
-	// Now invite the admin
 	inviteInput := service.InviteUserInput{
 		Email:          input.AdminEmail,
 		Name:           input.AdminName,
@@ -99,8 +88,6 @@ func (h *InvitationHandler) CreateOrganizationWithAdmin(c *gin.Context) {
 
 	inviteResult, err := h.invitationService.InviteUser(c.Request.Context(), inviteInput)
 	if err != nil {
-		// Log the error but don't fail the whole operation
-		// Organization is created, admin invite failed
 		c.JSON(http.StatusCreated, gin.H{
 			"success": true,
 			"data": gin.H{
@@ -123,7 +110,6 @@ func (h *InvitationHandler) CreateOrganizationWithAdmin(c *gin.Context) {
 	})
 }
 
-// InviteUserInput represents input for inviting a user
 type InviteUserInput struct {
 	Email          string  `json:"email" binding:"required,email"`
 	Name           string  `json:"name" binding:"required"`
@@ -131,8 +117,6 @@ type InviteUserInput struct {
 	OrgRole        string  `json:"org_role,omitempty"`
 }
 
-// InviteUser invites a new user to the platform
-// POST /api/v1/invitations
 func (h *InvitationHandler) InviteUser(c *gin.Context) {
 	var input InviteUserInput
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -143,7 +127,6 @@ func (h *InvitationHandler) InviteUser(c *gin.Context) {
 		return
 	}
 
-	// Get current user from context
 	user := auth.GetUser(c)
 	if user == nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
@@ -153,7 +136,6 @@ func (h *InvitationHandler) InviteUser(c *gin.Context) {
 		return
 	}
 
-	// Parse organization ID if provided
 	var orgID *uuid.UUID
 	if input.OrganizationID != nil && *input.OrganizationID != "" {
 		parsed, err := uuid.Parse(*input.OrganizationID)
@@ -167,7 +149,6 @@ func (h *InvitationHandler) InviteUser(c *gin.Context) {
 		orgID = &parsed
 	}
 
-	// Default role
 	orgRole := model.OrgMemberRoleMember
 	if input.OrgRole == "admin" {
 		orgRole = model.OrgMemberRoleAdmin
@@ -200,8 +181,6 @@ func (h *InvitationHandler) InviteUser(c *gin.Context) {
 	})
 }
 
-// ResendInvitation resends an invitation to a pending user
-// POST /api/v1/invitations/:user_id/resend
 func (h *InvitationHandler) ResendInvitation(c *gin.Context) {
 	userIDStr := c.Param("user_id")
 	userID, err := uuid.Parse(userIDStr)
@@ -233,5 +212,227 @@ func (h *InvitationHandler) ResendInvitation(c *gin.Context) {
 			"invitation_link": result.InvitationLink,
 		},
 		"message": "Invitation resent successfully",
+	})
+}
+
+func (h *InvitationHandler) CancelInvitation(c *gin.Context) {
+	userID := c.Param("user_id")
+	if _, err := uuid.Parse(userID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid user ID format",
+		})
+		return
+	}
+
+	if err := h.invitationService.CancelInvitation(c.Request.Context(), userID); err != nil {
+		status := http.StatusInternalServerError
+		if err.Error() == "user not found" || err.Error() == "user is not pending invitation" {
+			status = http.StatusBadRequest
+		}
+		c.JSON(status, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Invitation cancelled successfully",
+	})
+}
+
+func (h *InvitationHandler) ValidateToken(c *gin.Context) {
+	token := c.Query("token")
+	if token == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Token is required",
+		})
+		return
+	}
+
+	user, err := h.invitationService.ValidateToken(c.Request.Context(), token)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"email": user.Email,
+			"name":  user.Name,
+			"role":  user.Role,
+		},
+	})
+}
+
+type AcceptInvitationInput struct {
+	Token       string `json:"token" binding:"required"`
+	OIDCSubject string `json:"oidc_subject" binding:"required"`
+}
+
+func (h *InvitationHandler) AcceptInvitation(c *gin.Context) {
+	var input AcceptInvitationInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid request body: " + err.Error(),
+		})
+		return
+	}
+
+	user, err := h.invitationService.AcceptInvitation(c.Request.Context(), input.Token, input.OIDCSubject)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"id":     user.ID.String(),
+			"email":  user.Email,
+			"name":   user.Name,
+			"role":   user.Role,
+			"status": user.Status,
+		},
+	})
+}
+
+type SetPasswordInput struct {
+	Token    string `json:"token" binding:"required"`
+	Password string `json:"password" binding:"required,min=8"`
+}
+
+func (h *InvitationHandler) SetPassword(c *gin.Context) {
+	var input SetPasswordInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid request body: " + err.Error(),
+		})
+		return
+	}
+
+	result, err := h.invitationService.SetPassword(c.Request.Context(), input.Token, input.Password)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"user_id":     result.User.ID.String(),
+			"email":       result.User.Email,
+			"pin":         result.PIN,
+			"pin_expires": result.PINExpires,
+		},
+	})
+}
+
+func (h *InvitationHandler) GetVerificationStatus(c *gin.Context) {
+	userIDStr := c.Param("user_id")
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid user ID format",
+		})
+		return
+	}
+
+	result, err := h.invitationService.GetVerificationStatus(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"verified":    result.Verified,
+			"verified_at": result.VerifiedAt,
+		},
+	})
+}
+
+func (h *InvitationHandler) RegeneratePIN(c *gin.Context) {
+	userIDStr := c.Param("user_id")
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid user ID format",
+		})
+		return
+	}
+
+	result, err := h.invitationService.RegeneratePIN(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"pin":         result.PIN,
+			"pin_expires": result.PINExpires,
+		},
+	})
+}
+
+type VerifyPINInput struct {
+	PIN   string `json:"pin" binding:"required,len=6"`
+	Phone string `json:"phone" binding:"required"`
+}
+
+func (h *InvitationHandler) VerifyPIN(c *gin.Context) {
+	var input VerifyPINInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid request body: " + err.Error(),
+		})
+		return
+	}
+
+	user, err := h.invitationService.VerifyPIN(c.Request.Context(), input.PIN, input.Phone)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"user_id": user.ID.String(),
+			"email":   user.Email,
+			"name":    user.Name,
+			"status":  user.Status,
+		},
+		"message": "User verified successfully",
 	})
 }

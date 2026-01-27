@@ -33,6 +33,7 @@ import (
 	_ "github.com/leksa/datamapper-senyar/docs" // Swagger docs
 	"github.com/leksa/datamapper-senyar/internal/auth"
 	"github.com/leksa/datamapper-senyar/internal/config"
+	"github.com/leksa/datamapper-senyar/internal/email"
 	"github.com/leksa/datamapper-senyar/internal/handler"
 	"github.com/leksa/datamapper-senyar/internal/middleware"
 	"github.com/leksa/datamapper-senyar/internal/odk"
@@ -158,6 +159,10 @@ func main() {
 	userODKService := service.NewUserODKService(userRepo, odkPoskoClient, db)
 	orgODKService := service.NewOrganizationODKService(orgRepo, userRepo, odkPoskoClient, db)
 
+	// Email and Invitation services
+	emailService := email.NewService(cfg)
+	invitationService := service.NewInvitationService(userRepo, orgRepo, emailService, cfg)
+
 	// Initialize photo service (with optional S3 storage)
 	var photoService *service.PhotoService
 	if cfg.S3Enabled {
@@ -216,6 +221,7 @@ func main() {
 	odkHandler := handler.NewODKHandler(odkProjectService, projectRequestService)
 	relawanODKHandler := handler.NewRelawanODKHandler(relawanODKService)
 	orgODKHandler := handler.NewOrganizationODKHandler(orgODKService)
+	invitationHandler := handler.NewInvitationHandler(invitationService, orgService)
 
 	// Initialize OIDC validator for Admin Portal (if configured)
 	var oidcValidator *auth.OIDCValidator
@@ -442,31 +448,46 @@ func main() {
 					odk.GET("/projects/:id/forms", odkHandler.ListProjectForms)
 				}
 
+				// Invitations - require org_admin or super_admin role
+				invitations := admin.Group("/invitations")
+				invitations.Use(auth.RequireOrgAdminOrAbove())
+				{
+					invitations.POST("", invitationHandler.InviteUser)
+					invitations.POST("/:user_id/resend", invitationHandler.ResendInvitation)
+					invitations.DELETE("/:user_id", invitationHandler.CancelInvitation)
+				}
+
 				// Admin-only endpoints
 				adminOnly := admin.Group("/admin")
 				adminOnly.Use(auth.RequireSuperAdmin())
 				{
-					// User management (super_admin only)
 					adminOnly.GET("/users", userHandler.List)
 					adminOnly.GET("/users/:id", userHandler.Get)
 					adminOnly.PUT("/users/:id", userHandler.Update)
 
-					// User ODK role management (super_admin only)
 					adminOnly.GET("/users/:id/odk-roles", userODKHandler.GetUserProjectAssignments)
 					adminOnly.POST("/users/:id/odk-roles", userODKHandler.AssignProjectRole)
 					adminOnly.DELETE("/users/:id/odk-roles/:projectId", userODKHandler.RemoveProjectRole)
 					adminOnly.GET("/users/:id/odk-qr-code", userODKHandler.GetUserQRCode)
 
-					// ODK project assignments (super_admin only)
 					adminOnly.GET("/odk-projects/:id/assignments", userODKHandler.GetProjectAssignments)
 
-					// Project request management
 					adminOnly.GET("/project-requests", odkHandler.ListProjectRequests)
 					adminOnly.GET("/project-requests/:id", odkHandler.GetProjectRequest)
 					adminOnly.PUT("/project-requests/:id", odkHandler.ReviewProjectRequest)
+
+					invitations.POST("/organizations/with-admin", invitationHandler.CreateOrganizationWithAdmin)
 				}
 			}
 		}
+
+		// Public invitation endpoints (no auth required)
+		v1.GET("/invitations/validate", invitationHandler.ValidateToken)
+		v1.POST("/invitations/accept", invitationHandler.AcceptInvitation)
+		v1.POST("/invitations/set-password", invitationHandler.SetPassword)
+		v1.GET("/invitations/verification-status/:user_id", invitationHandler.GetVerificationStatus)
+		v1.POST("/invitations/regenerate-pin/:user_id", invitationHandler.RegeneratePIN)
+		v1.POST("/invitations/verify-pin", invitationHandler.VerifyPIN)
 	}
 
 	// Graceful shutdown

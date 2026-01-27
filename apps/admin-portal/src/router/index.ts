@@ -69,6 +69,18 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/invite/accept',
+    name: 'invite-accept',
+    component: () => import('@/views/InviteAcceptView.vue'),
+    meta: { requiresAuth: false, layout: 'blank' },
+  },
+  {
+    path: '/invite/verify',
+    name: 'invite-verify',
+    component: () => import('@/views/InviteVerifyView.vue'),
+    meta: { requiresAuth: false, layout: 'blank' },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/views/NotFoundView.vue'),

@@ -19,9 +19,10 @@ const (
 type UserStatus string
 
 const (
-	UserStatusPendingInvitation UserStatus = "pending_invitation"
-	UserStatusActive            UserStatus = "active"
-	UserStatusSuspended         UserStatus = "suspended"
+	UserStatusPendingInvitation   UserStatus = "pending_invitation"
+	UserStatusPendingVerification UserStatus = "pending_verification"
+	UserStatusActive              UserStatus = "active"
+	UserStatusSuspended           UserStatus = "suspended"
 )
 
 // User represents an admin portal user (from Authentik OIDC)
@@ -56,6 +57,12 @@ type User struct {
 	InvitationToken     *string    `json:"-" gorm:"column:invitation_token"`
 	InvitationExpiresAt *time.Time `json:"-" gorm:"column:invitation_expires_at"`
 	InvitationSentAt    *time.Time `json:"invitation_sent_at,omitempty" gorm:"column:invitation_sent_at"`
+
+	// WhatsApp PIN verification
+	VerificationPIN          *string    `json:"-" gorm:"column:verification_pin"`
+	VerificationPINExpiresAt *time.Time `json:"-" gorm:"column:verification_pin_expires_at"`
+	VerificationPhone        *string    `json:"verification_phone,omitempty" gorm:"column:verification_phone"`
+	VerifiedAt               *time.Time `json:"verified_at,omitempty" gorm:"column:verified_at"`
 
 	// Timestamps
 	CreatedAt time.Time `json:"created_at" gorm:"column:created_at"`
@@ -99,10 +106,24 @@ func (u *User) IsPendingInvitation() bool {
 	return u.Status == UserStatusPendingInvitation
 }
 
-// IsInvitationExpired checks if invitation has expired
 func (u *User) IsInvitationExpired() bool {
 	if u.InvitationExpiresAt == nil {
 		return true
 	}
 	return time.Now().After(*u.InvitationExpiresAt)
+}
+
+func (u *User) IsPINExpired() bool {
+	if u.VerificationPINExpiresAt == nil {
+		return true
+	}
+	return time.Now().After(*u.VerificationPINExpiresAt)
+}
+
+func (u *User) IsPendingVerification() bool {
+	return u.Status == UserStatusPendingVerification
+}
+
+func (u *User) IsVerified() bool {
+	return u.VerifiedAt != nil
 }
