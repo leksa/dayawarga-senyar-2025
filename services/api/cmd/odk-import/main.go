@@ -20,22 +20,25 @@ import (
 
 // ImportResult tracks import statistics
 type ImportResult struct {
-	WebUsersFound    int
-	WebUsersCreated  int
-	WebUsersUpdated  int
-	WebUsersSkipped  int
-	AppUsersFound    int
-	AppUsersCreated  int
-	AppUsersUpdated  int
-	AppUsersSkipped  int
-	Errors           []string
+	WebUsersFound      int
+	WebUsersCreated    int
+	WebUsersUpdated    int
+	WebUsersSkipped    int
+	AppUsersFound      int
+	AppUsersCreated    int
+	AppUsersUpdated    int
+	AppUsersSkipped    int
+	ODKAppUsersCreated int // App users created in ODK for QR codes
+	ODKAppUsersFailed  int
+	Errors             []string
 }
 
 func main() {
-	// Parse command line flags
 	importWebUsers := flag.Bool("web-users", false, "Import web users (email login users)")
 	importAppUsers := flag.Bool("app-users", false, "Import app users (ODK Collect field keys)")
 	importAll := flag.Bool("all", false, "Import all users (web + app)")
+	createODKAppUsers := flag.Bool("create-odk-app-users", false, "Create ODK App Users for all imported users (enables QR codes)")
+	backfillAppUsers := flag.Bool("backfill-app-users", false, "Create ODK App Users for existing users without one")
 	dryRun := flag.Bool("dry-run", false, "Show what would be imported without making changes")
 	verbose := flag.Bool("verbose", false, "Enable verbose logging")
 	listOnly := flag.Bool("list", false, "List users from ODK Central without importing")
@@ -70,6 +73,12 @@ Examples:
   # Verbose output
   odk-import -all -verbose
 
+  # Import and create ODK App Users for QR codes
+  odk-import -web-users -create-odk-app-users
+
+  # Backfill existing users with ODK App Users
+  odk-import -backfill-app-users
+
 Environment Variables:
   DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
   ODK_BASE_URL, ODK_EMAIL, ODK_PASSWORD, ODK_PROJECT_ID
@@ -78,7 +87,7 @@ Environment Variables:
 
 	flag.Parse()
 
-	if !*importWebUsers && !*importAppUsers && !*importAll && !*listOnly {
+	if !*importWebUsers && !*importAppUsers && !*importAll && !*listOnly && !*backfillAppUsers {
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -130,7 +139,7 @@ Environment Variables:
 	result := &ImportResult{}
 
 	if *importAll || *importWebUsers {
-		if err := importWebUsersFromODK(db, odkClient, cfg.ODKProjectID, *dryRun, *verbose, result); err != nil {
+		if err := importWebUsersFromODK(db, odkClient, cfg.ODKProjectID, *dryRun, *verbose, *createODKAppUsers, result); err != nil {
 			log.Printf("Error importing web users: %v", err)
 		}
 	}
@@ -138,6 +147,12 @@ Environment Variables:
 	if *importAll || *importAppUsers {
 		if err := importAppUsersFromODK(db, odkClient, cfg.ODKProjectID, *dryRun, *verbose, result); err != nil {
 			log.Printf("Error importing app users: %v", err)
+		}
+	}
+
+	if *backfillAppUsers {
+		if err := backfillODKAppUsers(db, odkClient, cfg.ODKProjectID, *dryRun, *verbose, result); err != nil {
+			log.Printf("Error backfilling ODK app users: %v", err)
 		}
 	}
 
@@ -151,6 +166,10 @@ Environment Variables:
 		result.WebUsersFound, result.WebUsersCreated, result.WebUsersUpdated, result.WebUsersSkipped)
 	log.Printf("App Users - Found: %d, Created: %d, Updated: %d, Skipped: %d",
 		result.AppUsersFound, result.AppUsersCreated, result.AppUsersUpdated, result.AppUsersSkipped)
+	if result.ODKAppUsersCreated > 0 || result.ODKAppUsersFailed > 0 {
+		log.Printf("ODK App Users (QR codes) - Created: %d, Failed: %d",
+			result.ODKAppUsersCreated, result.ODKAppUsersFailed)
+	}
 
 	if len(result.Errors) > 0 {
 		log.Printf("Errors: %d", len(result.Errors))
@@ -213,8 +232,7 @@ func listODKUsers(odkClient *odk.Client, projectID int, verbose bool) error {
 	return nil
 }
 
-// importWebUsersFromODK imports web users from ODK Central
-func importWebUsersFromODK(db *gorm.DB, odkClient *odk.Client, projectID int, dryRun, verbose bool, result *ImportResult) error {
+func importWebUsersFromODK(db *gorm.DB, odkClient *odk.Client, projectID int, dryRun, verbose, createAppUsers bool, result *ImportResult) error {
 	log.Println("\n=== Importing Web Users ===")
 
 	// Fetch web users from ODK
@@ -307,16 +325,16 @@ func importWebUsersFromODK(db *gorm.DB, odkClient *odk.Client, projectID int, dr
 			// Create new user with pending invitation status
 			odkID := odkUser.ID
 			newUser := &model.User{
-				ID:          uuid.New(),
-				OIDCSubject: fmt.Sprintf("odk-import-%d", odkUser.ID), // Placeholder, will be updated on first login
-				Email:       strings.ToLower(odkUser.Email),
-				Name:        &odkUser.DisplayName,
-				Role:        portalRole,
-				Status:      model.UserStatusPendingInvitation,
-				IsActive:    true,
+				ID:           uuid.New(),
+				OIDCSubject:  fmt.Sprintf("odk-import-%d", odkUser.ID), // Placeholder, will be updated on first login
+				Email:        strings.ToLower(odkUser.Email),
+				Name:         &odkUser.DisplayName,
+				Role:         portalRole,
+				Status:       model.UserStatusPendingInvitation,
+				IsActive:     true,
 				ODKWebUserID: &odkID,
-				CreatedAt:   time.Now(),
-				UpdatedAt:   time.Now(),
+				CreatedAt:    time.Now(),
+				UpdatedAt:    time.Now(),
 			}
 
 			if err := db.WithContext(ctx).Create(newUser).Error; err != nil {
@@ -327,6 +345,12 @@ func importWebUsersFromODK(db *gorm.DB, odkClient *odk.Client, projectID int, dr
 			log.Printf("  Created user: %s <%s> (ODK ID: %d, role: %s)",
 				odkUser.DisplayName, odkUser.Email, odkUser.ID, portalRole)
 			result.WebUsersCreated++
+
+			if createAppUsers && !dryRun {
+				if err := createODKAppUserForUser(db, odkClient, projectID, newUser, verbose, result); err != nil {
+					log.Printf("  Warning: Failed to create ODK App User for %s: %v", odkUser.Email, err)
+				}
+			}
 		}
 	}
 
@@ -448,7 +472,6 @@ func determinePortalRole(odkUserID int, assignmentMap map[int]int) model.UserRol
 	}
 }
 
-// roleIDToName converts ODK role ID to human-readable name
 func roleIDToName(roleID int) string {
 	switch roleID {
 	case odk.RoleAdmin:
@@ -462,4 +485,84 @@ func roleIDToName(roleID int) string {
 	default:
 		return fmt.Sprintf("Unknown (%d)", roleID)
 	}
+}
+
+func createODKAppUserForUser(db *gorm.DB, odkClient *odk.Client, projectID int, user *model.User, verbose bool, result *ImportResult) error {
+	if user.ODKAppUserID != nil && *user.ODKAppUserID > 0 {
+		if verbose {
+			log.Printf("    User %s already has ODK App User ID: %d", user.Email, *user.ODKAppUserID)
+		}
+		return nil
+	}
+
+	displayName := user.Email
+	if user.Name != nil && *user.Name != "" {
+		displayName = *user.Name
+	}
+
+	appUser, err := odkClient.CreateAppUser(projectID, displayName)
+	if err != nil {
+		result.ODKAppUsersFailed++
+		return fmt.Errorf("failed to create ODK app user: %w", err)
+	}
+
+	updates := map[string]interface{}{
+		"odk_app_user_id":         appUser.ID,
+		"odk_app_user_project_id": projectID,
+		"updated_at":              time.Now(),
+	}
+	if appUser.Token != "" {
+		updates["odk_app_user_token"] = appUser.Token
+	}
+
+	if err := db.Model(&model.User{}).Where("id = ?", user.ID).Updates(updates).Error; err != nil {
+		result.ODKAppUsersFailed++
+		return fmt.Errorf("failed to update user with ODK app user ID: %w", err)
+	}
+
+	log.Printf("    Created ODK App User for %s: ID=%d (token %s)",
+		user.Email, appUser.ID, tokenStatus(appUser.Token))
+	result.ODKAppUsersCreated++
+	return nil
+}
+
+func tokenStatus(token string) string {
+	if token != "" {
+		return "saved"
+	}
+	return "not available"
+}
+
+func backfillODKAppUsers(db *gorm.DB, odkClient *odk.Client, projectID int, dryRun, verbose bool, result *ImportResult) error {
+	log.Println("\n=== Backfilling ODK App Users ===")
+
+	var users []model.User
+	if err := db.Where("odk_app_user_id IS NULL OR odk_app_user_token IS NULL").Find(&users).Error; err != nil {
+		return fmt.Errorf("failed to fetch users without ODK app users: %w", err)
+	}
+
+	log.Printf("Found %d users without ODK App Users", len(users))
+
+	for _, user := range users {
+		displayName := user.Email
+		if user.Name != nil && *user.Name != "" {
+			displayName = *user.Name
+		}
+
+		if verbose {
+			log.Printf("  Processing: %s <%s>", displayName, user.Email)
+		}
+
+		if dryRun {
+			log.Printf("  [DRY-RUN] Would create ODK App User for: %s", user.Email)
+			result.ODKAppUsersCreated++
+			continue
+		}
+
+		if err := createODKAppUserForUser(db, odkClient, projectID, &user, verbose, result); err != nil {
+			log.Printf("  Error creating ODK App User for %s: %v", user.Email, err)
+		}
+	}
+
+	return nil
 }
