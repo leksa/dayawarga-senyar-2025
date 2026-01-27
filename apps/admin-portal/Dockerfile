@@ -1,20 +1,24 @@
 FROM node:20-alpine AS builder
 
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 WORKDIR /app
 
 ARG VITE_OIDC_AUTHORITY
 ARG VITE_OIDC_CLIENT_ID
 ARG VITE_API_BASE_URL
+ARG VITE_WHATSAPP_NUMBER
 
 ENV VITE_OIDC_AUTHORITY=$VITE_OIDC_AUTHORITY
 ENV VITE_OIDC_CLIENT_ID=$VITE_OIDC_CLIENT_ID
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_WHATSAPP_NUMBER=$VITE_WHATSAPP_NUMBER
 
-COPY package*.json ./
-RUN npm ci
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 COPY . .
-RUN npm run build
+RUN pnpm run build
 
 FROM nginx:alpine
 

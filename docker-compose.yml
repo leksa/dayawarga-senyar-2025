@@ -315,13 +315,13 @@ services:
         - VITE_OIDC_AUTHORITY=https://auth.dayawarga.com/application/o/admin-portal/
         - VITE_OIDC_CLIENT_ID=${ADMIN_PORTAL_OIDC_CLIENT_ID:-}
         - VITE_API_BASE_URL=https://api.dayawarga.com/api/v1
+        - VITE_WHATSAPP_NUMBER=${WHATSAPP_NUMBER:-6281234567890}
     container_name: senyar-admin-portal
     restart: unless-stopped
     profiles:
       - admin-portal
     depends_on:
       - api
-      - authentik-server
     networks:
       - senyar-network
     labels:
