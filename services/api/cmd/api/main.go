@@ -396,6 +396,8 @@ func main() {
 					orgs.POST("/:id/odk-project", auth.RequireSuperAdmin(), orgODKHandler.AssignODKProject)
 					orgs.DELETE("/:id/odk-project", auth.RequireSuperAdmin(), orgODKHandler.RemoveODKProject)
 					orgs.GET("/:id/odk-info", orgODKHandler.GetODKInfo)
+					// Create organization with admin (super_admin only)
+					orgs.POST("/with-admin", auth.RequireSuperAdmin(), invitationHandler.CreateOrganizationWithAdmin)
 				}
 
 				// Groups - require org_admin or super_admin role
