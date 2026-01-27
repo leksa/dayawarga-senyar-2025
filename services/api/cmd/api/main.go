@@ -248,7 +248,7 @@ func main() {
 
 	// Configure CORS
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:5179", "http://localhost:3000", "https://dayawarga.com", "https://www.dayawarga.com"},
+		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:5179", "http://localhost:3000", "https://dayawarga.com", "https://www.dayawarga.com", "https://admin.dayawarga.com"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length", "X-Cache", "X-RateLimit-Limit", "X-RateLimit-Remaining"},
