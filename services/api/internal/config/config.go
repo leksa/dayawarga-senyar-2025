@@ -26,13 +26,13 @@ type Config struct {
 	CORSOrigins string
 
 	// ODK Central
-	ODKBaseURL            string
-	ODKEmail              string
-	ODKPassword           string
-	ODKProjectID          int
-	ODKFormID             string
-	ODKFeedFormID         string
-	ODKFaskesFormID       string
+	ODKBaseURL             string
+	ODKEmail               string
+	ODKPassword            string
+	ODKProjectID           int
+	ODKFormID              string
+	ODKFeedFormID          string
+	ODKFaskesFormID        string
 	ODKInfrastrukturFormID string
 
 	// Storage
@@ -60,6 +60,14 @@ type Config struct {
 
 	// App Base URL (for invitation links)
 	AppBaseURL string
+
+	// SMTP Configuration
+	SMTPHost     string
+	SMTPPort     int
+	SMTPUsername string
+	SMTPPassword string
+	SMTPFrom     string
+	SMTPFromName string
 }
 
 func Load() *Config {
@@ -76,10 +84,10 @@ func Load() *Config {
 		CachePort:   getEnvInt("CACHE_PORT", 6379),
 		CORSOrigins: getEnv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000"),
 		// ODK Central
-		ODKBaseURL:    getEnv("ODK_BASE_URL", "https://data.dayawarga.com"),
-		ODKEmail:      getEnv("ODK_EMAIL", ""),
-		ODKPassword:   getEnv("ODK_PASSWORD", ""),
-		ODKProjectID:  getEnvInt("ODK_PROJECT_ID", 3),
+		ODKBaseURL:             getEnv("ODK_BASE_URL", "https://data.dayawarga.com"),
+		ODKEmail:               getEnv("ODK_EMAIL", ""),
+		ODKPassword:            getEnv("ODK_PASSWORD", ""),
+		ODKProjectID:           getEnvInt("ODK_PROJECT_ID", 3),
 		ODKFormID:              getEnv("ODK_FORM_ID", "form_posko_v1"),
 		ODKFeedFormID:          getEnv("ODK_FEED_FORM_ID", "form_feed_v1"),
 		ODKFaskesFormID:        getEnv("ODK_FASKES_FORM_ID", "form_faskes_v1"),
@@ -98,6 +106,15 @@ func Load() *Config {
 		// OIDC Configuration
 		OIDCIssuerURL: getEnv("OIDC_ISSUER_URL", ""),
 		OIDCClientID:  getEnv("OIDC_CLIENT_ID", ""),
+		// App Base URL
+		AppBaseURL: getEnv("APP_BASE_URL", "http://localhost:5173"),
+		// SMTP
+		SMTPHost:     getEnv("SMTP_HOST", ""),
+		SMTPPort:     getEnvInt("SMTP_PORT", 587),
+		SMTPUsername: getEnv("SMTP_USERNAME", ""),
+		SMTPPassword: getEnv("SMTP_PASSWORD", ""),
+		SMTPFrom:     getEnv("SMTP_FROM", "noreply@dayawarga.com"),
+		SMTPFromName: getEnv("SMTP_FROM_NAME", "Dayawarga"),
 	}
 }
 
