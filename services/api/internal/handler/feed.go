@@ -30,7 +30,27 @@ func (h *FeedHandler) SetFormID(formID string) {
 	h.formID = formID
 }
 
-// GetFeeds returns list of information feeds
+// GetFeeds godoc
+// @Summary      Get all feeds
+// @Description  Retrieve list of information feeds with optional filtering and pagination
+// @Tags         feeds
+// @Accept       json
+// @Produce      json
+// @Param        category    query     string  false  "Filter by category"
+// @Param        type        query     string  false  "Filter by type"
+// @Param        location_id query     string  false  "Filter by location ID"
+// @Param        location_name query     string  false  "Filter by location name"
+// @Param        search      query     string  false  "Search in content"
+// @Param        provinsi    query     string  false  "Filter by province"
+// @Param        kota_kab    query     string  false  "Filter by regency/city"
+// @Param        kecamatan   query     string  false  "Filter by district"
+// @Param        desa        query     string  false  "Filter by village"
+// @Param        since       query     string  false  "Get feeds after this timestamp"
+// @Param        page        query     int     false  "Page number" minimum(1) default(1)
+// @Param        limit       query     int     false  "Items per page" minimum(1) default(50)
+// @Success      200  {object}  dto.APIResponse{data=[]dto.FeedResponse}
+// @Failure      500  {object}  dto.APIResponse
+// @Router       /api/v1/feeds [get]
 func (h *FeedHandler) GetFeeds(c *gin.Context) {
 	filter := repository.FeedFilter{
 		Category:     c.Query("category"),
@@ -156,7 +176,19 @@ func (h *FeedHandler) convertPhotosToResponse(photos []model.FeedPhoto, odkSubmi
 	return result
 }
 
-// GetFeedsByLocation returns feeds for a specific location
+// GetFeedsByLocation godoc
+// @Summary      Get feeds by location
+// @Description  Retrieve list of feeds for a specific location with pagination
+// @Tags         feeds
+// @Accept       json
+// @Produce      json
+// @Param        id     path      string  true   "Location ID"
+// @Param        page   query     int     false  "Page number" minimum(1) default(1)
+// @Param        limit  query     int     false  "Items per page" minimum(1) default(50)
+// @Success      200  {object}  dto.APIResponse{data=[]dto.FeedResponse}
+// @Failure      400  {object}  dto.APIResponse
+// @Failure      500  {object}  dto.APIResponse
+// @Router       /api/v1/locations/{id}/feeds [get]
 func (h *FeedHandler) GetFeedsByLocation(c *gin.Context) {
 	idStr := c.Param("id")
 	locationID, err := uuid.Parse(idStr)

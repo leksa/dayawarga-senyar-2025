@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -103,8 +104,8 @@ func (rl *RateLimiter) Middleware() gin.HandlerFunc {
 
 		if !rl.Allow(ip) {
 			remaining := rl.RemainingTokens(ip)
-			c.Header("X-RateLimit-Limit", string(rune(rl.rate)))
-			c.Header("X-RateLimit-Remaining", string(rune(remaining)))
+			c.Header("X-RateLimit-Limit", strconv.Itoa(rl.rate))
+			c.Header("X-RateLimit-Remaining", strconv.Itoa(remaining))
 			c.Header("Retry-After", rl.window.String())
 
 			c.JSON(http.StatusTooManyRequests, dto.APIResponse{
@@ -123,8 +124,8 @@ func (rl *RateLimiter) Middleware() gin.HandlerFunc {
 
 		// Add rate limit headers
 		remaining := rl.RemainingTokens(ip)
-		c.Header("X-RateLimit-Limit", string(rune(rl.rate)))
-		c.Header("X-RateLimit-Remaining", string(rune(remaining)))
+		c.Header("X-RateLimit-Limit", strconv.Itoa(rl.rate))
+		c.Header("X-RateLimit-Remaining", strconv.Itoa(remaining))
 
 		c.Next()
 	}

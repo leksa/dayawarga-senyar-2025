@@ -1,0 +1,261 @@
+/*
+ * Dayawarga Senyar - Authentik Custom Theme
+ * 
+ * Color Palette (from admin-portal):
+ * - Primary Teal: oklch(0.7 0.14 190) ≈ #4DB6AC
+ * - Background Dark: oklch(0.12 0.015 250) ≈ #1a1f2e
+ * - Card Dark: oklch(0.16 0.015 250) ≈ #242a3d
+ * - Foreground: oklch(0.95 0.005 240) ≈ #f0f1f3
+ * - Accent Amber: oklch(0.78 0.14 75) ≈ #FFB74D
+ * 
+ * Logo Colors (from Senyar):
+ * - Coral Orange: #E07050
+ * - Navy Blue: #2D4A7C
+ * - Cyan: #4DBCE8
+ * - Teal: #2B7A9E
+ * - Green: #7CB342
+ */
+
+/* Import fonts */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+/* Root variables */
+:root {
+  --ak-accent: #4DB6AC !important;
+  --ak-accent-rgb: 77, 182, 172 !important;
+  --ak-dark-background: #1a1f2e !important;
+  --ak-dark-background-light: #242a3d !important;
+  --ak-dark-foreground: #f0f1f3 !important;
+  --pf-global--FontFamily--sans-serif: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* Global font */
+body, html {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* Dark mode body background */
+body {
+  background: linear-gradient(135deg, #1a1f2e 0%, #0f1219 100%) !important;
+  min-height: 100vh;
+}
+
+/* Main container */
+.pf-c-login {
+  background: transparent !important;
+}
+
+.pf-c-login__container {
+  background: transparent !important;
+}
+
+/* Login card */
+.pf-c-login__main {
+  background: rgba(36, 42, 61, 0.95) !important;
+  border: 1px solid rgba(77, 182, 172, 0.2) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: blur(10px) !important;
+  padding: 2rem !important;
+}
+
+/* Header */
+.pf-c-login__main-header {
+  padding-bottom: 1.5rem !important;
+}
+
+.pf-c-login__main-header-desc {
+  color: rgba(240, 241, 243, 0.7) !important;
+  font-size: 0.95rem !important;
+}
+
+/* Brand/Logo area */
+.pf-c-brand {
+  max-height: 80px !important;
+}
+
+/* Title */
+.pf-c-title {
+  color: #f0f1f3 !important;
+  font-weight: 600 !important;
+}
+
+/* Form labels */
+.pf-c-form__label-text {
+  color: rgba(240, 241, 243, 0.9) !important;
+  font-weight: 500 !important;
+}
+
+/* Input fields */
+.pf-c-form-control {
+  background-color: rgba(26, 31, 46, 0.8) !important;
+  border: 1px solid rgba(77, 182, 172, 0.3) !important;
+  border-radius: 8px !important;
+  color: #f0f1f3 !important;
+  padding: 0.75rem 1rem !important;
+  font-size: 1rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.pf-c-form-control:focus {
+  border-color: #4DB6AC !important;
+  box-shadow: 0 0 0 3px rgba(77, 182, 172, 0.2) !important;
+  outline: none !important;
+}
+
+.pf-c-form-control::placeholder {
+  color: rgba(240, 241, 243, 0.4) !important;
+}
+
+/* Primary button */
+.pf-c-button.pf-m-primary {
+  background: linear-gradient(135deg, #4DB6AC 0%, #2B7A9E 100%) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  color: #1a1f2e !important;
+  font-weight: 600 !important;
+  padding: 0.875rem 1.5rem !important;
+  font-size: 1rem !important;
+  transition: all 0.2s ease !important;
+  text-transform: none !important;
+}
+
+.pf-c-button.pf-m-primary:hover {
+  background: linear-gradient(135deg, #5CC9BD 0%, #3590B5 100%) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(77, 182, 172, 0.4) !important;
+}
+
+.pf-c-button.pf-m-primary:active {
+  transform: translateY(0) !important;
+}
+
+/* Secondary/Link buttons */
+.pf-c-button.pf-m-link,
+.pf-c-button.pf-m-secondary {
+  color: #4DB6AC !important;
+  font-weight: 500 !important;
+}
+
+.pf-c-button.pf-m-link:hover,
+.pf-c-button.pf-m-secondary:hover {
+  color: #5CC9BD !important;
+  text-decoration: underline !important;
+}
+
+/* Alert/Error messages */
+.pf-c-alert {
+  border-radius: 8px !important;
+  border: none !important;
+}
+
+.pf-c-alert.pf-m-danger {
+  background-color: rgba(239, 83, 80, 0.15) !important;
+  border-left: 4px solid #EF5350 !important;
+}
+
+.pf-c-alert.pf-m-success {
+  background-color: rgba(102, 187, 106, 0.15) !important;
+  border-left: 4px solid #66BB6A !important;
+}
+
+/* Footer */
+.pf-c-login__footer {
+  padding-top: 1.5rem !important;
+}
+
+.pf-c-login__footer-band {
+  background: transparent !important;
+}
+
+/* Links */
+a {
+  color: #4DB6AC !important;
+  transition: color 0.2s ease !important;
+}
+
+a:hover {
+  color: #5CC9BD !important;
+}
+
+/* Checkbox styling */
+.pf-c-check__input:checked {
+  background-color: #4DB6AC !important;
+  border-color: #4DB6AC !important;
+}
+
+/* Helper text */
+.pf-c-helper-text {
+  color: rgba(240, 241, 243, 0.6) !important;
+}
+
+/* Dividers */
+hr, .pf-c-divider {
+  border-color: rgba(77, 182, 172, 0.2) !important;
+}
+
+/* Social login buttons */
+.pf-c-login__main-footer-links-item-link {
+  background: rgba(26, 31, 46, 0.8) !important;
+  border: 1px solid rgba(77, 182, 172, 0.3) !important;
+  border-radius: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+.pf-c-login__main-footer-links-item-link:hover {
+  border-color: #4DB6AC !important;
+  background: rgba(77, 182, 172, 0.1) !important;
+}
+
+/* Loading spinner */
+.pf-c-spinner {
+  --pf-c-spinner--Color: #4DB6AC !important;
+}
+
+/* Password visibility toggle */
+.pf-c-button.pf-m-control {
+  color: rgba(240, 241, 243, 0.6) !important;
+}
+
+.pf-c-button.pf-m-control:hover {
+  color: #4DB6AC !important;
+}
+
+/* Card header with Dayawarga branding */
+.ak-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Hide default authentik branding if needed */
+/* .pf-c-brand img { display: none; } */
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1f2e;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4DB6AC;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #5CC9BD;
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+  .pf-c-login__main {
+    margin: 1rem !important;
+    padding: 1.5rem !important;
+  }
+}

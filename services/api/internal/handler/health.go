@@ -25,6 +25,13 @@ type HealthResponse struct {
 }
 
 // Check returns health status of the API
+// @Summary      Health check
+// @Description  Returns the health status of the API and its dependencies
+// @Tags         health
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} HealthResponse
+// @Router       /health [get]
 func (h *HealthHandler) Check(c *gin.Context) {
 	services := make(map[string]string)
 
@@ -55,6 +62,14 @@ func (h *HealthHandler) Check(c *gin.Context) {
 }
 
 // Ready returns readiness status
+// @Summary      Readiness check
+// @Description  Returns whether the API is ready to handle requests
+// @Tags         health
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} map[string]interface{}
+// @Failure      503  {object} map[string]interface{}
+// @Router       /ready [get]
 func (h *HealthHandler) Ready(c *gin.Context) {
 	sqlDB, err := h.db.DB()
 	if err != nil {

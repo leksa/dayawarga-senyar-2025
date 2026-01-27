@@ -2,6 +2,8 @@
 
 Authentik adalah Identity Provider (IdP) berbasis OIDC yang digunakan untuk single sign-on di Admin Portal dan ODK Central.
 
+**Versi**: 2025.6.1
+
 ## Quick Start
 
 ### 1. Generate Secrets
@@ -44,6 +46,7 @@ docker compose up -d
 | User Interface | http://localhost:9000 |
 | Admin Interface | http://localhost:9000/if/admin/ |
 | Initial Setup | http://localhost:9000/if/flow/initial-setup/ |
+| Password Recovery | http://localhost:9000/if/flow/recovery/ |
 
 ### Production
 
@@ -51,7 +54,86 @@ docker compose up -d
 |---------|-----|
 | User Interface | https://auth.dayawarga.com |
 | Admin Interface | https://auth.dayawarga.com/if/admin/ |
+| Password Recovery | https://auth.dayawarga.com/if/flow/recovery/ |
 | OIDC Discovery | https://auth.dayawarga.com/application/o/admin-portal/.well-known/openid-configuration |
+
+## Custom Branding (Dayawarga Theme)
+
+### 1. Upload Logo & Set Branding
+
+1. Buka Admin Interface: http://localhost:9000/if/admin/
+2. Pergi ke **System** → **Brands**
+3. Edit brand **authentik-default** atau buat baru:
+   - **Domain**: `localhost` (atau domain production)
+   - **Branding title**: `Dayawarga`
+   - **Logo**: Upload `branding/logo.png` atau URL: `/static/dist/assets/icons/icon.png`
+   - **Favicon**: Upload `branding/logo.png`
+
+### 2. Apply Custom CSS (Authentik 2025.4+)
+
+1. Di halaman Brand yang sama, scroll ke **Branding settings**
+2. Cari field **Custom CSS**
+3. Copy-paste isi dari file `branding/custom.css`
+4. Klik **Update**
+
+### 3. Set Default Flow Background (Optional)
+
+1. Di halaman Brand, cari **Default flow background**
+2. Upload background image atau biarkan kosong untuk gradient dari CSS
+
+### Theme Files
+
+```
+infrastructure/authentik/branding/
+├── logo.png          # Logo Dayawarga
+└── custom.css        # Custom CSS theme (dark teal theme)
+```
+
+### Preview Setelah Setup
+
+- Background gradient gelap (#1a1f2e → #0f1219)
+- Logo Dayawarga di header
+- Input fields dengan border teal
+- Tombol login gradient teal (#4DB6AC → #2B7A9E)
+- Font Plus Jakarta Sans
+
+## Password Recovery Setup
+
+### 1. Setup SMTP untuk Email
+
+Update `docker-compose.yml` environment untuk Authentik server dan worker:
+
+```yaml
+environment:
+  # ... existing config ...
+  AUTHENTIK_EMAIL__HOST: live.smtp.mailtrap.io
+  AUTHENTIK_EMAIL__PORT: 587
+  AUTHENTIK_EMAIL__USERNAME: ${SMTP_USERNAME}
+  AUTHENTIK_EMAIL__PASSWORD: ${SMTP_PASSWORD}
+  AUTHENTIK_EMAIL__USE_TLS: true
+  AUTHENTIK_EMAIL__FROM: noreply@dayawarga.com
+```
+
+Atau setup via Admin UI:
+1. **System** → **Settings** → scroll ke **Email**
+2. Isi SMTP settings
+
+### 2. Verify Recovery Flow
+
+1. Pergi ke **Flows and Stages** → **Flows**
+2. Pastikan ada flow dengan designation **Recovery**
+3. Jika tidak ada, buat flow baru atau import default recovery flow
+
+### 3. Set Recovery Flow di Brand
+
+1. **System** → **Brands** → Edit brand
+2. Di **Default flows**, set **Recovery flow** ke recovery flow yang ada
+
+### 4. Test Recovery
+
+1. Buka http://localhost:9000/if/flow/recovery/
+2. Masukkan email
+3. Cek inbox untuk link reset password
 
 ## OIDC Provider Setup
 
@@ -68,7 +150,7 @@ Setelah Authentik berjalan, buat OIDC Provider untuk Admin Portal:
    - Client ID: (auto-generated, catat ini)
    - Client Secret: (auto-generated, catat ini)
    - Redirect URIs:
-     - `http://localhost:5176/callback` (dev)
+     - `http://localhost:5173/callback` (dev)
      - `https://admin.dayawarga.com/callback` (prod)
    - Scopes: `openid`, `email`, `profile`
 
@@ -79,7 +161,7 @@ Setelah Authentik berjalan, buat OIDC Provider untuk Admin Portal:
    - Name: `Admin Portal`
    - Slug: `admin-portal`
    - Provider: Pilih "Admin Portal OIDC"
-   - Launch URL: `http://localhost:5176` atau `https://admin.dayawarga.com`
+   - Launch URL: `http://localhost:5173` atau `https://admin.dayawarga.com`
 
 ### 3. Update Frontend Config
 
@@ -89,6 +171,7 @@ Setelah Provider dibuat, update frontend `.env`:
 ```env
 VITE_OIDC_AUTHORITY=http://localhost:9000/application/o/admin-portal/
 VITE_OIDC_CLIENT_ID=<client_id_dari_provider>
+VITE_AUTHENTIK_BASE_URL=http://localhost:9000
 VITE_API_BASE_URL=http://localhost:8080/api/v1
 ```
 
@@ -96,6 +179,7 @@ VITE_API_BASE_URL=http://localhost:8080/api/v1
 ```env
 VITE_OIDC_AUTHORITY=https://auth.dayawarga.com/application/o/admin-portal/
 VITE_OIDC_CLIENT_ID=<client_id_dari_provider>
+VITE_AUTHENTIK_BASE_URL=https://auth.dayawarga.com
 VITE_API_BASE_URL=https://api.dayawarga.com/api/v1
 ```
 
@@ -135,6 +219,10 @@ Required environment variables di `.env`:
 AUTHENTIK_SECRET_KEY=<generate: openssl rand -base64 60>
 AUTHENTIK_POSTGRES_PASSWORD=<strong password>
 ADMIN_PORTAL_OIDC_CLIENT_ID=<from Authentik admin>
+
+# SMTP for password recovery
+SMTP_USERNAME=<mailtrap username>
+SMTP_PASSWORD=<mailtrap password>
 ```
 
 ## Management Commands
@@ -152,9 +240,37 @@ docker compose logs -f
 # Restart
 docker compose restart
 
+# Upgrade (pull new image)
+docker compose pull && docker compose up -d
+
 # Reset (CAUTION: deletes all data)
 docker compose down -v
 ```
+
+## Upgrading Authentik
+
+### From 2024.x to 2025.x
+
+1. Backup database:
+   ```bash
+   docker compose exec authentik-postgres pg_dump -U authentik authentik > backup.sql
+   ```
+
+2. Update image version di `docker-compose.yml`:
+   ```yaml
+   image: ghcr.io/goauthentik/server:2025.6.1
+   ```
+
+3. Pull dan restart:
+   ```bash
+   docker compose pull
+   docker compose up -d
+   ```
+
+4. Check logs for migration:
+   ```bash
+   docker compose logs -f authentik-server
+   ```
 
 ## Troubleshooting
 
@@ -180,3 +296,15 @@ Pastikan PostgreSQL healthy:
 ```bash
 docker compose logs authentik-postgres
 ```
+
+### Custom CSS Not Applied
+
+1. Pastikan versi Authentik >= 2025.4.0
+2. Clear browser cache (Ctrl+Shift+R)
+3. Cek CSS syntax errors di browser console
+
+### Password Recovery Email Not Sent
+
+1. Cek SMTP config di **System** → **Settings** → **Email**
+2. Test email: **System** → **Settings** → scroll ke Email → **Test Email**
+3. Cek logs: `docker compose logs authentik-worker`

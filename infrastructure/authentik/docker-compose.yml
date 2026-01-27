@@ -48,7 +48,7 @@ services:
   # AUTHENTIK SERVER - Main Application
   # ==========================================================================
   authentik-server:
-    image: ghcr.io/goauthentik/server:2024.12.3
+    image: ghcr.io/goauthentik/server:2025.6.1
     container_name: authentik-server
     restart: unless-stopped
     command: server
@@ -59,11 +59,15 @@ services:
       AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_POSTGRES_USER:-authentik}
       AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_POSTGRES_DB:-authentik}
       AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_POSTGRES_PASSWORD:?AUTHENTIK_POSTGRES_PASSWORD required}
-      # Email (optional - for password reset, etc)
-      # AUTHENTIK_EMAIL__HOST: ${AUTHENTIK_EMAIL_HOST:-localhost}
-      # AUTHENTIK_EMAIL__PORT: ${AUTHENTIK_EMAIL_PORT:-25}
-      # AUTHENTIK_EMAIL__USE_TLS: ${AUTHENTIK_EMAIL_USE_TLS:-false}
-      # AUTHENTIK_EMAIL__FROM: ${AUTHENTIK_EMAIL_FROM:-authentik@localhost}
+      # Email configuration (for password reset, notifications)
+      AUTHENTIK_EMAIL__HOST: ${AUTHENTIK_EMAIL__HOST:-}
+      AUTHENTIK_EMAIL__PORT: ${AUTHENTIK_EMAIL__PORT:-587}
+      AUTHENTIK_EMAIL__USERNAME: ${AUTHENTIK_EMAIL__USERNAME:-}
+      AUTHENTIK_EMAIL__PASSWORD: ${AUTHENTIK_EMAIL__PASSWORD:-}
+      AUTHENTIK_EMAIL__USE_TLS: ${AUTHENTIK_EMAIL__USE_TLS:-true}
+      AUTHENTIK_EMAIL__USE_SSL: ${AUTHENTIK_EMAIL__USE_SSL:-false}
+      AUTHENTIK_EMAIL__TIMEOUT: ${AUTHENTIK_EMAIL__TIMEOUT:-10}
+      AUTHENTIK_EMAIL__FROM: ${AUTHENTIK_EMAIL__FROM:-noreply@dayawarga.com}
     volumes:
       - authentik_media:/media
       - authentik_templates:/templates
@@ -82,7 +86,7 @@ services:
   # AUTHENTIK WORKER - Background Tasks
   # ==========================================================================
   authentik-worker:
-    image: ghcr.io/goauthentik/server:2024.12.3
+    image: ghcr.io/goauthentik/server:2025.6.1
     container_name: authentik-worker
     restart: unless-stopped
     command: worker
@@ -93,7 +97,15 @@ services:
       AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_POSTGRES_USER:-authentik}
       AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_POSTGRES_DB:-authentik}
       AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_POSTGRES_PASSWORD:?AUTHENTIK_POSTGRES_PASSWORD required}
-    # user: root  # Uncomment if you need to run as root
+      # Email configuration (worker also needs this for sending emails)
+      AUTHENTIK_EMAIL__HOST: ${AUTHENTIK_EMAIL__HOST:-}
+      AUTHENTIK_EMAIL__PORT: ${AUTHENTIK_EMAIL__PORT:-587}
+      AUTHENTIK_EMAIL__USERNAME: ${AUTHENTIK_EMAIL__USERNAME:-}
+      AUTHENTIK_EMAIL__PASSWORD: ${AUTHENTIK_EMAIL__PASSWORD:-}
+      AUTHENTIK_EMAIL__USE_TLS: ${AUTHENTIK_EMAIL__USE_TLS:-true}
+      AUTHENTIK_EMAIL__USE_SSL: ${AUTHENTIK_EMAIL__USE_SSL:-false}
+      AUTHENTIK_EMAIL__TIMEOUT: ${AUTHENTIK_EMAIL__TIMEOUT:-10}
+      AUTHENTIK_EMAIL__FROM: ${AUTHENTIK_EMAIL__FROM:-noreply@dayawarga.com}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - authentik_media:/media

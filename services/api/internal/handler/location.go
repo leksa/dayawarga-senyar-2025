@@ -2,14 +2,15 @@ package handler
 
 import (
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/leksa/datamapper-senyar/internal/dto"
+	"github.com/leksa/datamapper-senyar/internal/model"
 	"github.com/leksa/datamapper-senyar/internal/repository"
+	"github.com/leksa/datamapper-senyar/internal/validator"
 )
 
 type LocationHandler struct {
@@ -25,40 +26,45 @@ func NewLocationHandler(locationRepo *repository.LocationRepository, feedRepo *r
 }
 
 // GetLocations returns GeoJSON FeatureCollection of locations
+// @Summary      Get all locations
+// @Description  Returns GeoJSON FeatureCollection of locations with optional filtering and pagination
+// @Tags         locations
+// @Accept       json
+// @Produce      json
+// @Param        page   query     int    false  "Page number (min: 1)" default(1)
+// @Param        limit  query     int    false  "Items per page (min: 1, max: 100)" default(10)
+// @Param        type   query     string false  "Filter by location type" Enums(posko, faskes, jembatan)
+// @Param        status query     string false  "Filter by status" Enums(active, inactive)
+// @Param        search query     string false  "Search in location name"
+// @Param        bbox   query     string false  "Bounding box filter: minLng,minLat,maxLng,maxLat"
+// @Success      200    {object} dto.LocationListResponse
+// @Failure      400    {object} dto.APIResponse
+// @Failure      500    {object} dto.APIResponse
+// @Router       /api/v1/locations [get]
 func (h *LocationHandler) GetLocations(c *gin.Context) {
+	// Validate pagination parameters
+	pagination := validator.ValidatePagination(c)
+	if !pagination.Valid {
+		return
+	}
+
+	// Validate bounding box if provided
+	bbox := validator.ValidateBBox(c)
+
 	filter := repository.LocationFilter{
 		Type:   c.Query("type"),
 		Status: c.Query("status"),
-		Search: c.Query("search"),
-		Page:   1,
-		Limit:  50,
+		Search: validator.SanitizeSearchString(c.Query("search")),
+		Page:   pagination.Page,
+		Limit:  pagination.Limit,
 	}
 
-	// Parse pagination
-	if page, err := strconv.Atoi(c.Query("page")); err == nil && page > 0 {
-		filter.Page = page
-	}
-	if limit, err := strconv.Atoi(c.Query("limit")); err == nil && limit > 0 {
-		filter.Limit = limit
-	}
-
-	// Parse bounding box: bbox=minLng,minLat,maxLng,maxLat
-	if bbox := c.Query("bbox"); bbox != "" {
-		parts := strings.Split(bbox, ",")
-		if len(parts) == 4 {
-			if minLng, err := strconv.ParseFloat(parts[0], 64); err == nil {
-				filter.MinLng = &minLng
-			}
-			if minLat, err := strconv.ParseFloat(parts[1], 64); err == nil {
-				filter.MinLat = &minLat
-			}
-			if maxLng, err := strconv.ParseFloat(parts[2], 64); err == nil {
-				filter.MaxLng = &maxLng
-			}
-			if maxLat, err := strconv.ParseFloat(parts[3], 64); err == nil {
-				filter.MaxLat = &maxLat
-			}
-		}
+	// Apply bounding box filter if valid
+	if bbox.Valid {
+		filter.MinLng = &bbox.MinLng
+		filter.MinLat = &bbox.MinLat
+		filter.MaxLng = &bbox.MaxLng
+		filter.MaxLat = &bbox.MaxLat
 	}
 
 	locations, total, err := h.locationRepo.FindAll(filter)
@@ -225,23 +231,23 @@ func (h *LocationHandler) GetLocations(c *gin.Context) {
 				Coordinates: []float64{loc.Longitude, loc.Latitude},
 			},
 			Properties: dto.LocationListProperties{
-				ODKSubmissionID: odkSubmissionID,
-				Nama:            loc.Nama,
-				Type:            loc.Type,
-				Status:          loc.Status,
-				AlamatSingkat:   alamatSingkat,
-				NamaProvinsi:    namaProvinsi,
-				NamaKotaKab:     namaKotaKab,
-				NamaKecamatan:   namaKecamatan,
-				NamaDesa:        namaDesa,
-				IDProvinsi:      idProvinsi,
-				IDKotaKab:       idKotaKab,
-				IDKecamatan:     idKecamatan,
-				IDDesa:          idDesa,
-				JumlahKK:        jumlahKK,
-				TotalJiwa:       totalJiwa,
-				JumlahPerempuan: jumlahPerempuan,
-				JumlahLaki:      jumlahLaki,
+				ODKSubmissionID:   odkSubmissionID,
+				Nama:              loc.Nama,
+				Type:              loc.Type,
+				Status:            loc.Status,
+				AlamatSingkat:     alamatSingkat,
+				NamaProvinsi:      namaProvinsi,
+				NamaKotaKab:       namaKotaKab,
+				NamaKecamatan:     namaKecamatan,
+				NamaDesa:          namaDesa,
+				IDProvinsi:        idProvinsi,
+				IDKotaKab:         idKotaKab,
+				IDKecamatan:       idKecamatan,
+				IDDesa:            idDesa,
+				JumlahKK:          jumlahKK,
+				TotalJiwa:         totalJiwa,
+				JumlahPerempuan:   jumlahPerempuan,
+				JumlahLaki:        jumlahLaki,
 				JumlahBalita:      jumlahBalita,
 				KebutuhanAir:      kebutuhanAir,
 				KebutuhanAirLiter: kebutuhanAirLiter,
@@ -267,8 +273,23 @@ func (h *LocationHandler) GetLocations(c *gin.Context) {
 }
 
 // GetLocationByID returns detailed location info
+// @Summary      Get location by ID
+// @Description  Returns detailed information about a specific location including photos
+// @Tags         locations
+// @Accept       json
+// @Produce      json
+// @Param        id   path      string true  "Location UUID"
+// @Success      200   {object} dto.LocationDetailResponse
+// @Failure      400   {object} dto.APIResponse
+// @Failure      404   {object} dto.APIResponse
+// @Failure      500   {object} dto.APIResponse
+// @Router       /api/v1/locations/{id} [get]
 func (h *LocationHandler) GetLocationByID(c *gin.Context) {
-	idStr := c.Param("id")
+	idStr, ok := validator.ValidateUUID(c, "id", "Location ID")
+	if !ok {
+		return
+	}
+
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.APIResponse{
@@ -294,7 +315,12 @@ func (h *LocationHandler) GetLocationByID(c *gin.Context) {
 	}
 
 	// Get photos
-	photos, _ := h.locationRepo.FindPhotos(id)
+	photos, err := h.locationRepo.FindPhotos(id)
+	if err != nil {
+		// Log error but continue with empty photos list
+		// This is a non-critical error, we still want to return location data
+		photos = []model.LocationPhoto{}
+	}
 	photoResponses := make([]dto.PhotoResponse, len(photos))
 	for i, p := range photos {
 		photoResponses[i] = dto.PhotoResponse{

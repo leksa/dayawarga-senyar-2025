@@ -103,52 +103,6 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function loginWithPassword(username: string, password: string): Promise<boolean> {
-    isLoading.value = true
-    error.value = null
-
-    try {
-      // 1. Exchange credentials for tokens via ROPC
-      const tokenResponse = await authService.tokenExchange({ username, password })
-
-      // 2. Calculate expiration timestamp
-      const now = Math.floor(Date.now() / 1000)
-      const expiresAt = now + tokenResponse.expires_in
-
-      // 3. Create user object compatible with oidc-client-ts format
-      const oidcUser = {
-        access_token: tokenResponse.access_token,
-        token_type: tokenResponse.token_type,
-        expires_at: expiresAt,
-        expires_in: tokenResponse.expires_in,
-        refresh_token: tokenResponse.refresh_token,
-        id_token: tokenResponse.id_token,
-        scope: tokenResponse.scope,
-        profile: {},
-      }
-
-      // 4. Store in localStorage using same format as oidc-client-ts
-      const authority = (import.meta.env.VITE_OIDC_AUTHORITY || '').replace(/\/$/, '')
-      const clientId = import.meta.env.VITE_OIDC_CLIENT_ID
-      const storageKey = `oidc.user:${authority}:${clientId}`
-      localStorage.setItem(storageKey, JSON.stringify(oidcUser))
-
-      // 5. Update store state
-      user.value = oidcUser as unknown as OIDCUser
-
-      // 6. Fetch user info from backend API
-      await fetchUserInfo()
-
-      return true
-    } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Login gagal. Periksa username dan password Anda.'
-      console.error('ROPC login error:', e)
-      return false
-    } finally {
-      isLoading.value = false
-    }
-  }
-
   async function handleCallback() {
     isLoading.value = true
     error.value = null
@@ -232,7 +186,6 @@ export const useAuthStore = defineStore('auth', () => {
     canInviteUsers,
     init,
     login,
-    loginWithPassword,
     logout,
     handleCallback,
     clearSession,

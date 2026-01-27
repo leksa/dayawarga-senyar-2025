@@ -77,6 +77,15 @@ func (r *LocationRepository) FindAll(filter LocationFilter) ([]LocationWithCoord
 	if filter.Search != "" {
 		countQuery = countQuery.Where("nama ILIKE ?", "%"+filter.Search+"%")
 	}
+	// Apply bounding box filter to count query (same as main query)
+	if filter.MinLng != nil && filter.MinLat != nil && filter.MaxLng != nil && filter.MaxLat != nil {
+		countQuery = countQuery.Where(`
+			ST_Within(
+				geom,
+				ST_MakeEnvelope(?, ?, ?, ?, 4326)
+			)
+		`, *filter.MinLng, *filter.MinLat, *filter.MaxLng, *filter.MaxLat)
+	}
 	countQuery.Count(&total)
 
 	// Pagination
