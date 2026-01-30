@@ -55,8 +55,9 @@ type Config struct {
 	OIDCClientID  string
 
 	// Authentik API
-	AuthentikBaseURL  string
-	AuthentikAPIToken string
+	AuthentikBaseURL       string
+	AuthentikAPIToken      string
+	AuthentikWebhookSecret string
 
 	// App Base URL (for invitation links)
 	AppBaseURL string
@@ -106,6 +107,10 @@ func Load() *Config {
 		// OIDC Configuration
 		OIDCIssuerURL: getEnv("OIDC_ISSUER_URL", ""),
 		OIDCClientID:  getEnv("OIDC_CLIENT_ID", ""),
+		// Authentik
+		AuthentikBaseURL:       getEnv("AUTHENTIK_BASE_URL", ""),
+		AuthentikAPIToken:      getEnv("AUTHENTIK_API_TOKEN", ""),
+		AuthentikWebhookSecret: getEnv("AUTHENTIK_WEBHOOK_SECRET", ""),
 		// App Base URL
 		AppBaseURL: getEnv("APP_BASE_URL", "http://localhost:5173"),
 		// SMTP

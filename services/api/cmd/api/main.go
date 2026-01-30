@@ -161,6 +161,7 @@ func main() {
 	relawanODKService := service.NewRelawanODKService(relawanRepo, groupRepo, odkPoskoClient, cfg.ODKBaseURL, db)
 	userODKService := service.NewUserODKService(userRepo, odkPoskoClient, db)
 	orgODKService := service.NewOrganizationODKService(orgRepo, userRepo, odkPoskoClient, db)
+	authentikWebhookService := service.NewAuthentikWebhookService(userRepo, odkPoskoClient, db)
 
 	// Email and Invitation services
 	emailService := email.NewService(cfg)
@@ -226,6 +227,7 @@ func main() {
 	relawanODKHandler := handler.NewRelawanODKHandler(relawanODKService)
 	orgODKHandler := handler.NewOrganizationODKHandler(orgODKService)
 	invitationHandler := handler.NewInvitationHandler(invitationService, orgService)
+	authentikWebhookHandler := handler.NewAuthentikWebhookHandler(authentikWebhookService, cfg.AuthentikWebhookSecret)
 
 	// Initialize OIDC validator for Admin Portal (if configured)
 	var oidcValidator *auth.OIDCValidator
@@ -501,6 +503,13 @@ func main() {
 		v1.GET("/invitations/verification-status/:user_id", invitationHandler.GetVerificationStatus)
 		v1.POST("/invitations/regenerate-pin/:user_id", invitationHandler.RegeneratePIN)
 		v1.POST("/invitations/verify-pin", invitationHandler.VerifyPIN)
+
+		// Authentik Webhook endpoints (protected by secret)
+		webhooks := v1.Group("/webhooks")
+		{
+			webhooks.GET("/authentik/health", authentikWebhookHandler.HealthCheck)
+			webhooks.POST("/authentik", authentikWebhookHandler.HandleWebhook)
+		}
 	}
 
 	// Graceful shutdown

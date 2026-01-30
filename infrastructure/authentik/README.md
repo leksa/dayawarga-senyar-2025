@@ -308,3 +308,238 @@ docker compose logs authentik-postgres
 1. Cek SMTP config di **System** → **Settings** → **Email**
 2. Test email: **System** → **Settings** → scroll ke Email → **Test Email**
 3. Cek logs: `docker compose logs authentik-worker`
+
+---
+
+## Production Server Configuration Reference
+
+### Server Access
+
+| Item | Value |
+|------|-------|
+| Server IP | `103.179.57.203` |
+| SSH User | `leksa` |
+| Project Path | `/opt/dayawarga` |
+
+### URLs
+
+| Service | URL |
+|---------|-----|
+| Main Frontend | https://dayawarga.com |
+| Admin Portal | https://admin.dayawarga.com |
+| API | https://api.dayawarga.com |
+| Authentik SSO | https://auth.dayawarga.com |
+| ODK Central | https://data.dayawarga.com |
+
+### OIDC Configuration (Admin Portal)
+
+| Item | Value |
+|------|-------|
+| Issuer URL | `https://auth.dayawarga.com/application/o/admin-portal/` |
+| Client ID | `Y3DcvfobFob3IzpqjHfhOftMMUARZyQrcNCvg3He` |
+| Discovery URL | `https://auth.dayawarga.com/application/o/admin-portal/.well-known/openid-configuration` |
+
+### SMTP Configuration (Mailtrap)
+
+| Item | Value |
+|------|-------|
+| Host | `live.smtp.mailtrap.io` |
+| Port | `587` |
+| Username | `apismtp@mailtrap.io` |
+| Password | `28c7931902eea31458c9bb994ed6049e` |
+| From Email | `noreply@dayawarga.com` |
+| From Name | `Dayawarga` |
+| Auth | PLAIN, LOGIN |
+| TLS | Required (STARTTLS on port 587) |
+
+### Authentik API Token
+
+For programmatic user management:
+
+```
+Token: 9CVhCRNlVEpCdpYDZLzpswDkxoO2FSuefj1dnzzArvURubMs3ek9FF71SYBD
+```
+
+Example API call:
+```bash
+curl -X POST "https://auth.dayawarga.com/api/v3/core/users/" \
+  -H "Authorization: Bearer 9CVhCRNlVEpCdpYDZLzpswDkxoO2FSuefj1dnzzArvURubMs3ek9FF71SYBD" \
+  -H "Content-Type: application/json" \
+  -d '{"username": "newuser", "name": "New User", "email": "user@example.com", "is_active": true}'
+```
+
+### Database Access
+
+```bash
+# Connect to PostgreSQL (Dayawarga DB)
+ssh leksa@103.179.57.203 "docker exec -it senyar-postgres psql -U senyar -d senyar"
+
+# Connect to PostgreSQL (Authentik DB)
+ssh leksa@103.179.57.203 "docker exec -it authentik-postgres psql -U authentik -d authentik"
+```
+
+### Common Commands
+
+```bash
+# SSH to server
+ssh leksa@103.179.57.203
+
+# Navigate to project
+cd /opt/dayawarga
+
+# View logs
+docker logs senyar-api 2>&1 | tail -50
+docker logs senyar-admin-portal 2>&1 | tail -50
+docker logs authentik-server 2>&1 | tail -50
+
+# Restart services
+docker compose up -d api
+docker compose --profile admin-portal up -d
+
+# Rebuild and restart API
+docker compose build api && docker compose up -d api
+
+# Check running containers
+docker compose ps
+docker compose --profile admin-portal ps
+
+# Pull latest and restart
+git pull && docker compose build api && docker compose up -d api
+```
+
+### Environment Variables (.env on server)
+
+Key variables in `/opt/dayawarga/.env`:
+
+```env
+# Database
+DB_USER=senyar
+DB_PASSWORD=<password>
+DB_NAME=senyar
+
+# ODK Central
+ODK_BASE_URL=https://data.dayawarga.com
+ODK_EMAIL=<odk-admin-email>
+ODK_PASSWORD=<odk-admin-password>
+ODK_PROJECT_ID=3
+
+# OIDC for API
+OIDC_ISSUER_URL=https://auth.dayawarga.com/application/o/admin-portal/
+OIDC_CLIENT_ID=Y3DcvfobFob3IzpqjHfhOftMMUARZyQrcNCvg3He
+
+# Admin Portal OIDC
+ADMIN_PORTAL_OIDC_CLIENT_ID=Y3DcvfobFob3IzpqjHfhOftMMUARZyQrcNCvg3He
+
+# SMTP (Mailtrap)
+SMTP_HOST=live.smtp.mailtrap.io
+SMTP_PORT=587
+SMTP_USERNAME=apismtp@mailtrap.io
+SMTP_PASSWORD=28c7931902eea31458c9bb994ed6049e
+SMTP_FROM=noreply@dayawarga.com
+SMTP_FROM_NAME=Dayawarga
+
+# Authentik
+AUTHENTIK_SECRET_KEY=<generated-secret>
+AUTHENTIK_POSTGRES_PASSWORD=<password>
+```
+
+### Authentik Admin Account
+
+| Item | Value |
+|------|-------|
+| Username | `akadmin` |
+| Email | `root@example.com` |
+| Password | `DayawargaAdmin2026!` |
+| Role in Dayawarga DB | `super_admin` |
+
+---
+
+## Webhook: Auto-Sync Users to ODK Central
+
+When a new user is created in Authentik, a webhook automatically creates the corresponding ODK Web User.
+
+### How It Works
+
+1. **User Created in Authentik** → Triggers `model_created` event for User model
+2. **Event Matcher Policy** (`odk-user-sync-match-user-created`) → Matches the event
+3. **Notification Rule** (`odk-user-sync-rule`) → Sends notification via webhook transport
+4. **Webhook Transport** (`odk-user-sync-webhook`) → POSTs to API endpoint
+5. **API Handler** → Creates ODK Web User with the same email
+
+### Configuration Summary
+
+| Component | Name | Purpose |
+|-----------|------|---------|
+| Webhook Mapping | `odk-user-sync-mapping` | Formats payload with user data and secret |
+| Notification Transport | `odk-user-sync-webhook` | Sends POST to API webhook endpoint |
+| Event Matcher Policy | `odk-user-sync-match-user-created` | Matches `model_created` + `User` model |
+| Notification Rule | `odk-user-sync-rule` | Binds policy to transport |
+
+### Webhook Payload Format
+
+```json
+{
+  "event_type": "user_created",
+  "secret": "<AUTHENTIK_WEBHOOK_SECRET>",
+  "user": {
+    "pk": 123,
+    "username": "newuser",
+    "email": "newuser@example.com",
+    "name": "New User",
+    "is_active": true
+  }
+}
+```
+
+### API Endpoint
+
+```
+POST https://api.dayawarga.com/api/v1/webhooks/authentik
+```
+
+### Environment Variables
+
+Add to `.env`:
+```env
+AUTHENTIK_WEBHOOK_SECRET=<generate with: openssl rand -hex 32>
+```
+
+### Important Notes
+
+- **Manual Project Assignment**: The webhook only creates ODK Web User. Admin must manually assign user to ODK project to get App User + QR code.
+- **Auto-Approval**: Users are created with password (immediately active, no email verification in ODK).
+- **Secret in Body**: Authentik webhooks don't support custom headers, so the secret is included in the payload body.
+
+### Troubleshooting
+
+1. **Check Authentik Logs**:
+   ```bash
+   docker compose logs authentik-worker | grep -i webhook
+   ```
+
+2. **Check API Logs**:
+   ```bash
+   docker logs senyar-api 2>&1 | grep -i webhook
+   ```
+
+3. **Test Webhook Manually**:
+   ```bash
+   curl -X POST "https://api.dayawarga.com/api/v1/webhooks/authentik" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "event_type": "user_created",
+       "secret": "<your-secret>",
+       "user": {
+         "pk": 999,
+         "username": "testuser",
+         "email": "test@example.com",
+         "name": "Test User",
+         "is_active": true
+       }
+     }'
+   ```
+
+4. **Health Check**:
+   ```bash
+   curl "https://api.dayawarga.com/api/v1/webhooks/authentik/health"
+   ```
