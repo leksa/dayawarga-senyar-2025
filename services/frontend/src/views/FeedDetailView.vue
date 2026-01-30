@@ -127,12 +127,21 @@ const updateMetaTags = (feedData: Feed) => {
   })
 }
 
+const isUUID = (str: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  return uuidRegex.test(str)
+}
+
 const fetchFeed = async () => {
   loading.value = true
   error.value = null
   
   try {
-    const response = await api.getFeedByShortCode(feedCode.value)
+    const code = feedCode.value
+    const response = isUUID(code) 
+      ? await api.getFeedById(code)
+      : await api.getFeedByShortCode(code)
+    
     if (response.success && response.data) {
       feed.value = response.data
       updateMetaTags(response.data)
