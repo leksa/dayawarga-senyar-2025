@@ -131,6 +131,7 @@ func (h *FeedHandler) GetFeeds(c *gin.Context) {
 
 		feedResponses[i] = dto.FeedResponse{
 			ID:           feed.ID.String(),
+			ShortCode:    feed.ShortCode,
 			LocationID:   locationID,
 			LocationName: feed.LocationName,
 			FaskesID:     faskesID,
@@ -164,7 +165,7 @@ func (h *FeedHandler) convertPhotosToResponse(photos []model.FeedPhoto, odkSubmi
 	result := make([]dto.FeedPhotoResponse, len(photos))
 	for i, photo := range photos {
 		// Build photo URL - use feed photo endpoint (cached group has no prefix)
-		url := fmt.Sprintf("/api/v1/feeds/photos/%s/file", photo.ID.String())
+		url := fmt.Sprintf("/api/v1/feed-photos/%s/file", photo.ID.String())
 
 		result[i] = dto.FeedPhotoResponse{
 			ID:       photo.ID.String(),
@@ -174,6 +175,168 @@ func (h *FeedHandler) convertPhotosToResponse(photos []model.FeedPhoto, odkSubmi
 		}
 	}
 	return result
+}
+
+// GetFeedByID godoc
+// @Summary      Get feed by ID
+// @Description  Retrieve a single feed by its ID
+// @Tags         feeds
+// @Accept       json
+// @Produce      json
+// @Param        id   path      string  true  "Feed ID"
+// @Success      200  {object}  dto.APIResponse{data=dto.FeedResponse}
+// @Failure      400  {object}  dto.APIResponse
+// @Failure      404  {object}  dto.APIResponse
+// @Failure      500  {object}  dto.APIResponse
+// @Router       /api/v1/feeds/{id} [get]
+func (h *FeedHandler) GetFeedByID(c *gin.Context) {
+	idStr := c.Param("id")
+	feedID, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.APIResponse{
+			Success: false,
+			Error: &dto.ErrorInfo{
+				Code:    "VALIDATION_ERROR",
+				Message: "Invalid feed ID format",
+			},
+		})
+		return
+	}
+
+	feed, err := h.feedRepo.FindByID(feedID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, dto.APIResponse{
+			Success: false,
+			Error: &dto.ErrorInfo{
+				Code:    "NOT_FOUND",
+				Message: "Feed not found",
+			},
+		})
+		return
+	}
+
+	// Get photos for this feed
+	photos, _ := h.feedRepo.GetPhotosForFeed(feed.ID)
+	photoResponses := h.convertPhotosToResponse(photos, feed.ODKSubmissionID)
+
+	var locationID *string
+	if feed.LocationID != nil {
+		locIDStr := feed.LocationID.String()
+		locationID = &locIDStr
+	}
+
+	var faskesID *string
+	if feed.FaskesID != nil {
+		faskesIDStr := feed.FaskesID.String()
+		faskesID = &faskesIDStr
+	}
+
+	var coords []float64
+	if feed.Longitude != nil && feed.Latitude != nil {
+		coords = []float64{*feed.Longitude, *feed.Latitude}
+	}
+
+	var region *dto.FeedRegion
+	if feed.RawData != nil {
+		region = extractRegionFromRawData(feed.RawData)
+	}
+
+	response := dto.FeedResponse{
+		ID:           feed.ID.String(),
+		ShortCode:    feed.ShortCode,
+		LocationID:   locationID,
+		LocationName: feed.LocationName,
+		FaskesID:     faskesID,
+		FaskesName:   feed.FaskesName,
+		Category:     feed.Category,
+		Type:         feed.Type,
+		Content:      feed.Content,
+		Username:     feed.Username,
+		Organization: feed.Organization,
+		SubmittedAt:  getSubmittedAt(feed.SubmittedAt, feed.CreatedAt),
+		Coordinates:  coords,
+		Photos:       photoResponses,
+		Region:       region,
+	}
+
+	c.JSON(http.StatusOK, dto.APIResponse{
+		Success: true,
+		Data:    response,
+	})
+}
+
+func (h *FeedHandler) GetFeedByShortCode(c *gin.Context) {
+	shortCode := c.Param("code")
+	if shortCode == "" {
+		c.JSON(http.StatusBadRequest, dto.APIResponse{
+			Success: false,
+			Error: &dto.ErrorInfo{
+				Code:    "VALIDATION_ERROR",
+				Message: "Short code is required",
+			},
+		})
+		return
+	}
+
+	feed, err := h.feedRepo.FindByShortCode(shortCode)
+	if err != nil {
+		c.JSON(http.StatusNotFound, dto.APIResponse{
+			Success: false,
+			Error: &dto.ErrorInfo{
+				Code:    "NOT_FOUND",
+				Message: "Feed not found",
+			},
+		})
+		return
+	}
+
+	photos, _ := h.feedRepo.GetPhotosForFeed(feed.ID)
+	photoResponses := h.convertPhotosToResponse(photos, feed.ODKSubmissionID)
+
+	var locationID *string
+	if feed.LocationID != nil {
+		locIDStr := feed.LocationID.String()
+		locationID = &locIDStr
+	}
+
+	var faskesID *string
+	if feed.FaskesID != nil {
+		faskesIDStr := feed.FaskesID.String()
+		faskesID = &faskesIDStr
+	}
+
+	var coords []float64
+	if feed.Longitude != nil && feed.Latitude != nil {
+		coords = []float64{*feed.Longitude, *feed.Latitude}
+	}
+
+	var region *dto.FeedRegion
+	if feed.RawData != nil {
+		region = extractRegionFromRawData(feed.RawData)
+	}
+
+	response := dto.FeedResponse{
+		ID:           feed.ID.String(),
+		ShortCode:    feed.ShortCode,
+		LocationID:   locationID,
+		LocationName: feed.LocationName,
+		FaskesID:     faskesID,
+		FaskesName:   feed.FaskesName,
+		Category:     feed.Category,
+		Type:         feed.Type,
+		Content:      feed.Content,
+		Username:     feed.Username,
+		Organization: feed.Organization,
+		SubmittedAt:  getSubmittedAt(feed.SubmittedAt, feed.CreatedAt),
+		Coordinates:  coords,
+		Photos:       photoResponses,
+		Region:       region,
+	}
+
+	c.JSON(http.StatusOK, dto.APIResponse{
+		Success: true,
+		Data:    response,
+	})
 }
 
 // GetFeedsByLocation godoc

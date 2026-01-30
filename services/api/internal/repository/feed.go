@@ -161,6 +161,50 @@ func (r *FeedRepository) FindAll(filter FeedFilter) ([]FeedWithCoords, int64, er
 	return feeds, total, err
 }
 
+func (r *FeedRepository) FindByID(id uuid.UUID) (*FeedWithCoords, error) {
+	var feed FeedWithCoords
+
+	err := r.db.Table("information_feeds f").
+		Select(`
+			f.*,
+			ST_X(f.geom) as longitude,
+			ST_Y(f.geom) as latitude,
+			l.nama as location_name,
+			fk.nama as faskes_name
+		`).
+		Joins("LEFT JOIN locations l ON l.id = f.location_id").
+		Joins("LEFT JOIN faskes fk ON fk.id = f.faskes_id").
+		Where("f.id = ?", id).
+		First(&feed).Error
+
+	if err != nil {
+		return nil, err
+	}
+	return &feed, nil
+}
+
+func (r *FeedRepository) FindByShortCode(shortCode string) (*FeedWithCoords, error) {
+	var feed FeedWithCoords
+
+	err := r.db.Table("information_feeds f").
+		Select(`
+			f.*,
+			ST_X(f.geom) as longitude,
+			ST_Y(f.geom) as latitude,
+			l.nama as location_name,
+			fk.nama as faskes_name
+		`).
+		Joins("LEFT JOIN locations l ON l.id = f.location_id").
+		Joins("LEFT JOIN faskes fk ON fk.id = f.faskes_id").
+		Where("f.short_code = ?", shortCode).
+		First(&feed).Error
+
+	if err != nil {
+		return nil, err
+	}
+	return &feed, nil
+}
+
 func (r *FeedRepository) FindByLocationID(locationID uuid.UUID, limit int) ([]FeedWithCoords, error) {
 	var feeds []FeedWithCoords
 

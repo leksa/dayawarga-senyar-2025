@@ -288,14 +288,15 @@ func main() {
 
 			// Feeds (cached)
 			cached.GET("/feeds", feedHandler.GetFeeds)
+			cached.GET("/feeds/:id", feedHandler.GetFeedByID)
+			cached.GET("/feeds/s/:code", feedHandler.GetFeedByShortCode)
 			cached.GET("/locations/:id/feeds", feedHandler.GetFeedsByLocation)
 
 			// Photos (cached)
 			// Posko photos
 			cached.GET("/locations/:id/photos", photoHandler.GetPhotosByLocation)
 			cached.GET("/photos/:id/file", photoHandler.GetPhotoFile)
-			// Feed photos
-			cached.GET("/feeds/photos/:id/file", photoHandler.GetFeedPhotoFile)
+			cached.GET("/feed-photos/:id/file", photoHandler.GetFeedPhotoFile)
 			// Faskes photos
 			cached.GET("/faskes/:id/photos", photoHandler.GetPhotosByFaskes)
 			cached.GET("/faskes/photos/:id/file", photoHandler.GetFaskesPhotoFile)

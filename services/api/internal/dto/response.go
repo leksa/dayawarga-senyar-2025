@@ -55,28 +55,28 @@ type LocationFeatureResponse struct {
 }
 
 type LocationListProperties struct {
-	ODKSubmissionID  string    `json:"odk_submission_id,omitempty"`
-	Nama             string    `json:"nama"`
-	Type             string    `json:"type"`
-	Status           string    `json:"status"`
-	AlamatSingkat    string    `json:"alamat_singkat,omitempty"`
-	NamaProvinsi     string    `json:"nama_provinsi,omitempty"`
-	NamaKotaKab      string    `json:"nama_kota_kab,omitempty"`
-	NamaKecamatan    string    `json:"nama_kecamatan,omitempty"`
-	NamaDesa         string    `json:"nama_desa,omitempty"`
-	IDProvinsi       string    `json:"id_provinsi,omitempty"`
-	IDKotaKab        string    `json:"id_kota_kab,omitempty"`
-	IDKecamatan      string    `json:"id_kecamatan,omitempty"`
-	IDDesa           string    `json:"id_desa,omitempty"`
-	JumlahKK         int       `json:"jumlah_kk"`
-	TotalJiwa        int       `json:"total_jiwa"`
-	JumlahPerempuan  int       `json:"jumlah_perempuan"`
-	JumlahLaki       int       `json:"jumlah_laki"`
-	JumlahBalita       int       `json:"jumlah_balita"`
-	KebutuhanAir       string    `json:"kebutuhan_air,omitempty"`
-	KebutuhanAirLiter  int       `json:"kebutuhan_air_liter"`
-	BaselineSumber     string    `json:"baseline_sumber,omitempty"`
-	UpdatedAt          time.Time `json:"updated_at"`
+	ODKSubmissionID   string    `json:"odk_submission_id,omitempty"`
+	Nama              string    `json:"nama"`
+	Type              string    `json:"type"`
+	Status            string    `json:"status"`
+	AlamatSingkat     string    `json:"alamat_singkat,omitempty"`
+	NamaProvinsi      string    `json:"nama_provinsi,omitempty"`
+	NamaKotaKab       string    `json:"nama_kota_kab,omitempty"`
+	NamaKecamatan     string    `json:"nama_kecamatan,omitempty"`
+	NamaDesa          string    `json:"nama_desa,omitempty"`
+	IDProvinsi        string    `json:"id_provinsi,omitempty"`
+	IDKotaKab         string    `json:"id_kota_kab,omitempty"`
+	IDKecamatan       string    `json:"id_kecamatan,omitempty"`
+	IDDesa            string    `json:"id_desa,omitempty"`
+	JumlahKK          int       `json:"jumlah_kk"`
+	TotalJiwa         int       `json:"total_jiwa"`
+	JumlahPerempuan   int       `json:"jumlah_perempuan"`
+	JumlahLaki        int       `json:"jumlah_laki"`
+	JumlahBalita      int       `json:"jumlah_balita"`
+	KebutuhanAir      string    `json:"kebutuhan_air,omitempty"`
+	KebutuhanAirLiter int       `json:"kebutuhan_air_liter"`
+	BaselineSumber    string    `json:"baseline_sumber,omitempty"`
+	UpdatedAt         time.Time `json:"updated_at"`
 }
 
 // LocationDetailResponse for GET /locations/:id
@@ -116,9 +116,9 @@ type LocationMeta struct {
 	SubmitterName string     `json:"submitter,omitempty"`
 }
 
-// FeedResponse for GET /feeds
 type FeedResponse struct {
 	ID           string              `json:"id"`
+	ShortCode    *string             `json:"short_code,omitempty"`
 	LocationID   *string             `json:"location_id,omitempty"`
 	LocationName *string             `json:"location_name,omitempty"`
 	FaskesID     *string             `json:"faskes_id,omitempty"`
@@ -259,10 +259,10 @@ type InfrastrukturDetailResponse struct {
 
 // InfrastrukturStatsResponse for GET /infrastruktur/stats
 type InfrastrukturStatsResponse struct {
-	ByJenis           []StatItem `json:"by_jenis"`
-	ByStatusAkses     []StatItem `json:"by_status_akses"`
+	ByJenis            []StatItem `json:"by_jenis"`
+	ByStatusAkses      []StatItem `json:"by_status_akses"`
 	ByStatusPenanganan []StatItem `json:"by_status_penanganan"`
-	AvgProgress       float64    `json:"avg_progress"`
+	AvgProgress        float64    `json:"avg_progress"`
 }
 
 type StatItem struct {
@@ -272,10 +272,10 @@ type StatItem struct {
 
 // HealthResponse for GET /health
 type HealthResponse struct {
-	Status    string            `json:"status"`
-	Version   string            `json:"version"`
-	Checks    map[string]Check  `json:"checks"`
-	Timestamp time.Time         `json:"timestamp"`
+	Status    string           `json:"status"`
+	Version   string           `json:"version"`
+	Checks    map[string]Check `json:"checks"`
+	Timestamp time.Time        `json:"timestamp"`
 }
 
 type Check struct {

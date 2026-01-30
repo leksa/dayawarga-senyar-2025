@@ -13,6 +13,7 @@ type Feed struct {
 	FaskesID        *uuid.UUID `json:"faskes_id,omitempty" gorm:"type:uuid"`
 	ODKSubmissionID *string    `json:"odk_submission_id,omitempty" gorm:"column:odk_submission_id"`
 
+	ShortCode    *string `json:"short_code,omitempty" gorm:"column:short_code"`
 	Content      string  `json:"content" gorm:"not null"`
 	Category     string  `json:"category" gorm:"default:'informasi'"`
 	Type         *string `json:"type,omitempty"`
