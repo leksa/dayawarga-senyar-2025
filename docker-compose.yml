@@ -262,6 +262,14 @@ services:
       AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_POSTGRES_USER:-authentik}
       AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_POSTGRES_DB:-authentik}
       AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_POSTGRES_PASSWORD:-}
+      # Email/SMTP Configuration
+      AUTHENTIK_EMAIL__HOST: ${SMTP_HOST:-}
+      AUTHENTIK_EMAIL__PORT: ${SMTP_PORT:-587}
+      AUTHENTIK_EMAIL__USERNAME: ${SMTP_USERNAME:-}
+      AUTHENTIK_EMAIL__PASSWORD: ${SMTP_PASSWORD:-}
+      AUTHENTIK_EMAIL__USE_TLS: "true"
+      AUTHENTIK_EMAIL__USE_SSL: "false"
+      AUTHENTIK_EMAIL__FROM: ${SMTP_FROM:-noreply@dayawarga.com}
     volumes:
       - authentik_media:/media
       - authentik_templates:/templates
@@ -293,6 +301,13 @@ services:
       AUTHENTIK_POSTGRESQL__USER: ${AUTHENTIK_POSTGRES_USER:-authentik}
       AUTHENTIK_POSTGRESQL__NAME: ${AUTHENTIK_POSTGRES_DB:-authentik}
       AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_POSTGRES_PASSWORD:-}
+      AUTHENTIK_EMAIL__HOST: ${SMTP_HOST:-}
+      AUTHENTIK_EMAIL__PORT: ${SMTP_PORT:-587}
+      AUTHENTIK_EMAIL__USERNAME: ${SMTP_USERNAME:-}
+      AUTHENTIK_EMAIL__PASSWORD: ${SMTP_PASSWORD:-}
+      AUTHENTIK_EMAIL__USE_TLS: "true"
+      AUTHENTIK_EMAIL__USE_SSL: "false"
+      AUTHENTIK_EMAIL__FROM: ${SMTP_FROM:-noreply@dayawarga.com}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - authentik_media:/media

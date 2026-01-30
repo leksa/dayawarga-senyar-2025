@@ -313,12 +313,15 @@ docker compose logs authentik-postgres
 
 ## Production Server Configuration Reference
 
+> **Note**: All sensitive values (passwords, tokens, IPs) are stored in `.env` file on the server.
+> Never commit actual credentials to version control.
+
 ### Server Access
 
 | Item | Value |
 |------|-------|
-| Server IP | `103.179.57.203` |
-| SSH User | `leksa` |
+| Server IP | See `.env` or internal documentation |
+| SSH User | See internal documentation |
 | Project Path | `/opt/dayawarga` |
 
 ### URLs
@@ -336,34 +339,30 @@ docker compose logs authentik-postgres
 | Item | Value |
 |------|-------|
 | Issuer URL | `https://auth.dayawarga.com/application/o/admin-portal/` |
-| Client ID | `Y3DcvfobFob3IzpqjHfhOftMMUARZyQrcNCvg3He` |
+| Client ID | See Authentik Admin UI or `.env` |
 | Discovery URL | `https://auth.dayawarga.com/application/o/admin-portal/.well-known/openid-configuration` |
 
-### SMTP Configuration (Mailtrap)
+### SMTP Configuration
 
 | Item | Value |
 |------|-------|
-| Host | `live.smtp.mailtrap.io` |
+| Host | See `.env` |
 | Port | `587` |
-| Username | `apismtp@mailtrap.io` |
-| Password | `28c7931902eea31458c9bb994ed6049e` |
+| Username | See `.env` |
+| Password | See `.env` |
 | From Email | `noreply@dayawarga.com` |
-| From Name | `Dayawarga` |
-| Auth | PLAIN, LOGIN |
 | TLS | Required (STARTTLS on port 587) |
 
 ### Authentik API Token
 
-For programmatic user management:
-
-```
-Token: 9CVhCRNlVEpCdpYDZLzpswDkxoO2FSuefj1dnzzArvURubMs3ek9FF71SYBD
-```
+For programmatic user management, generate a token in Authentik Admin UI:
+1. Go to **Directory** → **Tokens and App passwords**
+2. Create a new token with appropriate permissions
 
 Example API call:
 ```bash
 curl -X POST "https://auth.dayawarga.com/api/v3/core/users/" \
-  -H "Authorization: Bearer 9CVhCRNlVEpCdpYDZLzpswDkxoO2FSuefj1dnzzArvURubMs3ek9FF71SYBD" \
+  -H "Authorization: Bearer <your-api-token>" \
   -H "Content-Type: application/json" \
   -d '{"username": "newuser", "name": "New User", "email": "user@example.com", "is_active": true}'
 ```
@@ -372,18 +371,15 @@ curl -X POST "https://auth.dayawarga.com/api/v3/core/users/" \
 
 ```bash
 # Connect to PostgreSQL (Dayawarga DB)
-ssh leksa@103.179.57.203 "docker exec -it senyar-postgres psql -U senyar -d senyar"
+docker exec -it senyar-postgres psql -U senyar -d senyar
 
 # Connect to PostgreSQL (Authentik DB)
-ssh leksa@103.179.57.203 "docker exec -it authentik-postgres psql -U authentik -d authentik"
+docker exec -it authentik-postgres psql -U authentik -d authentik
 ```
 
 ### Common Commands
 
 ```bash
-# SSH to server
-ssh leksa@103.179.57.203
-
 # Navigate to project
 cd /opt/dayawarga
 
@@ -421,26 +417,25 @@ DB_NAME=senyar
 ODK_BASE_URL=https://data.dayawarga.com
 ODK_EMAIL=<odk-admin-email>
 ODK_PASSWORD=<odk-admin-password>
-ODK_PROJECT_ID=3
+ODK_PROJECT_ID=<project-id>
 
 # OIDC for API
 OIDC_ISSUER_URL=https://auth.dayawarga.com/application/o/admin-portal/
-OIDC_CLIENT_ID=Y3DcvfobFob3IzpqjHfhOftMMUARZyQrcNCvg3He
+OIDC_CLIENT_ID=<from-authentik-admin>
 
 # Admin Portal OIDC
-ADMIN_PORTAL_OIDC_CLIENT_ID=Y3DcvfobFob3IzpqjHfhOftMMUARZyQrcNCvg3He
+ADMIN_PORTAL_OIDC_CLIENT_ID=<from-authentik-admin>
 
-# SMTP (Mailtrap)
-SMTP_HOST=live.smtp.mailtrap.io
+# SMTP
+SMTP_HOST=<smtp-host>
 SMTP_PORT=587
-SMTP_USERNAME=apismtp@mailtrap.io
-SMTP_PASSWORD=28c7931902eea31458c9bb994ed6049e
+SMTP_USERNAME=<smtp-username>
+SMTP_PASSWORD=<smtp-password>
 SMTP_FROM=noreply@dayawarga.com
-SMTP_FROM_NAME=Dayawarga
 
 # Authentik
-AUTHENTIK_SECRET_KEY=<generated-secret>
-AUTHENTIK_POSTGRES_PASSWORD=<password>
+AUTHENTIK_SECRET_KEY=<generate: openssl rand -base64 60>
+AUTHENTIK_POSTGRES_PASSWORD=<strong-password>
 ```
 
 ### Authentik Admin Account
@@ -448,8 +443,8 @@ AUTHENTIK_POSTGRES_PASSWORD=<password>
 | Item | Value |
 |------|-------|
 | Username | `akadmin` |
-| Email | `root@example.com` |
-| Password | `DayawargaAdmin2026!` |
+| Email | Set during initial setup |
+| Password | Set during initial setup (change immediately) |
 | Role in Dayawarga DB | `super_admin` |
 
 ---
