@@ -5,6 +5,28 @@ All notable changes to Dayawarga Senyar will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-01-30
+
+### Added
+- **Organization Enhancements** - Extended organization model with location and social media fields:
+  - `city`, `country` - Location information
+  - `website_url` - Organization website
+  - `social_media` - JSON object for social handles (facebook, twitter, instagram, linkedin)
+- **Bidang (Sectors) Management** - Organizations can now be tagged with fields of work:
+  - New `bidang` table with seed data: Kesehatan, Pendidikan, Logistik, Pangan, Shelter, WASH
+  - Junction table `organization_bidang` for many-to-many relationship
+  - API endpoints: `GET /bidang`, `POST /organizations/:id/bidang`, `DELETE /organizations/:id/bidang/:bidang_id`
+  - Frontend service: `bidangService` with list, add, remove methods
+- **Feed Short Code** - Feeds now have unique 8-character short codes for sharing (e.g., `/feeds/s/ABC12345`)
+
+### Changed
+- OrganizationHandler now uses `NewOrganizationHandlerWithBidang` constructor to support bidang operations
+- OrganizationsView and OrganizationDetailView updated with new fields UI
+
+### Infrastructure
+- Database migration 000016: Organization enhancements (city, country, website_url, social_media, bidang tables)
+- Database migration 000017: Feed short_code field
+
 ## [1.4.0] - 2026-01-30
 
 ### Added

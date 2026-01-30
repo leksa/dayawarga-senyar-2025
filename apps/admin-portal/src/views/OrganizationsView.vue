@@ -22,6 +22,8 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
+  Globe,
+  MapPin,
 } from 'lucide-vue-next'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
@@ -61,8 +63,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { organizationService, type Organization } from '@/services'
-import { odkProjectService } from '@/services/odk'
+import { Checkbox } from '@/components/ui/checkbox'
+import { organizationService, type Organization, type Bidang } from '@/services'
+import { odkProjectService, bidangService } from '@/services/odk'
 import type { ODKProject, AssignODKProjectResult, AdminODKResult } from '@/services/types'
 import { useAuthStore } from '@/stores/auth'
 
@@ -99,12 +102,25 @@ const pageSize = ref(20)
 const totalItems = ref(0)
 const totalPages = ref(0)
 
+// Bidang state
+const allBidang = ref<Bidang[]>([])
+const isLoadingBidang = ref(false)
+
 // Form state
 const formData = ref({
   name: '',
   description: '',
   admin_email: '',
   admin_name: '',
+  city: '',
+  country: '',
+  website_url: '',
+  social_media: {
+    instagram: '',
+    facebook: '',
+    twitter: '',
+  },
+  selected_bidang_ids: [] as string[],
 })
 
 // Invitation result state
@@ -173,11 +189,33 @@ function viewOrganization(org: OrganizationDisplay) {
   router.push(`/organizations/${org.id}`)
 }
 
+async function fetchBidang() {
+  isLoadingBidang.value = true
+  try {
+    allBidang.value = await bidangService.list()
+  } catch (error) {
+    console.error('Failed to fetch bidang:', error)
+  } finally {
+    isLoadingBidang.value = false
+  }
+}
+
 function openCreateDialog() {
-  formData.value = { name: '', description: '', admin_email: '', admin_name: '' }
+  formData.value = {
+    name: '',
+    description: '',
+    admin_email: '',
+    admin_name: '',
+    city: '',
+    country: '',
+    website_url: '',
+    social_media: { instagram: '', facebook: '', twitter: '' },
+    selected_bidang_ids: [],
+  }
   invitationResult.value = null
   isInvitationCopied.value = false
   isCreateDialogOpen.value = true
+  fetchBidang()
 }
 
 function openEditDialog(org: OrganizationDisplay) {
@@ -187,8 +225,18 @@ function openEditDialog(org: OrganizationDisplay) {
     description: org.description || '',
     admin_email: '',
     admin_name: '',
+    city: org.city || '',
+    country: org.country || '',
+    website_url: org.website_url || '',
+    social_media: {
+      instagram: org.social_media?.instagram || '',
+      facebook: org.social_media?.facebook || '',
+      twitter: org.social_media?.twitter || '',
+    },
+    selected_bidang_ids: org.bidang?.map(b => b.id) || [],
   }
   isEditDialogOpen.value = true
+  fetchBidang()
 }
 
 function openDeleteDialog(org: OrganizationDisplay) {
@@ -270,24 +318,40 @@ function getAdminStatusColor(admin: AdminODKResult) {
   return 'text-green-500'
 }
 
+function buildSocialMedia() {
+  const social: Record<string, string> = {}
+  if (formData.value.social_media.instagram) social.instagram = formData.value.social_media.instagram
+  if (formData.value.social_media.facebook) social.facebook = formData.value.social_media.facebook
+  if (formData.value.social_media.twitter) social.twitter = formData.value.social_media.twitter
+  return Object.keys(social).length > 0 ? social : undefined
+}
+
 async function handleCreate() {
   if (!formData.value.name) return
 
   isSaving.value = true
   try {
     const hasAdminEmail = formData.value.admin_email?.trim()
+    const baseInput = {
+      name: formData.value.name,
+      description: formData.value.description || undefined,
+      city: formData.value.city || undefined,
+      country: formData.value.country || undefined,
+      website_url: formData.value.website_url || undefined,
+      social_media: buildSocialMedia(),
+    }
+
+    let createdOrgId: string | null = null
 
     if (hasAdminEmail) {
-      // Create with admin invitation
       const result = await organizationService.createWithAdmin({
-        name: formData.value.name,
-        description: formData.value.description || undefined,
+        ...baseInput,
         admin_email: formData.value.admin_email.trim(),
         admin_name: formData.value.admin_name?.trim() || undefined,
       })
+      createdOrgId = result.organization?.id || null
 
       if (result.invitation_link) {
-        // Show invitation result
         invitationResult.value = {
           invitation_link: result.invitation_link,
           admin_email: formData.value.admin_email,
@@ -299,13 +363,16 @@ async function handleCreate() {
         isCreateDialogOpen.value = false
       }
     } else {
-      // Create without admin
-      await organizationService.create({
-        name: formData.value.name,
-        description: formData.value.description || undefined,
-      })
+      const result = await organizationService.create(baseInput)
+      createdOrgId = result.id
       toast.success('Organisasi berhasil dibuat')
       isCreateDialogOpen.value = false
+    }
+
+    if (createdOrgId && formData.value.selected_bidang_ids.length > 0) {
+      for (const bidangId of formData.value.selected_bidang_ids) {
+        await bidangService.addToOrganization(createdOrgId, bidangId)
+      }
     }
 
     await fetchOrganizations()
@@ -345,7 +412,25 @@ async function handleEdit() {
     await organizationService.update(selectedOrg.value.id, {
       name: formData.value.name,
       description: formData.value.description || undefined,
+      city: formData.value.city || undefined,
+      country: formData.value.country || undefined,
+      website_url: formData.value.website_url || undefined,
+      social_media: buildSocialMedia(),
     })
+
+    const currentBidangIds = selectedOrg.value.bidang?.map(b => b.id) || []
+    const newBidangIds = formData.value.selected_bidang_ids
+
+    const toAdd = newBidangIds.filter(id => !currentBidangIds.includes(id))
+    const toRemove = currentBidangIds.filter(id => !newBidangIds.includes(id))
+
+    for (const bidangId of toAdd) {
+      await bidangService.addToOrganization(selectedOrg.value.id, bidangId)
+    }
+    for (const bidangId of toRemove) {
+      await bidangService.removeFromOrganization(selectedOrg.value.id, bidangId)
+    }
+
     toast.success('Organisasi berhasil diperbarui')
     isEditDialogOpen.value = false
     await fetchOrganizations()
@@ -635,6 +720,110 @@ onMounted(() => {
               />
             </div>
 
+            <!-- Location Section -->
+            <div class="border-t pt-4 mt-4">
+              <div class="flex items-center gap-2 mb-3">
+                <MapPin class="h-4 w-4 text-muted-foreground" />
+                <span class="text-sm font-medium">Lokasi</span>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div class="space-y-2">
+                  <Label for="city">Kota</Label>
+                  <Input
+                    id="city"
+                    v-model="formData.city"
+                    placeholder="Jakarta"
+                  />
+                </div>
+                <div class="space-y-2">
+                  <Label for="country">Negara</Label>
+                  <Input
+                    id="country"
+                    v-model="formData.country"
+                    placeholder="Indonesia"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Web & Social Media Section -->
+            <div class="border-t pt-4 mt-4">
+              <div class="flex items-center gap-2 mb-3">
+                <Globe class="h-4 w-4 text-muted-foreground" />
+                <span class="text-sm font-medium">Web & Media Sosial</span>
+              </div>
+              <div class="space-y-3">
+                <div class="space-y-2">
+                  <Label for="website_url">Website</Label>
+                  <Input
+                    id="website_url"
+                    v-model="formData.website_url"
+                    placeholder="https://organisasi.com"
+                  />
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                  <div class="space-y-2">
+                    <Label for="instagram">Instagram</Label>
+                    <Input
+                      id="instagram"
+                      v-model="formData.social_media.instagram"
+                      placeholder="@username"
+                    />
+                  </div>
+                  <div class="space-y-2">
+                    <Label for="facebook">Facebook</Label>
+                    <Input
+                      id="facebook"
+                      v-model="formData.social_media.facebook"
+                      placeholder="pagename"
+                    />
+                  </div>
+                  <div class="space-y-2">
+                    <Label for="twitter">Twitter/X</Label>
+                    <Input
+                      id="twitter"
+                      v-model="formData.social_media.twitter"
+                      placeholder="@username"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bidang Section -->
+            <div class="border-t pt-4 mt-4">
+              <div class="flex items-center gap-2 mb-3">
+                <Building2 class="h-4 w-4 text-muted-foreground" />
+                <span class="text-sm font-medium">Bidang / Klaster</span>
+              </div>
+              <div v-if="isLoadingBidang" class="flex items-center gap-2">
+                <Loader2 class="h-4 w-4 animate-spin" />
+                <span class="text-sm text-muted-foreground">Memuat bidang...</span>
+              </div>
+              <div v-else class="grid grid-cols-2 gap-2">
+                <div
+                  v-for="bidang in allBidang"
+                  :key="bidang.id"
+                  class="flex items-center space-x-2"
+                >
+                  <Checkbox
+                    :id="`bidang-${bidang.id}`"
+                    :checked="formData.selected_bidang_ids.includes(bidang.id)"
+                    @update:checked="(checked: boolean) => {
+                      if (checked) {
+                        formData.selected_bidang_ids.push(bidang.id)
+                      } else {
+                        formData.selected_bidang_ids = formData.selected_bidang_ids.filter(id => id !== bidang.id)
+                      }
+                    }"
+                  />
+                  <Label :for="`bidang-${bidang.id}`" class="text-sm font-normal cursor-pointer">
+                    {{ bidang.name }}
+                  </Label>
+                </div>
+              </div>
+            </div>
+
             <!-- Admin Invitation Section -->
             <div class="border-t pt-4 mt-4">
               <div class="flex items-center gap-2 mb-3">
@@ -690,7 +879,7 @@ onMounted(() => {
 
       <!-- Edit Dialog -->
       <Dialog v-model:open="isEditDialogOpen">
-        <DialogContent>
+        <DialogContent class="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Organisasi</DialogTitle>
             <DialogDescription>
@@ -714,6 +903,110 @@ onMounted(() => {
                 placeholder="Masukkan deskripsi organisasi"
                 rows="3"
               />
+            </div>
+
+            <!-- Location Section -->
+            <div class="border-t pt-4 mt-4">
+              <div class="flex items-center gap-2 mb-3">
+                <MapPin class="h-4 w-4 text-muted-foreground" />
+                <span class="text-sm font-medium">Lokasi</span>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div class="space-y-2">
+                  <Label for="edit-city">Kota</Label>
+                  <Input
+                    id="edit-city"
+                    v-model="formData.city"
+                    placeholder="Jakarta"
+                  />
+                </div>
+                <div class="space-y-2">
+                  <Label for="edit-country">Negara</Label>
+                  <Input
+                    id="edit-country"
+                    v-model="formData.country"
+                    placeholder="Indonesia"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Web & Social Media Section -->
+            <div class="border-t pt-4 mt-4">
+              <div class="flex items-center gap-2 mb-3">
+                <Globe class="h-4 w-4 text-muted-foreground" />
+                <span class="text-sm font-medium">Web & Media Sosial</span>
+              </div>
+              <div class="space-y-3">
+                <div class="space-y-2">
+                  <Label for="edit-website_url">Website</Label>
+                  <Input
+                    id="edit-website_url"
+                    v-model="formData.website_url"
+                    placeholder="https://organisasi.com"
+                  />
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                  <div class="space-y-2">
+                    <Label for="edit-instagram">Instagram</Label>
+                    <Input
+                      id="edit-instagram"
+                      v-model="formData.social_media.instagram"
+                      placeholder="@username"
+                    />
+                  </div>
+                  <div class="space-y-2">
+                    <Label for="edit-facebook">Facebook</Label>
+                    <Input
+                      id="edit-facebook"
+                      v-model="formData.social_media.facebook"
+                      placeholder="pagename"
+                    />
+                  </div>
+                  <div class="space-y-2">
+                    <Label for="edit-twitter">Twitter/X</Label>
+                    <Input
+                      id="edit-twitter"
+                      v-model="formData.social_media.twitter"
+                      placeholder="@username"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bidang Section -->
+            <div class="border-t pt-4 mt-4">
+              <div class="flex items-center gap-2 mb-3">
+                <Building2 class="h-4 w-4 text-muted-foreground" />
+                <span class="text-sm font-medium">Bidang / Klaster</span>
+              </div>
+              <div v-if="isLoadingBidang" class="flex items-center gap-2">
+                <Loader2 class="h-4 w-4 animate-spin" />
+                <span class="text-sm text-muted-foreground">Memuat bidang...</span>
+              </div>
+              <div v-else class="grid grid-cols-2 gap-2">
+                <div
+                  v-for="bidang in allBidang"
+                  :key="bidang.id"
+                  class="flex items-center space-x-2"
+                >
+                  <Checkbox
+                    :id="`edit-bidang-${bidang.id}`"
+                    :checked="formData.selected_bidang_ids.includes(bidang.id)"
+                    @update:checked="(checked: boolean) => {
+                      if (checked) {
+                        formData.selected_bidang_ids.push(bidang.id)
+                      } else {
+                        formData.selected_bidang_ids = formData.selected_bidang_ids.filter(id => id !== bidang.id)
+                      }
+                    }"
+                  />
+                  <Label :for="`edit-bidang-${bidang.id}`" class="text-sm font-normal cursor-pointer">
+                    {{ bidang.name }}
+                  </Label>
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter>

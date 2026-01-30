@@ -20,7 +20,7 @@ const currentPIN = ref(pin)
 
 let pollInterval: ReturnType<typeof setInterval> | null = null
 
-const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '6281234567890'
+const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '6285939063283'
 
 const whatsappLink = computed(() => {
   const message = encodeURIComponent(currentPIN.value)

@@ -64,8 +64,31 @@ export interface Organization {
   logo_url: string | null
   odk_project_id: number | null
   is_active: boolean
+  city?: string | null
+  country?: string | null
+  website_url?: string | null
+  social_media?: Record<string, string> | null
+  bidang?: Bidang[]
   created_at: string
   updated_at: string
+}
+
+// Bidang (Field/Domain)
+export interface Bidang {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  is_active: boolean
+  created_at: string
+}
+
+// Organization Bidang (Junction table)
+export interface OrganizationBidang {
+  organization_id: string
+  bidang_id: string
+  created_at: string
+  bidang?: Bidang
 }
 
 export interface OrganizationStats {
@@ -93,6 +116,10 @@ export interface CreateOrganizationInput {
   address?: string
   logo_url?: string
   odk_project_id?: number
+  city?: string
+  country?: string
+  website_url?: string
+  social_media?: Record<string, string>
   // Admin invitation (optional)
   admin_email?: string
   admin_name?: string
@@ -116,6 +143,10 @@ export interface UpdateOrganizationInput {
   logo_url?: string
   odk_project_id?: number
   is_active?: boolean
+  city?: string
+  country?: string
+  website_url?: string
+  social_media?: Record<string, string>
 }
 
 // Group
@@ -430,4 +461,39 @@ export interface OrganizationODKInfo {
   organization: Organization
   odk_project?: ODKProject
   admin_odk_status: AdminODKStatus[]
+}
+
+// Feed Photo
+export interface FeedPhoto {
+  id: string
+  feed_id: string
+  filename: string
+  original_path: string
+  storage_path?: string
+  storage_url?: string
+  size_bytes?: number
+  content_type?: string
+  sync_status: string
+}
+
+// Feed (from ODK submissions)
+export interface Feed {
+  id: string
+  project_id: number
+  form_id: string
+  submission_id: string
+  instance_id: string
+  username?: string
+  device_id?: string
+  notes?: string
+  sync_status: string
+  created_at: string
+  updated_at: string
+  photos?: FeedPhoto[]
+}
+
+// Organization Activity (feed with relawan info)
+export interface OrganizationActivity {
+  feed: Feed
+  relawan_name?: string
 }

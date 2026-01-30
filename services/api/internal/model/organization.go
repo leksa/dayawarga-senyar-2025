@@ -19,6 +19,12 @@ type Organization struct {
 	Email   *string `json:"email,omitempty"`
 	Phone   *string `json:"phone,omitempty"`
 	Address *string `json:"address,omitempty"`
+	City    *string `json:"city,omitempty" gorm:"type:varchar(100)"`
+	Country *string `json:"country,omitempty" gorm:"type:varchar(100)"`
+
+	// Web presence
+	WebsiteURL  *string `json:"website_url,omitempty" gorm:"column:website_url;type:varchar(500)"`
+	SocialMedia JSONB   `json:"social_media,omitempty" gorm:"type:jsonb;default:'{}'"`
 
 	// Visual
 	LogoURL *string `json:"logo_url,omitempty" gorm:"column:logo_url"`
@@ -38,6 +44,7 @@ type Organization struct {
 	Members []OrganizationMember `json:"members,omitempty" gorm:"foreignKey:OrganizationID"`
 	Groups  []Group              `json:"groups,omitempty" gorm:"foreignKey:OrganizationID"`
 	Relawan []Relawan            `json:"relawan,omitempty" gorm:"foreignKey:OrganizationID"`
+	Bidang  []Bidang             `json:"bidang,omitempty" gorm:"many2many:organization_bidang"`
 }
 
 func (Organization) TableName() string {

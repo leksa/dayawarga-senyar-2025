@@ -10,6 +10,15 @@ import {
   Trash2,
   Plus,
   AlertCircle,
+  Globe,
+  MapPin,
+  Instagram,
+  Facebook,
+  Twitter,
+  Linkedin,
+  Link as LinkIcon,
+  Clock,
+  Image,
 } from 'lucide-vue-next'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
@@ -28,7 +37,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { organizationService } from '@/services/organizations'
 import { groupService } from '@/services/groups'
 import { relawanService } from '@/services/relawan'
-import type { Organization, OrganizationStats, Group, Relawan } from '@/services/types'
+import type { Organization, OrganizationStats, Group, Relawan, OrganizationActivity } from '@/services/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -39,8 +48,48 @@ const organization = ref<Organization | null>(null)
 const stats = ref<OrganizationStats | null>(null)
 const groups = ref<Group[]>([])
 const relawan = ref<Relawan[]>([])
+const activities = ref<OrganizationActivity[]>([])
+const activitiesTotal = ref(0)
+const activitiesPage = ref(1)
+const activitiesLoading = ref(false)
 
 const orgId = computed(() => route.params.id as string)
+
+const locationText = computed(() => {
+  const parts = []
+  if (organization.value?.city) parts.push(organization.value.city)
+  if (organization.value?.country) parts.push(organization.value.country)
+  return parts.join(', ') || null
+})
+
+const socialMediaLinks = computed(() => {
+  const sm = organization.value?.social_media
+  if (!sm) return []
+  const links: { platform: string; url: string }[] = []
+  for (const [platform, url] of Object.entries(sm)) {
+    if (url) links.push({ platform, url })
+  }
+  return links
+})
+
+function getSocialIcon(platform: string) {
+  const p = platform.toLowerCase()
+  if (p === 'instagram') return Instagram
+  if (p === 'facebook') return Facebook
+  if (p === 'twitter' || p === 'x') return Twitter
+  if (p === 'linkedin') return Linkedin
+  return LinkIcon
+}
+
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
 
 async function loadData() {
   isLoading.value = true
@@ -81,6 +130,24 @@ function viewGroup(group: Group) {
 
 function viewRelawan(r: Relawan) {
   router.push(`/relawan/${r.id}`)
+}
+
+async function loadActivities() {
+  activitiesLoading.value = true
+  try {
+    const data = await organizationService.getActivities(orgId.value, activitiesPage.value, 10)
+    activities.value = data.activities || []
+    activitiesTotal.value = data.total || 0
+  } catch (error) {
+    console.error('Failed to load activities:', error)
+  } finally {
+    activitiesLoading.value = false
+  }
+}
+
+function onActivitiesPageChange(page: number) {
+  activitiesPage.value = page
+  loadActivities()
 }
 </script>
 
@@ -164,11 +231,56 @@ function viewRelawan(r: Relawan) {
         </Card>
       </div>
 
+      <!-- Profile Info -->
+      <Card v-if="!isLoading && (locationText || organization?.website_url || socialMediaLinks.length || organization?.bidang?.length)">
+        <CardHeader>
+          <CardTitle class="text-base">Informasi Profil</CardTitle>
+        </CardHeader>
+        <CardContent class="space-y-4">
+          <div class="grid gap-4 md:grid-cols-2">
+            <div v-if="locationText" class="flex items-center gap-2 text-sm">
+              <MapPin class="h-4 w-4 text-muted-foreground" />
+              <span>{{ locationText }}</span>
+            </div>
+            <div v-if="organization?.website_url" class="flex items-center gap-2 text-sm">
+              <Globe class="h-4 w-4 text-muted-foreground" />
+              <a
+                :href="organization.website_url"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-primary hover:underline"
+              >
+                {{ organization.website_url }}
+              </a>
+            </div>
+          </div>
+          <div v-if="socialMediaLinks.length" class="flex items-center gap-3">
+            <a
+              v-for="link in socialMediaLinks"
+              :key="link.platform"
+              :href="link.url"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-muted-foreground hover:text-foreground transition-colors"
+              :title="link.platform"
+            >
+              <component :is="getSocialIcon(link.platform)" class="h-5 w-5" />
+            </a>
+          </div>
+          <div v-if="organization?.bidang?.length" class="flex flex-wrap gap-2">
+            <Badge v-for="b in organization.bidang" :key="b.id" variant="secondary">
+              {{ b.name }}
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
+
       <!-- Tabs -->
       <Tabs default-value="groups" class="space-y-4">
         <TabsList>
           <TabsTrigger value="groups">Tim/Grup</TabsTrigger>
           <TabsTrigger value="relawan">Relawan</TabsTrigger>
+          <TabsTrigger value="activities" @click="loadActivities">Aktivitas</TabsTrigger>
         </TabsList>
 
         <TabsContent value="groups" class="space-y-4">
@@ -269,6 +381,85 @@ function viewRelawan(r: Relawan) {
               </Table>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="activities" class="space-y-4">
+          <h3 class="text-lg font-semibold">Aktivitas Relawan</h3>
+
+          <div v-if="activitiesLoading" class="space-y-4">
+            <Skeleton v-for="i in 3" :key="i" class="h-32 w-full" />
+          </div>
+
+          <div v-else-if="activities.length === 0" class="text-center py-12 text-muted-foreground">
+            Belum ada aktivitas dari relawan organisasi ini
+          </div>
+
+          <div v-else class="space-y-4">
+            <Card v-for="activity in activities" :key="activity.feed.id">
+              <CardContent class="pt-4">
+                <div class="flex items-start gap-4">
+                  <div class="flex-1 space-y-2">
+                    <div class="flex items-center gap-2 text-sm">
+                      <UserCircle class="h-4 w-4 text-muted-foreground" />
+                      <span class="font-medium">{{ activity.relawan_name || activity.feed.username || '-' }}</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Clock class="h-3 w-3" />
+                      <span>{{ formatDate(activity.feed.created_at) }}</span>
+                    </div>
+                    <p v-if="activity.feed.notes" class="text-sm mt-2">
+                      {{ activity.feed.notes }}
+                    </p>
+                    <div v-if="activity.feed.photos?.length" class="flex gap-2 mt-3">
+                      <div
+                        v-for="photo in activity.feed.photos.slice(0, 4)"
+                        :key="photo.id"
+                        class="relative h-16 w-16 rounded overflow-hidden bg-muted"
+                      >
+                        <img
+                          v-if="photo.storage_url"
+                          :src="photo.storage_url"
+                          :alt="photo.filename"
+                          class="h-full w-full object-cover"
+                        />
+                        <div v-else class="h-full w-full flex items-center justify-center">
+                          <Image class="h-6 w-6 text-muted-foreground" />
+                        </div>
+                      </div>
+                      <div
+                        v-if="activity.feed.photos.length > 4"
+                        class="h-16 w-16 rounded bg-muted flex items-center justify-center text-sm text-muted-foreground"
+                      >
+                        +{{ activity.feed.photos.length - 4 }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div v-if="activitiesTotal > 10" class="flex justify-center gap-2 pt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                :disabled="activitiesPage <= 1"
+                @click="onActivitiesPageChange(activitiesPage - 1)"
+              >
+                Sebelumnya
+              </Button>
+              <span class="flex items-center px-3 text-sm text-muted-foreground">
+                Halaman {{ activitiesPage }} dari {{ Math.ceil(activitiesTotal / 10) }}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                :disabled="activitiesPage >= Math.ceil(activitiesTotal / 10)"
+                @click="onActivitiesPageChange(activitiesPage + 1)"
+              >
+                Selanjutnya
+              </Button>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

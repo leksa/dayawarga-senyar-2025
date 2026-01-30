@@ -14,12 +14,32 @@ import (
 
 // OrganizationHandler handles HTTP requests for organizations
 type OrganizationHandler struct {
-	service *service.OrganizationService
+	service         *service.OrganizationService
+	bidangService   *service.BidangService
+	activityService *service.OrganizationActivityService
 }
 
 // NewOrganizationHandler creates a new organization handler
 func NewOrganizationHandler(service *service.OrganizationService) *OrganizationHandler {
 	return &OrganizationHandler{service: service}
+}
+
+// NewOrganizationHandlerWithBidang creates a new organization handler with bidang service
+func NewOrganizationHandlerWithBidang(service *service.OrganizationService, bidangService *service.BidangService) *OrganizationHandler {
+	return &OrganizationHandler{service: service, bidangService: bidangService}
+}
+
+// NewOrganizationHandlerWithServices creates a new organization handler with all services
+func NewOrganizationHandlerWithServices(
+	service *service.OrganizationService,
+	bidangService *service.BidangService,
+	activityService *service.OrganizationActivityService,
+) *OrganizationHandler {
+	return &OrganizationHandler{
+		service:         service,
+		bidangService:   bidangService,
+		activityService: activityService,
+	}
 }
 
 // List returns paginated organizations
@@ -406,5 +426,151 @@ func (h *OrganizationHandler) UpdateMemberRole(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "Member role updated successfully",
+	})
+}
+
+// AddBidangInput represents input for adding a bidang to an organization
+type AddBidangInput struct {
+	BidangID string `json:"bidang_id" binding:"required"`
+}
+
+// AddBidang adds a bidang to an organization
+// POST /api/v1/organizations/:id/bidang
+// Only org admin can add bidangs to their organization
+func (h *OrganizationHandler) AddBidang(c *gin.Context) {
+	orgID := c.Param("id")
+
+	// Parse and check access
+	orgUUID, err := uuid.Parse(orgID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid organization ID format",
+		})
+		return
+	}
+
+	// Check if user can manage this organization
+	if !auth.CanManageOrganization(c, orgUUID) {
+		c.JSON(http.StatusForbidden, gin.H{
+			"success": false,
+			"error":   "Access denied to manage this organization",
+		})
+		return
+	}
+
+	var input AddBidangInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid request body: " + err.Error(),
+		})
+		return
+	}
+
+	if err := h.bidangService.AddToOrganization(c.Request.Context(), orgID, input.BidangID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"success": true,
+		"message": "Bidang added successfully",
+	})
+}
+
+// RemoveBidang removes a bidang from an organization
+// DELETE /api/v1/organizations/:id/bidang/:bidang_id
+// Only org admin can remove bidangs from their organization
+func (h *OrganizationHandler) RemoveBidang(c *gin.Context) {
+	orgID := c.Param("id")
+	bidangID := c.Param("bidang_id")
+
+	// Parse and check access
+	orgUUID, err := uuid.Parse(orgID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid organization ID format",
+		})
+		return
+	}
+
+	// Check if user can manage this organization
+	if !auth.CanManageOrganization(c, orgUUID) {
+		c.JSON(http.StatusForbidden, gin.H{
+			"success": false,
+			"error":   "Access denied to manage this organization",
+		})
+		return
+	}
+
+	if err := h.bidangService.RemoveFromOrganization(c.Request.Context(), orgID, bidangID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Bidang removed successfully",
+	})
+}
+
+// GetActivities returns paginated activities (feeds) from organization's relawan
+// GET /api/v1/organizations/:id/activities
+// Only org members can access their organization's activities
+func (h *OrganizationHandler) GetActivities(c *gin.Context) {
+	id := c.Param("id")
+
+	// Parse and check access
+	orgUUID, err := uuid.Parse(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid organization ID format",
+		})
+		return
+	}
+
+	// Check if user can access this organization
+	if !auth.CanAccessOrganization(c, orgUUID) {
+		c.JSON(http.StatusForbidden, gin.H{
+			"success": false,
+			"error":   "Access denied to this organization",
+		})
+		return
+	}
+
+	// Parse pagination parameters
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+
+	// Get activities from service
+	activities, total, err := h.activityService.GetOrganizationActivities(c.Request.Context(), orgUUID, page, pageSize)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to fetch activities",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"activities": activities,
+			"pagination": gin.H{
+				"page":       page,
+				"page_size":  pageSize,
+				"total":      total,
+				"total_page": (total + int64(pageSize) - 1) / int64(pageSize),
+			},
+		},
 	})
 }

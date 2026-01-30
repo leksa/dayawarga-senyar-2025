@@ -100,6 +100,7 @@ func main() {
 	relawanRepo := repository.NewRelawanRepository(db)
 	projectRequestRepo := repository.NewProjectRequestRepository(db)
 	groupProjectRepo := repository.NewGroupProjectRepository(db)
+	bidangRepo := repository.NewBidangRepository(db)
 	orgChecker := repository.NewOrgCheckerWrapper(orgRepo)
 
 	// Initialize ODK client for posko form
@@ -153,6 +154,7 @@ func main() {
 	orgService := service.NewOrganizationService(orgRepo)
 	groupService := service.NewGroupService(groupRepo, orgRepo)
 	relawanService := service.NewRelawanService(relawanRepo, orgRepo, groupRepo)
+	bidangService := service.NewBidangService(bidangRepo)
 	odkProjectService := service.NewODKProjectService(odkPoskoClient)
 	projectRequestService := service.NewProjectRequestService(projectRequestRepo, groupProjectRepo, groupRepo, userRepo, odkPoskoClient, db)
 	relawanODKService := service.NewRelawanODKService(relawanRepo, groupRepo, odkPoskoClient, cfg.ODKBaseURL, db)
@@ -215,9 +217,10 @@ func main() {
 	authHandler := handler.NewAuthHandler(userService)
 	userHandler := handler.NewUserHandler(userService)
 	userODKHandler := handler.NewUserODKHandler(userODKService)
-	orgHandler := handler.NewOrganizationHandler(orgService)
+	orgHandler := handler.NewOrganizationHandlerWithBidang(orgService, bidangService)
 	groupHandler := handler.NewGroupHandler(groupService)
 	relawanHandler := handler.NewRelawanHandler(relawanService)
+	bidangHandler := handler.NewBidangHandler(bidangService)
 	odkHandler := handler.NewODKHandler(odkProjectService, projectRequestService)
 	relawanODKHandler := handler.NewRelawanODKHandler(relawanODKService)
 	orgODKHandler := handler.NewOrganizationODKHandler(orgODKService)
@@ -393,6 +396,9 @@ func main() {
 					orgs.POST("/:id/members", orgHandler.AddMember)
 					orgs.DELETE("/:id/members/:user_id", orgHandler.RemoveMember)
 					orgs.PUT("/:id/members/:user_id/role", orgHandler.UpdateMemberRole)
+					// Bidang (sector/field) management
+					orgs.POST("/:id/bidang", orgHandler.AddBidang)
+					orgs.DELETE("/:id/bidang/:bidang_id", orgHandler.RemoveBidang)
 					// ODK Project assignment (super_admin only)
 					orgs.POST("/:id/odk-project", auth.RequireSuperAdmin(), orgODKHandler.AssignODKProject)
 					orgs.DELETE("/:id/odk-project", auth.RequireSuperAdmin(), orgODKHandler.RemoveODKProject)
@@ -400,6 +406,9 @@ func main() {
 					// Create organization with admin (super_admin only)
 					orgs.POST("/with-admin", auth.RequireSuperAdmin(), invitationHandler.CreateOrganizationWithAdmin)
 				}
+
+				// Bidang (sectors/fields of work) - read-only for org admins
+				admin.GET("/bidang", bidangHandler.List)
 
 				// Groups - require org_admin or super_admin role
 				groups := admin.Group("/groups")

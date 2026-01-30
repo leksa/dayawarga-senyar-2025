@@ -13,6 +13,7 @@ import type {
   AssignODKProjectToOrgInput,
   AssignODKProjectResult,
   OrganizationODKInfo,
+  OrganizationActivity,
 } from './types'
 
 interface OrganizationListResponse {
@@ -153,11 +154,21 @@ export const organizationService = {
     await api.delete(`/organizations/${orgId}/odk-project`)
   },
 
-  /**
-   * Get ODK information for organization
-   */
   async getODKInfo(orgId: string): Promise<OrganizationODKInfo> {
     const response = await api.get<ApiResponse<OrganizationODKInfo>>(`/organizations/${orgId}/odk-info`)
+    return response.data.data
+  },
+
+  async getActivities(
+    orgId: string,
+    page = 1,
+    pageSize = 10
+  ): Promise<{ activities: OrganizationActivity[]; total: number }> {
+    const response = await api.get<
+      ApiResponse<{ activities: OrganizationActivity[]; total: number }>
+    >(`/organizations/${orgId}/activities`, {
+      params: { page, page_size: pageSize },
+    })
     return response.data.data
   },
 }

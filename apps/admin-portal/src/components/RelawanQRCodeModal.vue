@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, nextTick } from 'vue'
 import { toast } from 'vue-sonner'
 import { QrCode, Copy, Download, RefreshCw, Trash2 } from 'lucide-vue-next'
+import QRCodeLib from 'qrcode'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -29,6 +30,7 @@ const isCreating = ref(false)
 const isRevoking = ref(false)
 const qrData = ref<QRCodeResponse | null>(null)
 const error = ref<string | null>(null)
+const qrCanvas = ref<HTMLCanvasElement | null>(null)
 
 const dialogOpen = computed({
   get: () => props.open,
@@ -59,11 +61,32 @@ async function fetchQRCode() {
 
   try {
     qrData.value = await relawanODKService.getQRCode(props.relawan.id)
+    // Generate QR code image after data is loaded
+    await nextTick()
+    await generateQRImage()
   } catch (err: any) {
     console.error('Failed to fetch QR code:', err)
     error.value = err.response?.data?.error || 'Gagal memuat QR code'
   } finally {
     isLoading.value = false
+  }
+}
+
+async function generateQRImage() {
+  if (!qrData.value?.qr_code_data || !qrCanvas.value) return
+
+  try {
+    await QRCodeLib.toCanvas(qrCanvas.value, qrData.value.qr_code_data, {
+      width: 256,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF',
+      },
+    })
+  } catch (err) {
+    console.error('Failed to generate QR image:', err)
+    error.value = 'Gagal menghasilkan gambar QR code'
   }
 }
 
@@ -109,21 +132,32 @@ function copyQRData() {
   toast.success('QR data disalin ke clipboard')
 }
 
-function downloadQRCode() {
+async function downloadQRCode() {
   if (!qrData.value?.qr_code_data) return
 
-  // Create a simple text file with the QR data
-  // In production, you might want to generate an actual QR image
-  const blob = new Blob([qrData.value.qr_code_data], { type: 'text/plain' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `odk-qr-${props.relawan?.name.replace(/\s+/g, '-')}.txt`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
-  toast.success('QR data berhasil diunduh')
+  try {
+    // Generate QR code as data URL
+    const dataUrl = await QRCodeLib.toDataURL(qrData.value.qr_code_data, {
+      width: 512,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF',
+      },
+    })
+
+    // Download as PNG
+    const a = document.createElement('a')
+    a.href = dataUrl
+    a.download = `odk-qr-${props.relawan?.name.replace(/\s+/g, '-')}.png`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    toast.success('QR code berhasil diunduh')
+  } catch (err) {
+    console.error('Failed to download QR code:', err)
+    toast.error('Gagal mengunduh QR code')
+  }
 }
 
 function formatDate(dateStr: string) {
@@ -200,15 +234,9 @@ function formatDate(dateStr: string) {
         <!-- QR Code Display -->
         <template v-else-if="qrData">
           <div class="text-center space-y-4">
-            <!-- QR Code Image Placeholder -->
-            <!-- In production, generate actual QR image from qr_code_data -->
-            <div class="mx-auto w-48 h-48 border-2 border-dashed rounded-lg flex items-center justify-center bg-muted">
-              <div class="text-center p-4">
-                <QrCode class="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                <p class="text-xs text-muted-foreground">
-                  Scan QR code ini dengan ODK Collect
-                </p>
-              </div>
+            <!-- QR Code Image -->
+            <div class="mx-auto w-64 h-64 flex items-center justify-center bg-white rounded-lg p-2 border">
+              <canvas ref="qrCanvas" class="max-w-full max-h-full"></canvas>
             </div>
 
             <!-- QR Data (truncated) -->

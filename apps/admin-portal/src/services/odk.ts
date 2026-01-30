@@ -9,7 +9,8 @@ import type {
   ReviewProjectRequestInput,
   ProjectRequestFilter,
   QRCodeResponse,
-  Relawan
+  Relawan,
+  Bidang
 } from './types'
 
 // ODK Projects Service
@@ -134,8 +135,28 @@ export const relawanODKService = {
   }
 }
 
+// Bidang Service
+export const bidangService = {
+  // List all bidang
+  async list(): Promise<Bidang[]> {
+    const response = await api.get<ApiResponse<Bidang[]>>('/bidang')
+    return response.data.data
+  },
+
+  // Add bidang to organization
+  async addToOrganization(orgId: string, bidangId: string): Promise<void> {
+    await api.post(`/organizations/${orgId}/bidang`, { bidang_id: bidangId })
+  },
+
+  // Remove bidang from organization
+  async removeFromOrganization(orgId: string, bidangId: string): Promise<void> {
+    await api.delete(`/organizations/${orgId}/bidang/${bidangId}`)
+  }
+}
+
 export default {
   projects: odkProjectService,
   requests: projectRequestService,
-  relawan: relawanODKService
+  relawan: relawanODKService,
+  bidang: bidangService
 }

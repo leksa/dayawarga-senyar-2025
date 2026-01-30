@@ -23,14 +23,18 @@ func NewOrganizationService(repo *repository.OrganizationRepository) *Organizati
 
 // CreateOrganizationInput represents input for creating an organization
 type CreateOrganizationInput struct {
-	Name         string  `json:"name" binding:"required"`
-	Slug         string  `json:"slug"`
-	Description  *string `json:"description"`
-	Email        *string `json:"email"`
-	Phone        *string `json:"phone"`
-	Address      *string `json:"address"`
-	LogoURL      *string `json:"logo_url"`
-	ODKProjectID *int    `json:"odk_project_id"`
+	Name         string                 `json:"name" binding:"required"`
+	Slug         string                 `json:"slug"`
+	Description  *string                `json:"description"`
+	Email        *string                `json:"email"`
+	Phone        *string                `json:"phone"`
+	Address      *string                `json:"address"`
+	City         *string                `json:"city"`
+	Country      *string                `json:"country"`
+	WebsiteURL   *string                `json:"website_url"`
+	SocialMedia  map[string]interface{} `json:"social_media"`
+	LogoURL      *string                `json:"logo_url"`
+	ODKProjectID *int                   `json:"odk_project_id"`
 
 	// Admin invitation (optional - if provided, invite user as org admin)
 	AdminEmail *string `json:"admin_email,omitempty"`
@@ -47,15 +51,19 @@ type CreateOrganizationResult struct {
 
 // UpdateOrganizationInput represents input for updating an organization
 type UpdateOrganizationInput struct {
-	Name         *string `json:"name"`
-	Slug         *string `json:"slug"`
-	Description  *string `json:"description"`
-	Email        *string `json:"email"`
-	Phone        *string `json:"phone"`
-	Address      *string `json:"address"`
-	LogoURL      *string `json:"logo_url"`
-	ODKProjectID *int    `json:"odk_project_id"`
-	IsActive     *bool   `json:"is_active"`
+	Name         *string                `json:"name"`
+	Slug         *string                `json:"slug"`
+	Description  *string                `json:"description"`
+	Email        *string                `json:"email"`
+	Phone        *string                `json:"phone"`
+	Address      *string                `json:"address"`
+	City         *string                `json:"city"`
+	Country      *string                `json:"country"`
+	WebsiteURL   *string                `json:"website_url"`
+	SocialMedia  map[string]interface{} `json:"social_media"`
+	LogoURL      *string                `json:"logo_url"`
+	ODKProjectID *int                   `json:"odk_project_id"`
+	IsActive     *bool                  `json:"is_active"`
 }
 
 // List returns paginated organizations
@@ -130,6 +138,10 @@ func (s *OrganizationService) Create(ctx context.Context, input CreateOrganizati
 		Email:        input.Email,
 		Phone:        input.Phone,
 		Address:      input.Address,
+		City:         input.City,
+		Country:      input.Country,
+		WebsiteURL:   input.WebsiteURL,
+		SocialMedia:  input.SocialMedia,
 		LogoURL:      input.LogoURL,
 		ODKProjectID: input.ODKProjectID,
 		IsActive:     true,
@@ -183,6 +195,18 @@ func (s *OrganizationService) Update(ctx context.Context, id string, input Updat
 	}
 	if input.Address != nil {
 		org.Address = input.Address
+	}
+	if input.City != nil {
+		org.City = input.City
+	}
+	if input.Country != nil {
+		org.Country = input.Country
+	}
+	if input.WebsiteURL != nil {
+		org.WebsiteURL = input.WebsiteURL
+	}
+	if input.SocialMedia != nil {
+		org.SocialMedia = input.SocialMedia
 	}
 	if input.LogoURL != nil {
 		org.LogoURL = input.LogoURL
