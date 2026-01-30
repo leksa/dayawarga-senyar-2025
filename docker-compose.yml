@@ -82,6 +82,8 @@ services:
       - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY:-}
       - S3_REGION=${S3_REGION:-auto}
       - S3_PATH_PREFIX=${S3_PATH_PREFIX:-}
+      # Authentik Webhook
+      - AUTHENTIK_WEBHOOK_SECRET=${AUTHENTIK_WEBHOOK_SECRET:-}
     volumes:
       - api_storage:/app/storage
     depends_on:
@@ -315,7 +317,7 @@ services:
         - VITE_OIDC_AUTHORITY=https://auth.dayawarga.com/application/o/admin-portal/
         - VITE_OIDC_CLIENT_ID=${ADMIN_PORTAL_OIDC_CLIENT_ID:-}
         - VITE_API_BASE_URL=https://api.dayawarga.com/api/v1
-        - VITE_WHATSAPP_NUMBER=${WHATSAPP_NUMBER:-6281234567890}
+        - VITE_WHATSAPP_NUMBER=${WHATSAPP_NUMBER:-6285939063283}
     container_name: senyar-admin-portal
     restart: unless-stopped
     profiles:
