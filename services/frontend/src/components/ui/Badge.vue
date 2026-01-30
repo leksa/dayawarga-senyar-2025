@@ -2,7 +2,7 @@
 import { cn } from '@/lib/utils'
 
 interface Props {
-  variant?: 'default' | 'success' | 'warning' | 'danger' | 'outline'
+  variant?: 'default' | 'success' | 'warning' | 'danger' | 'outline' | 'orange' | 'info'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -14,7 +14,9 @@ const variantClasses = {
   success: 'bg-green-100 text-green-700',
   warning: 'bg-yellow-100 text-yellow-700',
   danger: 'bg-red-100 text-red-700',
-  outline: 'border border-gray-300 text-gray-600 bg-white'
+  outline: 'border border-gray-300 text-gray-600 bg-white',
+  orange: 'bg-orange-100 text-orange-700',
+  info: 'bg-sky-100 text-sky-700'
 }
 </script>
 

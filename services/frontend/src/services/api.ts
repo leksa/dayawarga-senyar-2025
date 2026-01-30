@@ -86,6 +86,7 @@ export interface FeedRegion {
 
 export interface Feed {
   id: string
+  short_code?: string
   location_id?: string
   location_name?: string
   faskes_id?: string
@@ -371,6 +372,14 @@ export const api = {
     return fetchAPI<Feed[]>(`/feeds${query ? `?${query}` : ''}`)
   },
 
+  async getFeedById(id: string): Promise<APIResponse<Feed>> {
+    return fetchAPI<Feed>(`/feeds/${id}`)
+  },
+
+  async getFeedByShortCode(code: string): Promise<APIResponse<Feed>> {
+    return fetchAPI<Feed>(`/feeds/s/${code}`)
+  },
+
   async getFeedsByLocation(locationId: string, filter?: FeedFilter): Promise<APIResponse<Feed[]>> {
     const params = new URLSearchParams()
     if (filter?.page) params.append('page', filter.page.toString())
@@ -389,7 +398,7 @@ export const api = {
   },
 
   getFeedPhotoUrl(photoId: string): string {
-    return `${API_BASE_URL}/feeds/photos/${photoId}/file`
+    return `${API_BASE_URL}/feed-photos/${photoId}/file`
   },
 
   async getSyncStatus(): Promise<APIResponse<SyncStatus>> {

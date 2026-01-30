@@ -5,6 +5,57 @@ All notable changes to Dayawarga Senyar will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-01-30
+
+### Added
+- **Multi-Photo Support** - Feed submissions now support up to 4 photos (foto, foto2, foto3, foto4)
+- **FeedDetailView** - New dedicated page for viewing individual feed details with swipe gestures
+- **Timeline View** - Location/Posko detail panel now shows internal timeline of all feeds
+- **Desa Timeline** - Village-level feed timeline with statistics
+- **Share Image Template** - Generate shareable images from feed content with category-based styling
+
+### Changed
+- **Standardized Category/Tag Colors** - Created centralized `feedHelpers.ts` utility for consistent badge colors across all components:
+  - `kebutuhan` → danger (red)
+  - `informasi` → warning (yellow/amber)  
+  - `follow-up` → orange
+  - `info_bantuan` → success (green)
+  - All tags → info (light blue)
+- **Mobile Optimization** - Collapsible filters, infinite scroll, pull-to-refresh on FeedsView
+- **Safe Area Padding** - Added bottom padding for mobile browser docks on FeedDetailView
+
+### Fixed
+- Feed photo extraction now properly handles all 4 photo fields from ODK submissions
+- Category badge colors now consistent between FeedsView, DetailPanel, MapView, FeedDetailView, and ShareImageTemplate
+
+### Infrastructure
+- ODK Central upgraded from v2025.4.0 to v2025.4.2 on production
+- Increased Enketo payload limit from 1MB to 100MB for large photo submissions
+
+## [1.3.0] - 2026-01-28
+
+### Added
+- **Admin Portal** - Full relawan management with OIDC authentication via Authentik
+- **WhatsApp Verification** - Relawan WA access control integrated with chatbot
+- **User Invitation System** - Invite users with WhatsApp PIN verification (6-char alphanumeric, 15-min expiry)
+- **ODK Integration** - App User creation with QR code for ODK Collect
+- **Org-Scoped Authorization** - org_admin restricted to their own organizations only
+- **Project Request Workflow** - Request/approve ODK project assignments to groups
+- **Dual-stream Sync** - Conflict resolution for ODK data with entity tracking
+
+### Security
+- Removed `.claude/environment.md` from git tracking (contained server IPs)
+- Added environment.md to .gitignore
+
+### Documentation
+- Updated `claude.md` with complete project constitution and decisions log
+- Archived outdated IAM-features-new SRS (described different tech stack)
+
+### Infrastructure
+- Database migrations: 000009-000015 (admin portal, ODK, WhatsApp verification, invitation PIN)
+- WhatsApp chatbot operational on separate server (dayawarga-chatbot repo)
+- CI/CD via GitHub Actions for both main platform and chatbot
+
 ## [1.2.0] - 2025-01-14
 
 ### Added

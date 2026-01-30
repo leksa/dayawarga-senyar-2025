@@ -8,6 +8,7 @@ import { useLocations } from '@/composables/useLocations'
 import { useFaskes } from '@/composables/useFaskes'
 import { useInfrastruktur } from '@/composables/useInfrastruktur'
 import { api, type Feed } from '@/services/api'
+import { getCategoryLabel, getTagLabel, getCategoryPopupClass } from '@/lib/feedHelpers'
 const props = withDefaults(defineProps<{
   showMarkers?: boolean
   showFaskes?: boolean
@@ -306,10 +307,9 @@ const fetchFeedsWithCoords = async () => {
   }
 }
 
-// Get feed photo URL
 const getFeedPhotoUrl = (photoId: string) => {
   const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1'
-  return `${baseUrl}/feeds/photos/${photoId}/file`
+  return `${baseUrl}/feed-photos/${photoId}/file`
 }
 
 // Format timestamp for popup
@@ -322,36 +322,7 @@ const formatTimestamp = (isoString: string): string => {
   return `${day}/${month} ${hours}:${minutes}`
 }
 
-// Category labels for display
-const categoryLabels: Record<string, string> = {
-  kebutuhan: 'Butuh Bantuan',
-  informasi: 'Informasi',
-  'follow-up': 'Follow-up',
-  'info_bantuan': 'Terima Bantuan',
-}
 
-// Tag labels for display
-const tagLabels: Record<string, string> = {
-  'sar': 'SAR',
-  'ambulan': 'Ambulan',
-  'medis': 'Medis',
-  'transport_roda4': 'Transport Roda 4',
-  'transport_roda2': 'Transport Roda 2',
-  'air_bersih': 'Air Bersih',
-  'sembako': 'Sembako',
-  'psikososial': 'Psikososial',
-  'sekolah_darurat': 'Sekolah Darurat',
-  'dapur_umum': 'Dapur Umum',
-  'keamanan': 'Keamanan',
-  'listrik': 'Listrik',
-  'internet': 'Internet',
-  'sinyal_selular': 'Sinyal Selular',
-  'sanitasi_mck': 'Sanitasi MCK',
-  'lainnya': 'Lainnya',
-}
-
-const getCategoryLabel = (category: string): string => categoryLabels[category] || category
-const getTagLabel = (tag: string): string => tagLabels[tag] || tag
 
 // Build popup content for feed
 const buildFeedPopupContent = (feed: Feed): string => {
@@ -419,10 +390,7 @@ const buildFeedPopupContent = (feed: Feed): string => {
     }
   }
 
-  // Category badge
-  const categoryClass = feed.category === 'kebutuhan' ? 'cat-kebutuhan' :
-    feed.category === 'follow-up' ? 'cat-followup' :
-    feed.category === 'info_bantuan' ? 'cat-info-bantuan' : 'cat-info'
+  const categoryClass = getCategoryPopupClass(feed.category)
 
   // Type/tags badges
   let tagsHtml = ''
@@ -1436,6 +1404,8 @@ defineExpose({
 .feed-popup-container .leaflet-popup-content {
   margin: 0;
   width: 350px !important;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .feed-popup-container .leaflet-popup-tip {
@@ -1532,6 +1502,8 @@ defineExpose({
   font-size: 12px;
   color: #374151;
   line-height: 1.5;
+  max-height: 100px;
+  overflow-y: auto;
 }
 
 .feed-popup-new .popup-region {

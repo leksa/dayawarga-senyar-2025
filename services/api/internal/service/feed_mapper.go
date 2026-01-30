@@ -11,11 +11,11 @@ import (
 
 // FeedMappingResult contains the mapped feed and its photos
 type FeedMappingResult struct {
-	Feed        *model.Feed
-	Photos      []FeedPhotoInfo
-	RelasiType  string // "posko", "faskes", or "" (lapor situasi bebas)
-	RelasiName  string // nama posko/faskes yang dipilih
-	RelasiID    string // sel_posko atau sel_faskes value
+	Feed       *model.Feed
+	Photos     []FeedPhotoInfo
+	RelasiType string // "posko", "faskes", or "" (lapor situasi bebas)
+	RelasiName string // nama posko/faskes yang dipilih
+	RelasiID   string // sel_posko atau sel_faskes value
 }
 
 // FeedPhotoInfo contains photo information extracted from ODK submission
@@ -140,13 +140,26 @@ func MapFeedSubmissionWithPhotos(submission map[string]interface{}) (*FeedMappin
 		Photos: []FeedPhotoInfo{},
 	}
 
-	// Extract photos from grp_update.foto
+	// Extract photos from grp_update (supports up to 4 photos: foto, foto2, foto3, foto4)
 	if grpUpdate, ok := submission["grp_update"].(map[string]interface{}); ok {
-		if foto, ok := grpUpdate["foto"].(string); ok && foto != "" {
-			result.Photos = append(result.Photos, FeedPhotoInfo{
-				PhotoType: "foto",
-				Filename:  foto,
-			})
+		// Define photo fields to extract
+		photoFields := []struct {
+			field     string
+			photoType string
+		}{
+			{"foto", "foto"},
+			{"foto2", "foto2"},
+			{"foto3", "foto3"},
+			{"foto4", "foto4"},
+		}
+
+		for _, pf := range photoFields {
+			if foto, ok := grpUpdate[pf.field].(string); ok && foto != "" {
+				result.Photos = append(result.Photos, FeedPhotoInfo{
+					PhotoType: pf.photoType,
+					Filename:  foto,
+				})
+			}
 		}
 	}
 
@@ -204,17 +217,28 @@ func MapFeedSubmissionWithPhotos(submission map[string]interface{}) (*FeedMappin
 	return result, nil
 }
 
-// ExtractFeedPhotos extracts photo filenames from ODK submission
+// ExtractFeedPhotos extracts photo filenames from ODK submission (up to 4 photos)
 func ExtractFeedPhotos(submission map[string]interface{}) []FeedPhotoInfo {
 	var photos []FeedPhotoInfo
 
-	// Extract photos from grp_update.foto
 	if grpUpdate, ok := submission["grp_update"].(map[string]interface{}); ok {
-		if foto, ok := grpUpdate["foto"].(string); ok && foto != "" {
-			photos = append(photos, FeedPhotoInfo{
-				PhotoType: "foto",
-				Filename:  foto,
-			})
+		photoFields := []struct {
+			field     string
+			photoType string
+		}{
+			{"foto", "foto"},
+			{"foto2", "foto2"},
+			{"foto3", "foto3"},
+			{"foto4", "foto4"},
+		}
+
+		for _, pf := range photoFields {
+			if foto, ok := grpUpdate[pf.field].(string); ok && foto != "" {
+				photos = append(photos, FeedPhotoInfo{
+					PhotoType: pf.photoType,
+					Filename:  foto,
+				})
+			}
 		}
 	}
 

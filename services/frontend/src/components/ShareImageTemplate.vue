@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { categoryHexColors, getTagLabel } from '@/lib/feedHelpers'
 
 interface Props {
   category: string
@@ -15,39 +16,8 @@ interface Props {
 
 const props = defineProps<Props>()
 
-// Category config with bold colors
 const categoryConfig = computed(() => {
-  const configs: Record<string, { label: string; bg: string; bgDark: string; accent: string; overlay: string }> = {
-    'kebutuhan': {
-      label: 'BUTUH BANTUAN',
-      bg: '#DC2626',
-      bgDark: '#991B1B',
-      accent: '#FECACA',
-      overlay: 'rgba(153, 27, 27, 0.25)'
-    },
-    'informasi': {
-      label: 'INFORMASI',
-      bg: '#1E40AF',
-      bgDark: '#1E3A8A',
-      accent: '#BFDBFE',
-      overlay: 'rgba(30, 58, 138, 0.25)'
-    },
-    'follow-up': {
-      label: 'FOLLOW UP',
-      bg: '#B45309',
-      bgDark: '#92400E',
-      accent: '#FDE68A',
-      overlay: 'rgba(146, 64, 14, 0.25)'
-    },
-    'info_bantuan': {
-      label: 'TERIMA BANTUAN',
-      bg: '#047857',
-      bgDark: '#065F46',
-      accent: '#A7F3D0',
-      overlay: 'rgba(6, 95, 70, 0.25)'
-    },
-  }
-  return configs[props.category] || {
+  return categoryHexColors[props.category] || {
     label: props.category.toUpperCase(),
     bg: '#DC2626',
     bgDark: '#991B1B',
@@ -55,33 +25,6 @@ const categoryConfig = computed(() => {
     overlay: 'rgba(153, 27, 27, 0.25)'
   }
 })
-
-// Tag labels - map field values to display labels
-const tagLabels: Record<string, string> = {
-  'sar': 'SAR',
-  'ambulan': 'Ambulan',
-  'medis': 'Medis',
-  'transport_roda4': 'Transport Roda 4',
-  'transport_roda2': 'Transport Roda 2',
-  'air_bersih': 'Air Bersih',
-  'sembako': 'Sembako',
-  'psikososial': 'Psikososial',
-  'sekolah_darurat': 'Sekolah Darurat',
-  'dapur_umum': 'Dapur Umum',
-  'keamanan': 'Keamanan',
-  'listrik': 'Listrik',
-  'internet': 'Internet',
-  'sinyal_selular': 'Sinyal Selular',
-  'sanitasi_mck': 'Sanitasi MCK',
-  'lainnya': 'Lainnya',
-}
-
-// Get tag label - convert field value to human-readable label
-const getTagLabel = (tag: string): string => {
-  if (!tag) return ''
-  const trimmedTag = tag.trim().toLowerCase()
-  return tagLabels[trimmedTag] || tag.replace(/_/g, ' ')
-}
 
 // Normalize tags - ensure it's always an array of individual tags
 const normalizedTags = computed(() => {

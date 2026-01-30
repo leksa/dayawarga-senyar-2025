@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, computed } from 'vue'
+import { ref, watch, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Search, MapPin, Download, Filter, Image, Navigation, Megaphone, ChevronDown, X } from 'lucide-vue-next'
+import { Search, MapPin, Download, Filter, Image, Megaphone, ChevronDown, ChevronUp, X, RefreshCw } from 'lucide-vue-next'
 import DataLayersSidebar from '@/components/DataLayersSidebar.vue'
-import ShareButton from '@/components/ShareButton.vue'
 import Input from '@/components/ui/Input.vue'
 import Badge from '@/components/ui/Badge.vue'
 import Button from '@/components/ui/Button.vue'
 import { api, type Feed, type FeedFilter, type FeedPhoto } from '@/services/api'
+import { categoryColors, tagColor, getCategoryLabel, getTagLabel } from '@/lib/feedHelpers'
 
 const route = useRoute()
 const router = useRouter()
@@ -24,6 +24,22 @@ const limit = 20
 const searchQuery = ref('')
 const selectedCategory = ref('')
 const selectedTag = ref('')
+
+// Mobile filter collapse state
+const showFilters = ref(true)
+const isMobile = ref(false)
+
+// Pull-to-refresh state
+const scrollContainerRef = ref<HTMLElement | null>(null)
+const pullStartY = ref(0)
+const pullDistance = ref(0)
+const isPulling = ref(false)
+const isRefreshing = ref(false)
+const pullThreshold = 80
+
+// Infinite scroll
+const loadMoreTriggerRef = ref<HTMLElement | null>(null)
+const infiniteScrollObserver = ref<IntersectionObserver | null>(null)
 
 // Region cascade filter state
 const showRegionFilter = ref(false)
@@ -45,6 +61,106 @@ const appliedDesa = ref<string>('')
 const availableKotaKab = ref<string[]>([])
 const availableKecamatan = ref<string[]>([])
 const availableDesa = ref<string[]>([])
+
+// Check if mobile
+const checkMobile = () => {
+  isMobile.value = window.innerWidth < 768
+  // On desktop, always show filters
+  if (!isMobile.value) {
+    showFilters.value = true
+  }
+}
+
+// Pull-to-refresh handlers
+const onTouchStart = (e: TouchEvent) => {
+  if (!scrollContainerRef.value) return
+  // Only enable pull-to-refresh when scrolled to top
+  if (scrollContainerRef.value.scrollTop <= 0) {
+    pullStartY.value = e.touches[0].clientY
+    isPulling.value = true
+  }
+}
+
+const onTouchMove = (e: TouchEvent) => {
+  if (!isPulling.value || isRefreshing.value) return
+  if (!scrollContainerRef.value || scrollContainerRef.value.scrollTop > 0) {
+    isPulling.value = false
+    pullDistance.value = 0
+    return
+  }
+  
+  const currentY = e.touches[0].clientY
+  const diff = currentY - pullStartY.value
+  
+  if (diff > 0) {
+    // Dampen the pull distance
+    pullDistance.value = Math.min(diff * 0.5, pullThreshold * 1.5)
+    e.preventDefault()
+  }
+}
+
+const onTouchEnd = async () => {
+  if (!isPulling.value) return
+  isPulling.value = false
+  
+  if (pullDistance.value >= pullThreshold && !isRefreshing.value) {
+    isRefreshing.value = true
+    pullDistance.value = pullThreshold
+    
+    // Refresh data
+    await fetchFeeds()
+    
+    isRefreshing.value = false
+  }
+  
+  pullDistance.value = 0
+}
+
+// Setup infinite scroll observer
+const setupInfiniteScroll = () => {
+  if (infiniteScrollObserver.value) {
+    infiniteScrollObserver.value.disconnect()
+  }
+  
+  infiniteScrollObserver.value = new IntersectionObserver(
+    (entries) => {
+      if (entries[0].isIntersecting && hasMore.value && !loadingMore.value && !loading.value) {
+        loadMore()
+      }
+    },
+    { rootMargin: '200px' }
+  )
+  
+  nextTick(() => {
+    if (loadMoreTriggerRef.value) {
+      infiniteScrollObserver.value?.observe(loadMoreTriggerRef.value)
+    }
+  })
+}
+
+onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+  
+  // Initialize from route query
+  if (route.query.search) {
+    searchQuery.value = route.query.search as string
+  }
+  if (route.query.category) {
+    selectedCategory.value = route.query.category as string
+  }
+  if (route.query.tag) {
+    selectedTag.value = route.query.tag as string
+  }
+  
+  fetchFeeds()
+  setupInfiniteScroll()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+  infiniteScrollObserver.value?.disconnect()
+})
 
 // Collect unique region values from feeds
 const collectRegionData = () => {
@@ -99,6 +215,16 @@ const regionFilterLabel = computed(() => {
 // Check if any region filter is active
 const hasActiveRegionFilter = computed(() => {
   return !!(appliedProvinsi.value || appliedKotaKab.value || appliedKecamatan.value || appliedDesa.value)
+})
+
+// Count active filters
+const activeFilterCount = computed(() => {
+  let count = 0
+  if (searchQuery.value) count++
+  if (selectedCategory.value) count++
+  if (selectedTag.value) count++
+  if (hasActiveRegionFilter.value) count++
+  return count
 })
 
 // Handle provinsi selection
@@ -184,31 +310,6 @@ const getThirtyDaysAgo = (): string => {
   return date.toISOString()
 }
 
-// Category and type colors
-const categoryColors: Record<string, 'default' | 'success' | 'warning' | 'danger' | 'outline'> = {
-  kebutuhan: 'warning',
-  informasi: 'outline',
-  'follow-up': 'danger',
-  'info_bantuan': 'success',
-}
-
-const typeColors: Record<string, 'default' | 'success' | 'warning' | 'danger' | 'outline'> = {
-  'sar': 'danger',
-  'ambulan': 'danger',
-  'medis': 'success',
-  'transport_roda4': 'default',
-  'transport_roda2': 'default',
-  'air_bersih': 'outline',
-  'sembako': 'warning',
-  'psikososial': 'outline',
-  'sekolah_darurat': 'outline',
-  'dapur_umum': 'outline',
-  'keamanan': 'danger',
-  'listrik': 'outline',
-  'internet': 'outline',
-  'sinyal_selular': 'outline',
-}
-
 // Format timestamp
 const formatTimestamp = (isoString: string): string => {
   const date = new Date(isoString)
@@ -220,44 +321,12 @@ const formatTimestamp = (isoString: string): string => {
   return `${day}-${month}-${year} ${hours}:${minutes}`
 }
 
-// Format category display
-const formatCategoryDisplay = (category: string): string => {
-  const categoryMap: Record<string, string> = {
-    'kebutuhan': 'Butuh Bantuan',
-    'informasi': 'Informasi',
-    'follow-up': 'Follow-up',
-    'info_bantuan': 'Terima Bantuan',
-  }
-  return categoryMap[category] || category
-}
 
-// Format tag display
-const formatTagDisplay = (tag: string): string => {
-  const tagMap: Record<string, string> = {
-    'sar': 'SAR',
-    'ambulan': 'Ambulan',
-    'medis': 'Medis',
-    'transport_roda4': 'Transport Roda 4',
-    'transport_roda2': 'Transport Roda 2',
-    'air_bersih': 'Air Bersih',
-    'sembako': 'Sembako',
-    'psikososial': 'Psikososial',
-    'sekolah_darurat': 'Sekolah Darurat',
-    'dapur_umum': 'Dapur Umum',
-    'keamanan': 'Keamanan',
-    'listrik': 'Listrik',
-    'internet': 'Internet',
-    'sinyal_selular': 'Sinyal Selular',
-    'sanitasi_mck': 'Sanitasi MCK',
-    'lainnya': 'Lainnya',
-  }
-  return tagMap[tag] || tag
-}
 
-// Formatted feeds
 const formattedFeeds = computed(() => {
   return feeds.value.map(feed => ({
     id: feed.id,
+    shortCode: feed.short_code,
     timestamp: formatTimestamp(feed.submitted_at),
     username: feed.username ?? 'anonymous',
     organization: feed.organization ?? '',
@@ -271,56 +340,23 @@ const formattedFeeds = computed(() => {
     tags: feed.type ? feed.type.split(',').map(t => t.trim()).filter(t => t) : [],
     coordinates: feed.coordinates,
     photos: feed.photos ?? [],
-    // Region info for desa detail
     desaId: feed.region?.id_desa,
     desaName: feed.region?.desa,
     kecamatan: feed.region?.kecamatan,
     kotaKab: feed.region?.kota_kab,
     provinsi: feed.region?.provinsi,
-    // Submitter for share template
     submitter: `${feed.username ?? 'anonymous'}${feed.organization ? ` - ${feed.organization}` : ''}`,
   }))
 })
 
-// Get photo URL helper - use direct photo ID approach like MapView
 const getPhotoUrl = (photo: FeedPhoto) => {
   const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1'
-  return `${baseUrl}/feeds/photos/${photo.id}/file`
+  return `${baseUrl}/feed-photos/${photo.id}/file`
 }
 
-// Navigate to map with coordinates and show popup
-const goToMapWithFeed = (feed: {
-  id: string,
-  coordinates?: [number, number],
-  locationId?: string,
-  faskesId?: string,
-  desaId?: string,
-  desaName?: string,
-  kecamatan?: string,
-  kotaKab?: string
-}) => {
-  // Priority: location > faskes > coordinates (with desa info for free geolocation feeds)
-  if (feed.locationId) {
-    router.push({ path: '/', query: { location: feed.locationId } })
-  } else if (feed.faskesId) {
-    router.push({ path: '/', query: { faskes: feed.faskesId } })
-  } else if (feed.coordinates) {
-    // Free geolocation feed - include desa info if available
-    const query: Record<string, string> = {
-      lat: feed.coordinates[1].toString(),
-      lng: feed.coordinates[0].toString(),
-      zoom: '18',
-      feed: feed.id
-    }
-    // Add desa info for showing desa detail panel
-    if (feed.desaId && feed.desaName) {
-      query.desa = feed.desaId
-      query.desa_name = feed.desaName
-      if (feed.kecamatan) query.kecamatan = feed.kecamatan
-      if (feed.kotaKab) query.kotakab = feed.kotaKab
-    }
-    router.push({ path: '/', query })
-  }
+const goToFeedDetail = (shortCode: string | undefined, feedId: string) => {
+  const code = shortCode || feedId
+  router.push({ path: `/feeds/${code}` })
 }
 
 // Has more data to load
@@ -340,10 +376,9 @@ const fetchFeeds = async (reset = true) => {
     const filter: FeedFilter = {
       page: page.value,
       limit,
-      since: getThirtyDaysAgo(), // Always filter last 30 days
+      since: getThirtyDaysAgo(),
     }
 
-    // Check if search is UUID or name
     if (searchQuery.value) {
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
       if (uuidRegex.test(searchQuery.value)) {
@@ -358,7 +393,6 @@ const fetchFeeds = async (reset = true) => {
     if (selectedTag.value) {
       filter.type = selectedTag.value
     }
-    // Region filters
     if (appliedProvinsi.value) {
       filter.provinsi = appliedProvinsi.value
     }
@@ -391,6 +425,7 @@ const fetchFeeds = async (reset = true) => {
 
 // Load more
 const loadMore = () => {
+  if (loadingMore.value || loading.value) return
   page.value++
   fetchFeeds(false)
 }
@@ -400,7 +435,7 @@ const handleSearch = () => {
   fetchFeeds()
 }
 
-// Watch filter changes (but not triggered by route sync)
+// Watch filter changes
 const isRouteSyncing = ref(false)
 
 watch([selectedCategory, selectedTag], () => {
@@ -409,7 +444,7 @@ watch([selectedCategory, selectedTag], () => {
   }
 })
 
-// Watch route query changes to sync filters when navigating via sidebar links
+// Watch route query changes
 watch(() => route.query, (newQuery) => {
   isRouteSyncing.value = true
 
@@ -417,7 +452,6 @@ watch(() => route.query, (newQuery) => {
   const newTag = (newQuery.tag as string) || ''
   const newSearch = (newQuery.search as string) || ''
 
-  // Check if any filter actually changed
   const categoryChanged = selectedCategory.value !== newCategory
   const tagChanged = selectedTag.value !== newTag
   const searchChanged = searchQuery.value !== newSearch
@@ -431,20 +465,6 @@ watch(() => route.query, (newQuery) => {
 
   isRouteSyncing.value = false
 }, { immediate: false })
-
-// Initialize from route query
-onMounted(() => {
-  if (route.query.search) {
-    searchQuery.value = route.query.search as string
-  }
-  if (route.query.category) {
-    selectedCategory.value = route.query.category as string
-  }
-  if (route.query.tag) {
-    selectedTag.value = route.query.tag as string
-  }
-  fetchFeeds()
-})
 
 // Predefined tags list for filter
 const allTags = [
@@ -473,6 +493,13 @@ const allCategories = [
   { value: 'follow-up', label: 'Follow-up' },
   { value: 'info_bantuan', label: 'Terima Bantuan' },
 ]
+
+// Toggle filters visibility on mobile
+const toggleFilters = () => {
+  if (isMobile.value) {
+    showFilters.value = !showFilters.value
+  }
+}
 </script>
 
 <template>
@@ -481,276 +508,341 @@ const allCategories = [
 
     <!-- Feeds Content -->
     <main class="flex-1 bg-gray-50 flex flex-col overflow-hidden">
-      <!-- Header -->
-      <div class="bg-white border-b border-gray-200 px-3 md:px-6 py-3 md:py-4">
-        <div class="max-w-4xl mx-auto">
-          <div class="flex items-center justify-between mb-3 md:mb-4">
-            <div>
-              <h1 class="text-lg md:text-2xl font-bold text-gray-900">Informasi Terbaru</h1>
-              <div class="flex items-center gap-2 mt-1">
-                <span class="relative flex h-2 w-2 md:h-2.5 md:w-2.5">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2 w-2 md:h-2.5 md:w-2.5 bg-green-500"></span>
-                </span>
-                <span class="text-xs md:text-sm text-gray-500">{{ total }} updates</span>
-              </div>
-            </div>
-            <Button variant="outline" class="gap-2 hidden md:flex">
-              <Download class="w-4 h-4" />
-              Export
-            </Button>
-          </div>
-
-          <!-- Filters Row - Stack on mobile -->
-          <div class="flex flex-col md:flex-row gap-2 md:gap-3">
-            <!-- Search by Location Name -->
-            <div class="flex-1 relative">
-              <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                v-model="searchQuery"
-                placeholder="Cari nama posko..."
-                class="pl-9 w-full"
-                @keyup.enter="handleSearch"
-              />
-            </div>
-
-            <!-- Filter selects in row on mobile -->
-            <div class="flex gap-2">
-              <!-- Category Filter -->
-              <div class="flex-1 md:w-48 md:flex-initial">
-                <select
-                  v-model="selectedCategory"
-                  class="w-full h-10 text-sm border border-gray-200 rounded-lg px-2 md:px-3 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">Kategori</option>
-                  <option v-for="cat in allCategories" :key="cat.value" :value="cat.value">
-                    {{ cat.label }}
-                  </option>
-                </select>
-              </div>
-
-              <!-- Tags Filter (Single Select) -->
-              <div class="flex-1 md:w-48 md:flex-initial">
-                <select
-                  v-model="selectedTag"
-                  class="w-full h-10 text-sm border border-gray-200 rounded-lg px-2 md:px-3 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">Tags</option>
-                  <option v-for="tag in allTags" :key="tag.value" :value="tag.value">
-                    {{ tag.label }}
-                  </option>
-                </select>
-              </div>
-
-              <!-- Region Cascade Filter -->
-              <div class="relative flex-1 md:w-48 md:flex-initial">
-                <button
-                  class="w-full h-10 text-sm border border-gray-200 rounded-lg px-2 md:px-3 bg-white flex items-center justify-between hover:bg-gray-50"
-                  :class="{ 'ring-2 ring-blue-500 border-transparent': showRegionFilter, 'text-blue-600': hasActiveRegionFilter }"
-                  @click="showRegionFilter = !showRegionFilter"
-                >
-                  <span class="flex items-center gap-1.5 truncate">
-                    <MapPin class="w-4 h-4 flex-shrink-0" />
-                    <span class="truncate">{{ regionFilterLabel }}</span>
+      <!-- Header - Sticky -->
+      <div class="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div class="px-3 md:px-6 py-3 md:py-4">
+          <div class="max-w-4xl mx-auto">
+            <!-- Title row -->
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h1 class="text-lg md:text-2xl font-bold text-gray-900">Informasi Terbaru</h1>
+                <div class="flex items-center gap-2 mt-1">
+                  <span class="relative flex h-2 w-2 md:h-2.5 md:w-2.5">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 md:h-2.5 md:w-2.5 bg-green-500"></span>
                   </span>
-                  <div class="flex items-center gap-1">
-                    <button
-                      v-if="hasActiveRegionFilter"
-                      class="p-0.5 hover:bg-gray-200 rounded"
-                      @click.stop="clearRegionFilter"
-                    >
-                      <X class="w-3 h-3 text-gray-500" />
-                    </button>
-                    <ChevronDown class="w-4 h-4 text-gray-400" />
-                  </div>
-                </button>
-
-                <!-- Dropdown Menu -->
-                <div
-                  v-if="showRegionFilter"
-                  class="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 min-w-[250px] max-h-[400px] overflow-hidden flex flex-col z-50"
-                >
-                  <!-- Breadcrumb -->
-                  <div v-if="filterLevel !== 'provinsi'" class="px-3 py-2 bg-gray-50 border-b border-gray-200">
-                    <div class="flex items-center gap-1 text-xs text-gray-500 flex-wrap">
-                      <button class="hover:text-blue-600" @click="filterLevel = 'provinsi'; pendingKotaKab = ''; pendingKecamatan = ''; pendingDesa = ''">
-                        {{ pendingProvinsi || 'Provinsi' }}
-                      </button>
-                      <span v-if="pendingKotaKab">›</span>
-                      <button v-if="pendingKotaKab" class="hover:text-blue-600" @click="filterLevel = 'kecamatan'; pendingKecamatan = ''; pendingDesa = ''">
-                        {{ pendingKotaKab }}
-                      </button>
-                      <span v-if="pendingKecamatan">›</span>
-                      <button v-if="pendingKecamatan" class="hover:text-blue-600" @click="filterLevel = 'desa'; pendingDesa = ''">
-                        {{ pendingKecamatan }}
-                      </button>
-                      <span v-if="pendingDesa">›</span>
-                      <span v-if="pendingDesa" class="font-medium text-gray-700">{{ pendingDesa }}</span>
-                    </div>
-                  </div>
-
-                  <!-- Header with Back button -->
-                  <div class="px-3 py-2 border-b border-gray-200 flex items-center justify-between">
-                    <span class="text-xs font-medium text-gray-500 uppercase">
-                      {{ filterLevel === 'provinsi' ? 'Provinsi' : filterLevel === 'kotakab' ? 'Kota/Kabupaten' : filterLevel === 'kecamatan' ? 'Kecamatan' : 'Desa' }}
-                    </span>
-                    <button
-                      v-if="filterLevel !== 'provinsi'"
-                      class="text-blue-500 hover:text-blue-700 text-xs"
-                      @click="goBackLevel"
-                    >
-                      ← Kembali
-                    </button>
-                  </div>
-
-                  <!-- List Content -->
-                  <div class="max-h-[250px] overflow-y-auto flex-1">
-                    <!-- Provinsi Selection -->
-                    <template v-if="filterLevel === 'provinsi'">
-                      <button
-                        class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2"
-                        :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingProvinsi === 'Aceh' }"
-                        @click="selectProvinsi('Aceh')"
-                      >
-                        <MapPin class="w-4 h-4" />
-                        Aceh
-                      </button>
-                    </template>
-
-                    <!-- Kota/Kab Selection -->
-                    <template v-else-if="filterLevel === 'kotakab'">
-                      <button
-                        class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600"
-                        :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingKotaKab === '' }"
-                        @click="pendingKotaKab = ''; pendingKecamatan = ''; pendingDesa = ''"
-                      >
-                        Semua Kota/Kabupaten
-                      </button>
-                      <button
-                        v-for="kota in availableKotaKab"
-                        :key="kota"
-                        class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600"
-                        :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingKotaKab === kota }"
-                        @click="selectKotaKab(kota)"
-                      >
-                        {{ kota }}
-                      </button>
-                      <div v-if="availableKotaKab.length === 0" class="px-3 py-4 text-sm text-gray-400 text-center">
-                        Tidak ada data
-                      </div>
-                    </template>
-
-                    <!-- Kecamatan Selection -->
-                    <template v-else-if="filterLevel === 'kecamatan'">
-                      <button
-                        class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600"
-                        :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingKecamatan === '' }"
-                        @click="pendingKecamatan = ''; pendingDesa = ''"
-                      >
-                        Semua Kecamatan
-                      </button>
-                      <button
-                        v-for="kec in availableKecamatan"
-                        :key="kec"
-                        class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600"
-                        :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingKecamatan === kec }"
-                        @click="selectKecamatan(kec)"
-                      >
-                        {{ kec }}
-                      </button>
-                      <div v-if="availableKecamatan.length === 0" class="px-3 py-4 text-sm text-gray-400 text-center">
-                        Tidak ada data kecamatan
-                      </div>
-                    </template>
-
-                    <!-- Desa Selection -->
-                    <template v-else-if="filterLevel === 'desa'">
-                      <button
-                        class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600"
-                        :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingDesa === '' }"
-                        @click="pendingDesa = ''"
-                      >
-                        Semua Desa
-                      </button>
-                      <button
-                        v-for="desa in availableDesa"
-                        :key="desa"
-                        class="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 hover:text-blue-600"
-                        :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingDesa === desa }"
-                        @click="selectDesa(desa)"
-                      >
-                        {{ desa }}
-                      </button>
-                      <div v-if="availableDesa.length === 0" class="px-3 py-4 text-sm text-gray-400 text-center">
-                        Tidak ada data desa
-                      </div>
-                    </template>
-                  </div>
-
-                  <!-- Apply Button -->
-                  <div class="px-3 py-2 border-t border-gray-200 bg-gray-50">
-                    <button
-                      class="w-full px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                      @click="applyRegionFilter"
-                    >
-                      Terapkan Filter
-                    </button>
-                  </div>
+                  <span class="text-xs md:text-sm text-gray-500">{{ total }} updates</span>
                 </div>
               </div>
+              <div class="flex items-center gap-2">
+                <!-- Mobile filter toggle -->
+                <button
+                  v-if="isMobile"
+                  @click="toggleFilters"
+                  class="flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                  :class="{ 'text-blue-600 border-blue-300 bg-blue-50': activeFilterCount > 0 }"
+                >
+                  <Filter class="w-4 h-4" />
+                  <span>Filter</span>
+                  <span v-if="activeFilterCount > 0" class="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center">
+                    {{ activeFilterCount }}
+                  </span>
+                  <component :is="showFilters ? ChevronUp : ChevronDown" class="w-4 h-4 text-gray-400" />
+                </button>
+                <Button variant="outline" class="gap-2 hidden md:flex">
+                  <Download class="w-4 h-4" />
+                  Export
+                </Button>
+              </div>
             </div>
-          </div>
 
-          <!-- Active Filters Display -->
-          <div v-if="searchQuery || selectedCategory || selectedTag || hasActiveRegionFilter" class="flex flex-wrap gap-2 mt-3">
-            <Badge
-              v-if="searchQuery"
-              variant="default"
-              class="cursor-pointer hover:bg-gray-200"
-              @click="searchQuery = ''; handleSearch()"
+            <!-- Collapsible Filters -->
+            <Transition
+              enter-active-class="transition-all duration-200 ease-out"
+              enter-from-class="opacity-0 max-h-0"
+              enter-to-class="opacity-100 max-h-[500px]"
+              leave-active-class="transition-all duration-200 ease-in"
+              leave-from-class="opacity-100 max-h-[500px]"
+              leave-to-class="opacity-0 max-h-0"
             >
-              Lokasi: {{ searchQuery }}
-              <span class="ml-1">&times;</span>
-            </Badge>
-            <Badge
-              v-if="selectedCategory"
-              variant="default"
-              class="cursor-pointer hover:bg-gray-200"
-              @click="selectedCategory = ''"
-            >
-              Kategori: {{ allCategories.find(c => c.value === selectedCategory)?.label }}
-              <span class="ml-1">&times;</span>
-            </Badge>
-            <Badge
-              v-if="selectedTag"
-              variant="default"
-              class="cursor-pointer hover:bg-gray-200"
-              @click="selectedTag = ''"
-            >
-              Tag: {{ formatTagDisplay(selectedTag) }}
-              <span class="ml-1">&times;</span>
-            </Badge>
-            <Badge
-              v-if="hasActiveRegionFilter"
-              variant="default"
-              class="cursor-pointer hover:bg-gray-200"
-              @click="clearRegionFilter"
-            >
-              Wilayah: {{ regionFilterLabel }}
-              <span class="ml-1">&times;</span>
-            </Badge>
+              <div v-show="showFilters" class="overflow-hidden">
+                <!-- Filters Row -->
+                <div class="flex flex-col md:flex-row gap-2 md:gap-3">
+                  <!-- Search by Location Name -->
+                  <div class="flex-1 relative">
+                    <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input
+                      v-model="searchQuery"
+                      placeholder="Cari nama posko..."
+                      class="pl-9 w-full h-11 md:h-10"
+                      @keyup.enter="handleSearch"
+                    />
+                  </div>
+
+                  <!-- Filter selects -->
+                  <div class="flex gap-2">
+                    <!-- Category Filter -->
+                    <div class="flex-1 md:w-40 md:flex-initial">
+                      <select
+                        v-model="selectedCategory"
+                        class="w-full h-11 md:h-10 text-sm border border-gray-200 rounded-lg px-3 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="">Kategori</option>
+                        <option v-for="cat in allCategories" :key="cat.value" :value="cat.value">
+                          {{ cat.label }}
+                        </option>
+                      </select>
+                    </div>
+
+                    <!-- Tags Filter -->
+                    <div class="flex-1 md:w-40 md:flex-initial">
+                      <select
+                        v-model="selectedTag"
+                        class="w-full h-11 md:h-10 text-sm border border-gray-200 rounded-lg px-3 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="">Tags</option>
+                        <option v-for="tag in allTags" :key="tag.value" :value="tag.value">
+                          {{ tag.label }}
+                        </option>
+                      </select>
+                    </div>
+
+                    <!-- Region Cascade Filter -->
+                    <div class="relative flex-1 md:w-40 md:flex-initial">
+                      <button
+                        class="w-full h-11 md:h-10 text-sm border border-gray-200 rounded-lg px-3 bg-white flex items-center justify-between hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                        :class="{ 'ring-2 ring-blue-500 border-transparent': showRegionFilter, 'text-blue-600': hasActiveRegionFilter }"
+                        @click="showRegionFilter = !showRegionFilter"
+                      >
+                        <span class="flex items-center gap-1.5 truncate">
+                          <MapPin class="w-4 h-4 flex-shrink-0" />
+                          <span class="truncate">{{ regionFilterLabel }}</span>
+                        </span>
+                        <div class="flex items-center gap-1">
+                          <button
+                            v-if="hasActiveRegionFilter"
+                            class="p-0.5 hover:bg-gray-200 rounded"
+                            @click.stop="clearRegionFilter"
+                          >
+                            <X class="w-3 h-3 text-gray-500" />
+                          </button>
+                          <ChevronDown class="w-4 h-4 text-gray-400" />
+                        </div>
+                      </button>
+
+                      <!-- Region Dropdown Menu -->
+                      <Teleport to="body">
+                        <div
+                          v-if="showRegionFilter"
+                          class="fixed inset-0 z-[9998]"
+                          @click="showRegionFilter = false"
+                        ></div>
+                      </Teleport>
+                      <div
+                        v-if="showRegionFilter"
+                        class="absolute top-full left-0 right-0 md:left-auto md:right-auto mt-1 bg-white rounded-lg shadow-lg border border-gray-200 min-w-[280px] max-h-[400px] overflow-hidden flex flex-col z-[9999]"
+                      >
+                        <!-- Breadcrumb -->
+                        <div v-if="filterLevel !== 'provinsi'" class="px-3 py-2 bg-gray-50 border-b border-gray-200">
+                          <div class="flex items-center gap-1 text-xs text-gray-500 flex-wrap">
+                            <button class="hover:text-blue-600 active:text-blue-700" @click="filterLevel = 'provinsi'; pendingKotaKab = ''; pendingKecamatan = ''; pendingDesa = ''">
+                              {{ pendingProvinsi || 'Provinsi' }}
+                            </button>
+                            <span v-if="pendingKotaKab">›</span>
+                            <button v-if="pendingKotaKab" class="hover:text-blue-600 active:text-blue-700" @click="filterLevel = 'kecamatan'; pendingKecamatan = ''; pendingDesa = ''">
+                              {{ pendingKotaKab }}
+                            </button>
+                            <span v-if="pendingKecamatan">›</span>
+                            <button v-if="pendingKecamatan" class="hover:text-blue-600 active:text-blue-700" @click="filterLevel = 'desa'; pendingDesa = ''">
+                              {{ pendingKecamatan }}
+                            </button>
+                            <span v-if="pendingDesa">›</span>
+                            <span v-if="pendingDesa" class="font-medium text-gray-700">{{ pendingDesa }}</span>
+                          </div>
+                        </div>
+
+                        <!-- Header with Back button -->
+                        <div class="px-3 py-2 border-b border-gray-200 flex items-center justify-between">
+                          <span class="text-xs font-medium text-gray-500 uppercase">
+                            {{ filterLevel === 'provinsi' ? 'Provinsi' : filterLevel === 'kotakab' ? 'Kota/Kabupaten' : filterLevel === 'kecamatan' ? 'Kecamatan' : 'Desa' }}
+                          </span>
+                          <button
+                            v-if="filterLevel !== 'provinsi'"
+                            class="text-blue-500 hover:text-blue-700 active:text-blue-800 text-xs font-medium"
+                            @click="goBackLevel"
+                          >
+                            ← Kembali
+                          </button>
+                        </div>
+
+                        <!-- List Content -->
+                        <div class="max-h-[250px] overflow-y-auto flex-1 overscroll-contain">
+                          <!-- Provinsi Selection -->
+                          <template v-if="filterLevel === 'provinsi'">
+                            <button
+                              class="w-full px-3 py-3 text-left text-sm hover:bg-blue-50 active:bg-blue-100 hover:text-blue-600 flex items-center gap-2 transition-colors"
+                              :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingProvinsi === 'Aceh' }"
+                              @click="selectProvinsi('Aceh')"
+                            >
+                              <MapPin class="w-4 h-4" />
+                              Aceh
+                            </button>
+                          </template>
+
+                          <!-- Kota/Kab Selection -->
+                          <template v-else-if="filterLevel === 'kotakab'">
+                            <button
+                              class="w-full px-3 py-3 text-left text-sm hover:bg-blue-50 active:bg-blue-100 hover:text-blue-600 transition-colors"
+                              :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingKotaKab === '' }"
+                              @click="pendingKotaKab = ''; pendingKecamatan = ''; pendingDesa = ''"
+                            >
+                              Semua Kota/Kabupaten
+                            </button>
+                            <button
+                              v-for="kota in availableKotaKab"
+                              :key="kota"
+                              class="w-full px-3 py-3 text-left text-sm hover:bg-blue-50 active:bg-blue-100 hover:text-blue-600 transition-colors"
+                              :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingKotaKab === kota }"
+                              @click="selectKotaKab(kota)"
+                            >
+                              {{ kota }}
+                            </button>
+                            <div v-if="availableKotaKab.length === 0" class="px-3 py-4 text-sm text-gray-400 text-center">
+                              Tidak ada data
+                            </div>
+                          </template>
+
+                          <!-- Kecamatan Selection -->
+                          <template v-else-if="filterLevel === 'kecamatan'">
+                            <button
+                              class="w-full px-3 py-3 text-left text-sm hover:bg-blue-50 active:bg-blue-100 hover:text-blue-600 transition-colors"
+                              :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingKecamatan === '' }"
+                              @click="pendingKecamatan = ''; pendingDesa = ''"
+                            >
+                              Semua Kecamatan
+                            </button>
+                            <button
+                              v-for="kec in availableKecamatan"
+                              :key="kec"
+                              class="w-full px-3 py-3 text-left text-sm hover:bg-blue-50 active:bg-blue-100 hover:text-blue-600 transition-colors"
+                              :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingKecamatan === kec }"
+                              @click="selectKecamatan(kec)"
+                            >
+                              {{ kec }}
+                            </button>
+                            <div v-if="availableKecamatan.length === 0" class="px-3 py-4 text-sm text-gray-400 text-center">
+                              Tidak ada data kecamatan
+                            </div>
+                          </template>
+
+                          <!-- Desa Selection -->
+                          <template v-else-if="filterLevel === 'desa'">
+                            <button
+                              class="w-full px-3 py-3 text-left text-sm hover:bg-blue-50 active:bg-blue-100 hover:text-blue-600 transition-colors"
+                              :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingDesa === '' }"
+                              @click="pendingDesa = ''"
+                            >
+                              Semua Desa
+                            </button>
+                            <button
+                              v-for="desa in availableDesa"
+                              :key="desa"
+                              class="w-full px-3 py-3 text-left text-sm hover:bg-blue-50 active:bg-blue-100 hover:text-blue-600 transition-colors"
+                              :class="{ 'bg-blue-50 text-blue-600 font-medium': pendingDesa === desa }"
+                              @click="selectDesa(desa)"
+                            >
+                              {{ desa }}
+                            </button>
+                            <div v-if="availableDesa.length === 0" class="px-3 py-4 text-sm text-gray-400 text-center">
+                              Tidak ada data desa
+                            </div>
+                          </template>
+                        </div>
+
+                        <!-- Apply Button -->
+                        <div class="px-3 py-3 border-t border-gray-200 bg-gray-50">
+                          <button
+                            class="w-full px-4 py-3 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors"
+                            @click="applyRegionFilter"
+                          >
+                            Terapkan Filter
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Active Filters Display -->
+                <div v-if="activeFilterCount > 0" class="flex flex-wrap gap-2 mt-3">
+                  <Badge
+                    v-if="searchQuery"
+                    variant="default"
+                    class="cursor-pointer hover:bg-gray-200 active:bg-gray-300 transition-colors"
+                    @click="searchQuery = ''; handleSearch()"
+                  >
+                    Lokasi: {{ searchQuery }}
+                    <span class="ml-1">&times;</span>
+                  </Badge>
+                  <Badge
+                    v-if="selectedCategory"
+                    variant="default"
+                    class="cursor-pointer hover:bg-gray-200 active:bg-gray-300 transition-colors"
+                    @click="selectedCategory = ''"
+                  >
+                    Kategori: {{ allCategories.find(c => c.value === selectedCategory)?.label }}
+                    <span class="ml-1">&times;</span>
+                  </Badge>
+                  <Badge
+                    v-if="selectedTag"
+                    variant="default"
+                    class="cursor-pointer hover:bg-gray-200 active:bg-gray-300 transition-colors"
+                    @click="selectedTag = ''"
+                  >
+                    Tag: {{ getTagLabel(selectedTag) }}
+                    <span class="ml-1">&times;</span>
+                  </Badge>
+                  <Badge
+                    v-if="hasActiveRegionFilter"
+                    variant="default"
+                    class="cursor-pointer hover:bg-gray-200 active:bg-gray-300 transition-colors"
+                    @click="clearRegionFilter"
+                  >
+                    Wilayah: {{ regionFilterLabel }}
+                    <span class="ml-1">&times;</span>
+                  </Badge>
+                </div>
+              </div>
+            </Transition>
           </div>
         </div>
       </div>
 
       <!-- Loading -->
       <div v-if="loading" class="flex-1 flex items-center justify-center">
-        <div class="text-gray-500">Memuat data...</div>
+        <div class="flex flex-col items-center gap-3">
+          <div class="w-8 h-8 border-3 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+          <span class="text-gray-500 text-sm">Memuat data...</span>
+        </div>
       </div>
 
-      <!-- Feeds List -->
-      <div v-else class="flex-1 overflow-y-auto">
-        <div class="max-w-4xl mx-auto py-3 md:py-4 px-3 md:px-6">
+      <!-- Feeds List with Pull-to-refresh -->
+      <div
+        v-else
+        ref="scrollContainerRef"
+        class="flex-1 overflow-y-auto overscroll-contain"
+        @touchstart.passive="onTouchStart"
+        @touchmove="onTouchMove"
+        @touchend.passive="onTouchEnd"
+      >
+        <!-- Pull-to-refresh indicator -->
+        <div
+          class="flex items-center justify-center transition-all duration-200 overflow-hidden"
+          :style="{ height: `${pullDistance}px` }"
+        >
+          <div v-if="pullDistance > 0" class="flex items-center gap-2 text-gray-500">
+            <RefreshCw
+              class="w-5 h-5 transition-transform duration-200"
+              :class="{ 'animate-spin': isRefreshing }"
+              :style="{ transform: isRefreshing ? '' : `rotate(${pullDistance * 2}deg)` }"
+            />
+            <span class="text-sm">
+              {{ isRefreshing ? 'Memperbarui...' : pullDistance >= pullThreshold ? 'Lepaskan untuk refresh' : 'Tarik untuk refresh' }}
+            </span>
+          </div>
+        </div>
+
+        <div class="max-w-4xl mx-auto py-3 md:py-4 px-3 md:px-6 pb-safe">
           <!-- Empty State -->
           <div v-if="formattedFeeds.length === 0" class="text-center py-12">
             <Filter class="w-12 h-12 text-gray-300 mx-auto mb-4" />
@@ -764,126 +856,145 @@ const allCategories = [
               v-for="update in formattedFeeds"
               :key="update.id"
               :id="`feed-item-${update.id}`"
-              class="bg-white rounded-lg border border-gray-200 p-3 md:p-4 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer"
-              @click="goToMapWithFeed({ id: update.id, coordinates: update.coordinates, locationId: update.locationId, faskesId: update.faskesId, desaId: update.desaId, desaName: update.desaName, kecamatan: update.kecamatan, kotaKab: update.kotaKab })"
+              class="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md hover:border-blue-300 active:bg-gray-50 transition-all cursor-pointer"
+              @click="goToFeedDetail(update.shortCode, update.id)"
             >
-              <div class="flex gap-3">
+              <div class="flex min-h-[120px] md:min-h-[140px]">
                 <!-- Photo on the left -->
-                <div v-if="update.photos.length > 0" class="flex-shrink-0">
-                  <div class="relative">
-                    <img
-                      :src="getPhotoUrl(update.photos[0])"
-                      :alt="update.photos[0].filename"
-                      class="w-24 h-24 md:w-32 md:h-32 object-cover rounded-lg border border-gray-200"
-                      loading="lazy"
-                    />
-                    <div
-                      v-if="update.photos.length > 1"
-                      class="absolute bottom-1 right-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded flex items-center gap-1"
-                    >
-                      <Image class="w-3 h-3" />
-                      <span>+{{ update.photos.length - 1 }}</span>
-                    </div>
+                <div v-if="update.photos.length > 0" class="flex-shrink-0 w-28 md:w-36 bg-gray-200 relative overflow-hidden">
+                  <div class="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                    <div class="w-6 h-6 border-2 border-gray-300 border-t-gray-400 rounded-full animate-spin feed-img-loader"></div>
+                  </div>
+                  <img
+                    :src="getPhotoUrl(update.photos[0])"
+                    :alt="update.photos[0].filename"
+                    class="w-full h-full object-cover relative z-10 bg-gray-200"
+                    loading="lazy"
+                    decoding="async"
+                    @load="(e: Event) => (e.target as HTMLElement).classList.add('feed-img-loaded')"
+                    @error="(e: Event) => (e.target as HTMLElement).classList.add('feed-img-error')"
+                  />
+                  <div
+                    v-if="update.photos.length > 1"
+                    class="absolute bottom-1.5 right-1.5 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded flex items-center gap-1 z-20"
+                  >
+                    <Image class="w-3 h-3" />
+                    <span>+{{ update.photos.length - 1 }}</span>
                   </div>
                 </div>
 
                 <!-- Content on the right -->
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center justify-between mb-1">
-                    <span class="text-xs text-gray-500">{{ update.timestamp }}</span>
-                    <!-- Action buttons -->
-                    <div class="flex items-center gap-2">
-                      <!-- Download image button -->
-                      <ShareButton
-                        :feed-id="update.id"
-                        :category="update.category"
-                        :photo="update.photos.length > 0 ? getPhotoUrl(update.photos[0]) : undefined"
-                        :kabupaten="update.kotaKab"
-                        :kecamatan="update.kecamatan"
-                        :desa="update.desaName"
-                        :submitter="update.submitter"
-                        :content="update.content"
-                        :tags="update.tags"
-                        :timestamp="update.timestamp"
-                      />
-                      <!-- Navigate to map indicator -->
-                      <div
-                        v-if="update.coordinates || update.locationId || update.faskesId"
-                        class="flex items-center gap-1 text-xs text-blue-500"
-                        title="Klik untuk lihat di peta"
-                      >
-                        <Navigation class="w-3.5 h-3.5" />
-                        <span class="hidden sm:inline">Peta</span>
-                      </div>
+                <div class="flex-1 min-w-0 p-3 md:p-4 flex flex-col">
+                  <!-- Top row -->
+                  <div class="flex items-center justify-between mb-1.5">
+                    <div class="flex items-center gap-1.5">
+                      <template v-if="update.locationId">
+                        <MapPin class="w-4 h-4 text-blue-500 flex-shrink-0" />
+                        <span class="text-xs font-medium text-blue-600">Posko</span>
+                      </template>
+                      <template v-else-if="update.faskesId">
+                        <MapPin class="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <span class="text-xs font-medium text-green-600">Faskes</span>
+                      </template>
+                      <template v-else>
+                        <Megaphone class="w-4 h-4 text-orange-500 flex-shrink-0" />
+                        <span class="text-xs font-medium text-orange-600">Laporan Situasi</span>
+                      </template>
                     </div>
+                    <span class="text-xs text-gray-400">{{ update.timestamp }}</span>
                   </div>
-                  <div class="text-xs text-blue-600 font-medium mb-1">
-                    {{ update.username }}{{ update.organization ? ` - ${update.organization}` : '' }}
-                  </div>
-                  <div class="flex items-center gap-1.5 mb-1">
-                    <!-- Show different icon based on whether it's related to a location/faskes -->
+
+                  <!-- Location name -->
+                  <div class="mb-1">
                     <template v-if="update.locationId">
-                      <MapPin class="w-4 h-4 text-blue-500 flex-shrink-0" />
-                      <span class="text-sm font-medium text-blue-600 truncate">{{ update.location }}</span>
+                      <span class="text-sm font-semibold text-gray-900 line-clamp-1">{{ update.location }}</span>
+                      <span v-if="update.desaName || update.kecamatan" class="text-xs text-gray-500 block line-clamp-1">
+                        {{ update.desaName || update.kecamatan }}{{ update.kotaKab ? `, ${update.kotaKab}` : '' }}
+                      </span>
                     </template>
                     <template v-else-if="update.faskesId">
-                      <MapPin class="w-4 h-4 text-green-500 flex-shrink-0" />
-                      <span class="text-sm font-medium text-green-600 truncate">{{ update.faskesName }}</span>
-                      <Badge variant="success" class="ml-1 text-xs">Faskes</Badge>
+                      <span class="text-sm font-semibold text-gray-900 line-clamp-1">{{ update.faskesName }}</span>
+                      <span v-if="update.desaName || update.kecamatan" class="text-xs text-gray-500 block line-clamp-1">
+                        {{ update.desaName || update.kecamatan }}{{ update.kotaKab ? `, ${update.kotaKab}` : '' }}
+                      </span>
                     </template>
-                    <template v-else-if="update.coordinates">
-                      <Megaphone class="w-4 h-4 text-orange-500 flex-shrink-0" />
-                      <span class="text-sm font-medium text-orange-600">Laporan Situasi</span>
+                    <template v-else-if="update.desaName || update.kecamatan">
+                      <span class="text-sm font-semibold text-gray-900 line-clamp-1">
+                        {{ update.desaName || update.kecamatan }}{{ update.kotaKab ? `, ${update.kotaKab}` : '' }}
+                      </span>
                     </template>
                   </div>
 
-                  <!-- Region info (like in map popup) -->
-                  <div v-if="update.desaName || update.kecamatan || update.kotaKab" class="text-xs text-gray-500 mb-2">
-                    <span v-if="update.desaName">{{ update.desaName }}</span>
-                    <span v-if="update.desaName && update.kecamatan"> • </span>
-                    <span v-if="update.kecamatan">{{ update.kecamatan }}</span>
-                    <span v-if="(update.desaName || update.kecamatan) && update.kotaKab"> • </span>
-                    <span v-if="update.kotaKab">{{ update.kotaKab }}</span>
-                  </div>
+                  <!-- Content text -->
+                  <p class="text-sm text-gray-600 leading-relaxed line-clamp-3 md:line-clamp-4 flex-1">{{ update.content }}</p>
 
-                  <p class="text-sm text-gray-600 mb-2 leading-relaxed line-clamp-2">{{ update.content }}</p>
-                  <div class="flex flex-wrap gap-1.5">
-                    <Badge :variant="categoryColors[update.category] || 'outline'" class="text-xs">
-                      {{ formatCategoryDisplay(update.category) }}
-                    </Badge>
-                    <template v-if="update.type">
-                      <Badge
-                        v-for="t in update.type.split(/[\s,]+/).filter((tag: string) => tag)"
-                        :key="t"
-                        :variant="typeColors[t] || 'outline'"
-                        class="text-xs"
-                      >
-                        {{ formatTagDisplay(t) }}
+                  <!-- Bottom row -->
+                  <div class="flex items-end justify-between mt-2 gap-2">
+                    <div class="flex flex-wrap gap-1">
+                      <Badge :variant="categoryColors[update.category] || 'outline'" class="text-xs">
+                        {{ getCategoryLabel(update.category) }}
                       </Badge>
-                    </template>
+                      <template v-if="update.type">
+                        <Badge
+                          v-for="t in update.type.split(/[\s,]+/).filter((tag: string) => tag).slice(0, 2)"
+                          :key="t"
+                          :variant="tagColor"
+                          class="text-xs"
+                        >
+                          {{ getTagLabel(t) }}
+                        </Badge>
+                      </template>
+                    </div>
+                    <span class="text-xs text-gray-500 truncate max-w-[100px] md:max-w-[180px] text-right flex-shrink-0">
+                      {{ update.username }}{{ update.organization ? ` • ${update.organization}` : '' }}
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Load More -->
-          <div v-if="hasMore" class="py-6 text-center">
-            <Button
-              variant="outline"
-              :disabled="loadingMore"
-              @click="loadMore"
-            >
-              {{ loadingMore ? 'Memuat...' : 'Muat Lebih Banyak' }}
-            </Button>
-          </div>
-
-          <!-- End of list -->
-          <div v-else-if="formattedFeeds.length > 0" class="py-6 text-center text-sm text-gray-400">
-            Semua update telah ditampilkan
+          <!-- Infinite scroll trigger & loading more indicator -->
+          <div ref="loadMoreTriggerRef" class="py-6 text-center">
+            <div v-if="loadingMore" class="flex items-center justify-center gap-2">
+              <div class="w-5 h-5 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+              <span class="text-sm text-gray-500">Memuat lebih banyak...</span>
+            </div>
+            <div v-else-if="!hasMore && formattedFeeds.length > 0" class="text-sm text-gray-400">
+              Semua update telah ditampilkan
+            </div>
           </div>
         </div>
       </div>
     </main>
   </div>
 </template>
+
+<style scoped>
+.feed-img-loaded {
+  opacity: 1;
+}
+
+.feed-img-loaded + .feed-img-loader,
+.feed-img-loaded ~ .feed-img-loader {
+  display: none;
+}
+
+.feed-img-error {
+  opacity: 0;
+}
+
+.feed-img-loaded + div .feed-img-loader {
+  display: none;
+}
+
+/* Safe area for bottom */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Better touch scrolling */
+.overscroll-contain {
+  overscroll-behavior: contain;
+}
+</style>

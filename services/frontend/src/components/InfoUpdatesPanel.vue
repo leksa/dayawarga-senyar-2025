@@ -5,6 +5,7 @@ import Input from './ui/Input.vue'
 import Badge from './ui/Badge.vue'
 import Button from './ui/Button.vue'
 import { useFeeds } from '@/composables/useFeeds'
+import { categoryColors, getCategoryLabel, getTagLabel, tagColor } from '@/lib/feedHelpers'
 
 interface Props {
   filterLocation?: string
@@ -56,25 +57,7 @@ watch([selectedCategory, selectedType], () => {
   doSearch()
 })
 
-const categoryColors: Record<string, 'default' | 'success' | 'warning' | 'danger' | 'outline'> = {
-  kebutuhan: 'warning',
-  informasi: 'outline',
-}
 
-const typeColors: Record<string, 'default' | 'success' | 'warning' | 'danger' | 'outline'> = {
-  'SAR': 'danger',
-  'kesehatan': 'success',
-  'logistik': 'default',
-  'air bersih': 'outline',
-  'transportasi': 'outline',
-  'listrik': 'outline',
-  'infrastruktur': 'outline',
-  'pendidikan': 'outline',
-  'psikososial': 'outline',
-  'ibadah': 'outline',
-  'komunikasi': 'outline',
-  'internet': 'outline',
-}
 </script>
 
 <template>
@@ -163,11 +146,11 @@ const typeColors: Record<string, 'default' | 'success' | 'warning' | 'danger' | 
         </div>
         <p class="text-sm text-gray-600 mb-3">{{ update.content }}</p>
         <div class="flex gap-2">
-          <Badge :variant="categoryColors[update.category] || 'outline'">
-            {{ update.category }}
+          <Badge :variant="categoryColors[update.category] || 'default'">
+            {{ getCategoryLabel(update.category) }}
           </Badge>
-          <Badge v-if="update.type" :variant="typeColors[update.type] || 'outline'">
-            {{ update.type }}
+          <Badge v-if="update.type" :variant="tagColor">
+            {{ getTagLabel(update.type) }}
           </Badge>
         </div>
       </div>

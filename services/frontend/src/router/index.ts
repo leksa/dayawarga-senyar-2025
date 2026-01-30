@@ -14,6 +14,11 @@ const router = createRouter({
       component: () => import('@/views/FeedsView.vue'),
     },
     {
+      path: '/feeds/:code',
+      name: 'feed-detail',
+      component: () => import('@/views/FeedDetailView.vue'),
+    },
+    {
       path: '/tentang',
       name: 'tentang',
       component: () => import('@/views/TentangView.vue'),

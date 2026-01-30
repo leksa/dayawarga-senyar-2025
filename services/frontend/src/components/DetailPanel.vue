@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { X, Phone, User, ChevronDown, ChevronUp, ChevronRight, Clock, MapPin, Users, Home, Wifi, Navigation, Camera, ArrowLeft, Construction, Wrench, BarChart3, ExternalLink } from 'lucide-vue-next'
 import Badge from './ui/Badge.vue'
 import PhotoModal from './PhotoModal.vue'
 import type { MapMarker } from '@/types'
 import { api, type LocationDetail, type FaskesDetail, type InfrastrukturDetail, type Feed, type Photo, type FeedPhoto } from '@/services/api'
+import { categoryColors, tagColor, getCategoryLabel, getTagLabel } from '@/lib/feedHelpers'
 
 // Desa info interface for village-level detail panel
 interface DesaInfo {
@@ -65,6 +66,10 @@ const desaFeeds = ref<Feed[]>([])
 const desaPhotos = ref<FeedPhoto[]>([])
 const loadingDesaData = ref(false)
 
+// Location/Posko feeds state
+const locationFeeds = ref<Feed[]>([])
+const loadingLocationFeeds = ref(false)
+
 // Check if we are showing faskes, infrastruktur, desa, or location
 const isFaskesView = computed(() => !!props.faskes)
 const isInfrastrukturView = computed(() => !!props.infrastruktur)
@@ -93,6 +98,7 @@ watch(() => props.marker, async (newMarker) => {
     locationDetail.value = null
     latestFeed.value = null
     photos.value = []
+    locationFeeds.value = []
     viewMode.value = 'detail'
     return
   }
@@ -270,53 +276,23 @@ const formatRelativeTime = (dateStr: string | undefined) => {
   return `${diffDays} hari yang lalu`
 }
 
-// Category colors and labels
-const categoryColors: Record<string, 'default' | 'success' | 'warning' | 'danger' | 'outline'> = {
-  kebutuhan: 'warning',
-  informasi: 'outline',
-  'follow-up': 'danger',
-  'info_bantuan': 'success',
-}
 
-const categoryLabels: Record<string, string> = {
-  kebutuhan: 'Butuh Bantuan',
-  informasi: 'Informasi',
-  'follow-up': 'Follow-up',
-  'info_bantuan': 'Terima Bantuan',
-}
 
-const tagLabels: Record<string, string> = {
-  'sar': 'SAR',
-  'ambulan': 'Ambulan',
-  'medis': 'Medis',
-  'transport_roda4': 'Transport Roda 4',
-  'transport_roda2': 'Transport Roda 2',
-  'air_bersih': 'Air Bersih',
-  'sembako': 'Sembako',
-  'psikososial': 'Psikososial',
-  'sekolah_darurat': 'Sekolah Darurat',
-  'dapur_umum': 'Dapur Umum',
-  'keamanan': 'Keamanan',
-  'listrik': 'Listrik',
-  'internet': 'Internet',
-  'sinyal_selular': 'Sinyal Selular',
-  'sanitasi_mck': 'Sanitasi MCK',
-  'lainnya': 'Lainnya',
-}
-
-// Helper to get category label
-const getCategoryLabel = (category: string): string => {
-  return categoryLabels[category] || category
-}
-
-// Helper to get tag label
-const getTagLabel = (tag: string): string => {
-  return tagLabels[tag] || tag
-}
-
-const handleShowMoreUpdates = () => {
+const handleShowMoreUpdates = async () => {
   if (props.marker) {
-    emit('show-location-updates', props.marker.id)
+    // Fetch all feeds for this location
+    loadingLocationFeeds.value = true
+    try {
+      const feedsRes = await api.getFeedsByLocation(props.marker.id, { limit: 100 })
+      if (feedsRes.success && feedsRes.data) {
+        locationFeeds.value = feedsRes.data
+      }
+      viewMode.value = 'feeds'
+    } catch (e) {
+      console.error('Failed to fetch location feeds:', e)
+    } finally {
+      loadingLocationFeeds.value = false
+    }
   }
 }
 
@@ -413,22 +389,98 @@ const closePhotoModal = () => {
   isModalOpen.value = false
   selectedPhotoUrl.value = null
 }
+
+// Mobile detection
+const isMobile = ref(false)
+const checkMobile = () => {
+  isMobile.value = window.innerWidth < 1024
+}
+
+// Swipe-to-close gesture
+const panelRef = ref<HTMLElement | null>(null)
+const touchStartX = ref(0)
+const touchCurrentX = ref(0)
+const isSwiping = ref(false)
+const swipeThreshold = 100
+
+const onPanelTouchStart = (e: TouchEvent) => {
+  // Only enable swipe on mobile
+  if (!isMobile.value) return
+  touchStartX.value = e.touches[0].clientX
+  touchCurrentX.value = e.touches[0].clientX
+  isSwiping.value = true
+}
+
+const onPanelTouchMove = (e: TouchEvent) => {
+  if (!isSwiping.value) return
+  touchCurrentX.value = e.touches[0].clientX
+  const diff = touchCurrentX.value - touchStartX.value
+  // Only allow swiping to the right (positive diff)
+  if (diff > 0 && panelRef.value) {
+    panelRef.value.style.transform = `translateX(${Math.min(diff, 200)}px)`
+    panelRef.value.style.opacity = `${1 - (diff / 400)}`
+  }
+}
+
+const onPanelTouchEnd = () => {
+  if (!isSwiping.value) return
+  isSwiping.value = false
+  const diff = touchCurrentX.value - touchStartX.value
+  
+  if (diff > swipeThreshold) {
+    // Close the panel
+    emit('close')
+  }
+  
+  // Reset transform
+  if (panelRef.value) {
+    panelRef.value.style.transform = ''
+    panelRef.value.style.opacity = ''
+  }
+}
+
+onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+})
+
+// Auto-expand important sections on mobile
+const autoExpandOnMobile = () => {
+  if (isMobile.value) {
+    // On mobile, auto-expand the most important sections
+    expandedSections.value.pengungsi = true
+  }
+}
+
+watch(isMobile, autoExpandOnMobile, { immediate: true })
+watch(() => props.marker, autoExpandOnMobile)
 </script>
 
 <template>
   <!-- Mobile backdrop (covers area behind panel, clicking closes it) -->
-  <div
-    v-if="marker || faskes || infrastruktur || desa"
-    class="fixed inset-0 left-14 bg-black/30 z-[1100] lg:hidden"
-    @click="emit('close')"
-  />
+  <Transition name="backdrop-fade">
+    <div
+      v-if="marker || faskes || infrastruktur || desa"
+      class="fixed inset-0 left-14 bg-black/40 z-40 lg:hidden"
+      @click="emit('close')"
+    />
+  </Transition>
 
-  <aside
-    v-if="marker || faskes || infrastruktur || desa"
-    class="fixed inset-y-0 left-14 right-0 lg:h-full lg:relative lg:inset-auto lg:w-96 bg-white border-l border-gray-200 flex flex-col overflow-hidden z-[1200] lg:z-auto lg:border-t-0"
-  >
+  <Transition name="panel-slide">
+    <aside
+      v-if="marker || faskes || infrastruktur || desa"
+      ref="panelRef"
+      class="fixed inset-y-0 left-14 right-0 lg:h-full lg:relative lg:inset-auto lg:w-96 bg-white border-l border-gray-200 flex flex-col overflow-hidden z-50 lg:z-auto lg:border-t-0 transition-transform duration-150"
+      @touchstart.passive="onPanelTouchStart"
+      @touchmove.passive="onPanelTouchMove"
+      @touchend.passive="onPanelTouchEnd"
+    >
     <!-- Header for Location/Posko -->
-    <div v-if="!isFaskesView && !isInfrastrukturView && !isDesaView" class="p-3 lg:p-4 border-b border-gray-200">
+    <div v-if="!isFaskesView && !isInfrastrukturView && !isDesaView" class="p-3 lg:p-4 border-b border-gray-200 safe-area-top">
       <div class="flex items-start justify-between gap-2">
         <div class="flex-1 min-w-0">
           <h2 class="text-base lg:text-lg font-semibold text-gray-900 truncate">{{ marker?.name }}</h2>
@@ -437,16 +489,17 @@ const closePhotoModal = () => {
           </div>
         </div>
         <button
-          class="p-1 hover:bg-gray-100 rounded"
+          class="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-colors -mr-1"
           @click="emit('close')"
+          aria-label="Tutup panel"
         >
-          <X class="w-5 h-5 text-gray-400" />
+          <X class="w-5 h-5 text-gray-500" />
         </button>
       </div>
     </div>
 
     <!-- Header for Faskes -->
-    <div v-if="isFaskesView" class="p-3 lg:p-4 border-b border-gray-200">
+    <div v-if="isFaskesView" class="p-3 lg:p-4 border-b border-gray-200 safe-area-top">
       <div class="flex items-start justify-between gap-2">
         <div class="flex-1 min-w-0">
           <h2 class="text-base lg:text-lg font-semibold text-gray-900 truncate">{{ faskes?.name || faskesDetail?.nama }}</h2>
@@ -457,16 +510,17 @@ const closePhotoModal = () => {
           </div>
         </div>
         <button
-          class="p-1 hover:bg-gray-100 rounded"
+          class="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-colors -mr-1"
           @click="emit('close')"
+          aria-label="Tutup panel"
         >
-          <X class="w-5 h-5 text-gray-400" />
+          <X class="w-5 h-5 text-gray-500" />
         </button>
       </div>
     </div>
 
     <!-- Header for Infrastruktur -->
-    <div v-if="isInfrastrukturView" class="p-3 lg:p-4 border-b border-gray-200">
+    <div v-if="isInfrastrukturView" class="p-3 lg:p-4 border-b border-gray-200 safe-area-top">
       <div class="flex items-start justify-between gap-2">
         <div class="flex-1 min-w-0">
           <h2 class="text-base lg:text-lg font-semibold text-gray-900 truncate">{{ infrastruktur?.name || infrastrukturDetail?.nama }}</h2>
@@ -480,16 +534,17 @@ const closePhotoModal = () => {
           </div>
         </div>
         <button
-          class="p-1 hover:bg-gray-100 rounded"
+          class="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-colors -mr-1"
           @click="emit('close')"
+          aria-label="Tutup panel"
         >
-          <X class="w-5 h-5 text-gray-400" />
+          <X class="w-5 h-5 text-gray-500" />
         </button>
       </div>
     </div>
 
     <!-- Header for Desa -->
-    <div v-if="isDesaView && viewMode !== 'feeds'" class="p-3 lg:p-4 border-b border-gray-200">
+    <div v-if="isDesaView && viewMode !== 'feeds'" class="p-3 lg:p-4 border-b border-gray-200 safe-area-top">
       <div class="flex items-start justify-between gap-2">
         <div class="flex-1 min-w-0">
           <h2 class="text-base lg:text-lg font-semibold text-gray-900 truncate">Desa {{ desa?.name }}</h2>
@@ -498,10 +553,11 @@ const closePhotoModal = () => {
           </div>
         </div>
         <button
-          class="p-1 hover:bg-gray-100 rounded"
+          class="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-colors -mr-1"
           @click="emit('close')"
+          aria-label="Tutup panel"
         >
-          <X class="w-5 h-5 text-gray-400" />
+          <X class="w-5 h-5 text-gray-500" />
         </button>
       </div>
     </div>
@@ -545,8 +601,8 @@ const closePhotoModal = () => {
       </div>
 
       <!-- Thumbnails Grid -->
-      <div class="flex-1 overflow-y-auto p-3 lg:p-4">
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-2 lg:gap-3">
+      <div class="flex-1 overflow-y-auto overscroll-contain p-3 lg:p-4 pb-safe">
+        <div class="grid grid-cols-2 gap-2 lg:gap-3">
           <div
             v-for="photo in displayPhotos"
             :key="photo.id"
@@ -568,8 +624,9 @@ const closePhotoModal = () => {
     </div>
 
     <!-- Loading -->
-    <div v-if="loading || loadingDesaData" class="flex-1 flex items-center justify-center">
-      <span class="text-gray-500">Memuat data...</span>
+    <div v-if="loading || loadingDesaData" class="flex-1 flex flex-col items-center justify-center gap-3 p-8">
+      <div class="w-8 h-8 border-3 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
+      <span class="text-sm text-gray-500">Memuat data...</span>
     </div>
 
     <!-- Feeds Timeline View (for Desa) -->
@@ -586,56 +643,156 @@ const closePhotoModal = () => {
       </div>
 
       <!-- Feeds Timeline -->
-      <div class="flex-1 overflow-y-auto">
+      <div class="flex-1 overflow-y-auto overscroll-contain pb-safe">
         <div v-if="desaFeeds.length === 0" class="p-8 text-center text-gray-500">
           Belum ada informasi untuk desa ini.
         </div>
-        <div v-else class="divide-y divide-gray-100">
+        <div v-else class="py-4">
           <div
-            v-for="feed in desaFeeds"
+            v-for="(feed, index) in desaFeeds"
             :key="feed.id"
-            class="p-4 hover:bg-gray-50"
+            class="relative pl-8 pr-4 pb-6 last:pb-0"
           >
-            <!-- Photo if available -->
-            <div v-if="feed.photos && feed.photos.length > 0" class="mb-3">
-              <img
-                :src="api.getFeedPhotoUrl(feed.photos[0].id)"
-                :alt="feed.photos[0].filename"
-                class="w-full h-32 object-cover rounded-lg"
-                loading="lazy"
-              />
-              <div v-if="feed.photos.length > 1" class="text-xs text-gray-400 mt-1">
-                +{{ feed.photos.length - 1 }} foto lainnya
+            <!-- Timeline vertical line -->
+            <div 
+              v-if="index < desaFeeds.length - 1"
+              class="absolute left-[11px] top-3 bottom-0 w-0.5 bg-gray-200"
+            ></div>
+            
+            <!-- Timeline dot -->
+            <div class="absolute left-1.5 top-1.5 w-3 h-3 rounded-full bg-blue-500 border-2 border-white shadow-sm z-10"></div>
+
+            <!-- Feed card -->
+            <div class="bg-white rounded-lg border border-gray-100 shadow-sm p-4 hover:shadow-md transition-shadow">
+              <!-- Photo if available -->
+              <div v-if="feed.photos && feed.photos.length > 0" class="mb-3 -mx-1">
+                <img
+                  :src="api.getFeedPhotoUrl(feed.photos[0].id)"
+                  :alt="feed.photos[0].filename"
+                  class="w-full h-40 object-cover rounded-lg"
+                  loading="lazy"
+                />
+                <div v-if="feed.photos.length > 1" class="text-xs text-gray-400 mt-1.5 px-1">
+                  +{{ feed.photos.length - 1 }} foto lainnya
+                </div>
+              </div>
+
+              <!-- Timestamp & Submitter -->
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <div class="flex items-center gap-1.5 text-xs text-gray-500">
+                  <Clock class="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                  <span>{{ formatDate(feed.submitted_at) }}</span>
+                </div>
+                <div class="text-xs text-blue-600 font-medium truncate max-w-[50%]">
+                  {{ feed.username || 'Anonim' }}{{ feed.organization ? ` - ${feed.organization}` : '' }}
+                </div>
+              </div>
+
+              <!-- Content - Full text, no truncation -->
+              <p class="text-sm text-gray-800 mb-3 leading-relaxed whitespace-pre-line">{{ feed.content }}</p>
+
+              <!-- Badges -->
+              <div class="flex flex-wrap gap-1.5">
+                <Badge :variant="categoryColors[feed.category] || 'outline'" class="text-xs">
+                  {{ getCategoryLabel(feed.category) }}
+                </Badge>
+                <Badge
+                  v-for="tag in (feed.type || '').split(/[\s,]+/).filter((t: string) => t)"
+                  :key="tag"
+                  :variant="tagColor"
+                  class="text-xs"
+                >
+                  {{ getTagLabel(tag) }}
+                </Badge>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-            <!-- Timestamp -->
-            <div class="flex items-center gap-2 mb-1">
-              <Clock class="w-3.5 h-3.5 text-gray-400" />
-              <span class="text-xs text-gray-500">{{ formatDate(feed.submitted_at) }}</span>
-            </div>
+    <!-- Feeds Timeline View (for Location/Posko) -->
+    <div v-if="!loading && viewMode === 'feeds' && !isDesaView && !isFaskesView && !isInfrastrukturView" class="flex-1 flex flex-col overflow-hidden">
+      <!-- Feeds Header -->
+      <div class="p-4 border-b border-gray-200 flex items-center gap-3">
+        <button
+          class="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+          @click="backToDetailFromFeeds"
+        >
+          <ArrowLeft class="w-5 h-5 text-gray-600" />
+        </button>
+        <h3 class="font-semibold text-gray-900">Update {{ marker?.name || 'Posko' }} ({{ locationFeeds.length }})</h3>
+      </div>
 
-            <!-- Submitter -->
-            <div class="text-xs text-blue-600 font-medium mb-2">
-              {{ feed.username || 'Anonim' }}{{ feed.organization ? ` - ${feed.organization}` : '' }}
-            </div>
+      <!-- Loading state -->
+      <div v-if="loadingLocationFeeds" class="flex-1 flex flex-col items-center justify-center gap-3 p-8">
+        <div class="w-8 h-8 border-3 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
+        <span class="text-sm text-gray-500">Memuat data...</span>
+      </div>
 
-            <!-- Content -->
-            <p class="text-sm text-gray-700 mb-2 leading-relaxed">{{ feed.content }}</p>
+      <!-- Feeds Timeline -->
+      <div v-else class="flex-1 overflow-y-auto overscroll-contain pb-safe">
+        <div v-if="locationFeeds.length === 0" class="p-8 text-center text-gray-500">
+          Belum ada update untuk lokasi ini.
+        </div>
+        <div v-else class="py-4">
+          <div
+            v-for="(feed, index) in locationFeeds"
+            :key="feed.id"
+            class="relative pl-8 pr-4 pb-6 last:pb-0"
+          >
+            <!-- Timeline vertical line -->
+            <div 
+              v-if="index < locationFeeds.length - 1"
+              class="absolute left-[11px] top-3 bottom-0 w-0.5 bg-gray-200"
+            ></div>
+            
+            <!-- Timeline dot -->
+            <div class="absolute left-1.5 top-1.5 w-3 h-3 rounded-full bg-blue-500 border-2 border-white shadow-sm z-10"></div>
 
-            <!-- Badges -->
-            <div class="flex flex-wrap gap-1.5">
-              <Badge :variant="categoryColors[feed.category] || 'outline'" class="text-xs">
-                {{ getCategoryLabel(feed.category) }}
-              </Badge>
-              <Badge
-                v-for="tag in (feed.type || '').split(/[\s,]+/).filter((t: string) => t)"
-                :key="tag"
-                variant="outline"
-                class="text-xs"
-              >
-                {{ getTagLabel(tag) }}
-              </Badge>
+            <!-- Feed card -->
+            <div class="bg-white rounded-lg border border-gray-100 shadow-sm p-4 hover:shadow-md transition-shadow">
+              <!-- Photo if available -->
+              <div v-if="feed.photos && feed.photos.length > 0" class="mb-3 -mx-1">
+                <img
+                  :src="api.getFeedPhotoUrl(feed.photos[0].id)"
+                  :alt="feed.photos[0].filename"
+                  class="w-full h-40 object-cover rounded-lg"
+                  loading="lazy"
+                />
+                <div v-if="feed.photos.length > 1" class="text-xs text-gray-400 mt-1.5 px-1">
+                  +{{ feed.photos.length - 1 }} foto lainnya
+                </div>
+              </div>
+
+              <!-- Timestamp & Submitter -->
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <div class="flex items-center gap-1.5 text-xs text-gray-500">
+                  <Clock class="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                  <span>{{ formatDate(feed.submitted_at) }}</span>
+                </div>
+                <div class="text-xs text-blue-600 font-medium truncate max-w-[50%]">
+                  {{ feed.username || 'Anonim' }}{{ feed.organization ? ` - ${feed.organization}` : '' }}
+                </div>
+              </div>
+
+              <!-- Content - Full text, no truncation -->
+              <p class="text-sm text-gray-800 mb-3 leading-relaxed whitespace-pre-line">{{ feed.content }}</p>
+
+              <!-- Badges -->
+              <div class="flex flex-wrap gap-1.5">
+                <Badge :variant="categoryColors[feed.category] || 'outline'" class="text-xs">
+                  {{ getCategoryLabel(feed.category) }}
+                </Badge>
+                <Badge
+                  v-for="tag in (feed.type || '').split(/[\s,]+/).filter((t: string) => t)"
+                  :key="tag"
+                  :variant="tagColor"
+                  class="text-xs"
+                >
+                  {{ getTagLabel(tag) }}
+                </Badge>
+              </div>
             </div>
           </div>
         </div>
@@ -643,7 +800,7 @@ const closePhotoModal = () => {
     </div>
 
     <!-- Content (Detail View) - Desa -->
-    <div v-if="!loading && !loadingDesaData && viewMode === 'detail' && isDesaView" class="flex-1 overflow-y-auto">
+    <div v-if="!loading && !loadingDesaData && viewMode === 'detail' && isDesaView" class="flex-1 overflow-y-auto overscroll-contain">
       <!-- Latest Update for this desa -->
       <div v-if="latestFeed" class="p-4 border-b border-gray-200 bg-blue-50">
         <div class="flex items-center gap-2 mb-2">
@@ -656,7 +813,7 @@ const closePhotoModal = () => {
         <div class="text-xs text-blue-600 font-medium mb-2">
           {{ latestFeed.username || '-' }}{{ latestFeed.organization ? ` - ${latestFeed.organization}` : '' }}
         </div>
-        <p class="text-sm text-gray-600 mb-3">{{ latestFeed.content }}</p>
+        <p class="text-sm text-gray-600 mb-3 line-clamp-3">{{ latestFeed.content }}</p>
         <div class="flex flex-wrap gap-2 mb-3">
           <Badge :variant="categoryColors[latestFeed.category] || 'outline'">
             {{ getCategoryLabel(latestFeed.category) }}
@@ -664,13 +821,13 @@ const closePhotoModal = () => {
           <Badge
             v-for="tag in (latestFeed.type || '').split(/[\s,]+/).filter((t: string) => t)"
             :key="tag"
-            variant="outline"
+            :variant="tagColor"
           >
             {{ getTagLabel(tag) }}
           </Badge>
         </div>
         <button
-          class="w-full flex items-center justify-center gap-1 py-2 text-sm text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+          class="w-full flex items-center justify-center gap-1 py-2 text-sm text-blue-600 hover:bg-blue-100 rounded-lg transition-colors active:bg-blue-200"
           @click="handleShowDesaFeeds"
         >
           <span>Informasi lainnya</span>
@@ -744,7 +901,7 @@ const closePhotoModal = () => {
     </div>
 
     <!-- Content (Detail View) - Location/Posko -->
-    <div v-if="!loading && !loadingDesaData && viewMode === 'detail' && !isFaskesView && !isInfrastrukturView && !isDesaView" class="flex-1 overflow-y-auto">
+    <div v-if="!loading && !loadingDesaData && viewMode === 'detail' && !isFaskesView && !isInfrastrukturView && !isDesaView" class="flex-1 overflow-y-auto overscroll-contain">
       <!-- Latest Update for this location -->
       <div v-if="latestFeed" class="p-4 border-b border-gray-200 bg-blue-50">
         <div class="flex items-center gap-2 mb-2">
@@ -757,7 +914,7 @@ const closePhotoModal = () => {
         <div class="text-xs text-blue-600 font-medium mb-2">
           {{ latestFeed.username || '-' }}{{ latestFeed.organization ? ` - ${latestFeed.organization}` : '' }}
         </div>
-        <p class="text-sm text-gray-600 mb-3">{{ latestFeed.content }}</p>
+        <p class="text-sm text-gray-600 mb-3 line-clamp-3">{{ latestFeed.content }}</p>
         <div class="flex flex-wrap gap-2 mb-3">
           <Badge :variant="categoryColors[latestFeed.category] || 'outline'">
             {{ getCategoryLabel(latestFeed.category) }}
@@ -765,13 +922,13 @@ const closePhotoModal = () => {
           <Badge
             v-for="tag in (latestFeed.type || '').split(/[\s,]+/).filter((t: string) => t)"
             :key="tag"
-            variant="outline"
+            :variant="tagColor"
           >
             {{ getTagLabel(tag) }}
           </Badge>
         </div>
         <button
-          class="w-full flex items-center justify-center gap-1 py-2 text-sm text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+          class="w-full flex items-center justify-center gap-1 py-2 text-sm text-blue-600 hover:bg-blue-100 rounded-lg transition-colors active:bg-blue-200"
           @click="handleShowMoreUpdates"
         >
           <span>Update lainnya</span>
@@ -880,7 +1037,7 @@ const closePhotoModal = () => {
       <!-- Data Pengungsi (Collapsible) -->
       <div class="border-b border-gray-200">
         <button
-          class="w-full flex items-center justify-between p-4 hover:bg-gray-50"
+          class="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
           @click="toggleSection('pengungsi')"
         >
           <span class="font-medium text-gray-700 flex items-center gap-2">
@@ -948,7 +1105,7 @@ const closePhotoModal = () => {
       <!-- Fasilitas Layanan (Collapsible) -->
       <div class="border-b border-gray-200">
         <button
-          class="w-full flex items-center justify-between p-4 hover:bg-gray-50"
+          class="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
           @click="toggleSection('fasilitas')"
         >
           <span class="font-medium text-gray-700 flex items-center gap-2">
@@ -1030,7 +1187,7 @@ const closePhotoModal = () => {
       <!-- Sarana Komunikasi (Collapsible) -->
       <div class="border-b border-gray-200">
         <button
-          class="w-full flex items-center justify-between p-4 hover:bg-gray-50"
+          class="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
           @click="toggleSection('komunikasi')"
         >
           <span class="font-medium text-gray-700 flex items-center gap-2">
@@ -1060,7 +1217,7 @@ const closePhotoModal = () => {
       <!-- Akses Fasilitas Umum (Collapsible) -->
       <div class="border-b border-gray-200">
         <button
-          class="w-full flex items-center justify-between p-4 hover:bg-gray-50"
+          class="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
           @click="toggleSection('akses')"
         >
           <span class="font-medium text-gray-700 flex items-center gap-2">
@@ -1138,7 +1295,7 @@ const closePhotoModal = () => {
     </div>
 
     <!-- Content (Detail View) - Faskes -->
-    <div v-if="!loading && viewMode === 'detail' && isFaskesView" class="flex-1 overflow-y-auto">
+    <div v-if="!loading && viewMode === 'detail' && isFaskesView" class="flex-1 overflow-y-auto overscroll-contain">
       <!-- Update Terbaru placeholder for Faskes -->
       <div class="p-4 border-b border-gray-200 bg-gray-50">
         <div class="flex items-center gap-2 mb-2">
@@ -1213,7 +1370,7 @@ const closePhotoModal = () => {
       <!-- SDM -->
       <div v-if="faskesDetail?.sdm" class="border-b border-gray-200">
         <button
-          class="w-full flex items-center justify-between p-4 hover:bg-gray-50"
+          class="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
           @click="toggleSection('sdm')"
         >
           <span class="font-medium text-gray-700 flex items-center gap-2">
@@ -1271,7 +1428,7 @@ const closePhotoModal = () => {
       <!-- Infrastruktur -->
       <div v-if="faskesDetail?.infrastruktur" class="border-b border-gray-200">
         <button
-          class="w-full flex items-center justify-between p-4 hover:bg-gray-50"
+          class="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
           @click="toggleSection('infrastruktur')"
         >
           <span class="font-medium text-gray-700 flex items-center gap-2">
@@ -1321,7 +1478,7 @@ const closePhotoModal = () => {
       <!-- Perbekalan -->
       <div v-if="faskesDetail?.perbekalan" class="border-b border-gray-200">
         <button
-          class="w-full flex items-center justify-between p-4 hover:bg-gray-50"
+          class="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
           @click="toggleSection('perbekalan')"
         >
           <span class="font-medium text-gray-700 flex items-center gap-2">
@@ -1371,7 +1528,7 @@ const closePhotoModal = () => {
       <!-- Isolasi -->
       <div v-if="faskesDetail?.isolasi" class="border-b border-gray-200">
         <button
-          class="w-full flex items-center justify-between p-4 hover:bg-gray-50"
+          class="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
           @click="toggleSection('isolasi')"
         >
           <span class="font-medium text-gray-700 flex items-center gap-2">
@@ -1397,7 +1554,7 @@ const closePhotoModal = () => {
       <!-- Klaster -->
       <div v-if="faskesDetail?.klaster" class="border-b border-gray-200">
         <button
-          class="w-full flex items-center justify-between p-4 hover:bg-gray-50"
+          class="w-full flex items-center justify-between p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
           @click="toggleSection('klaster')"
         >
           <span class="font-medium text-gray-700 flex items-center gap-2">
@@ -1483,7 +1640,7 @@ const closePhotoModal = () => {
     </div>
 
     <!-- Content (Detail View) - Infrastruktur -->
-    <div v-if="!loading && viewMode === 'detail' && isInfrastrukturView" class="flex-1 overflow-y-auto">
+    <div v-if="!loading && viewMode === 'detail' && isInfrastrukturView" class="flex-1 overflow-y-auto overscroll-contain">
       <!-- Progress Bar -->
       <div class="p-4 border-b border-gray-200 bg-amber-50">
         <div class="flex items-center justify-between mb-2">
@@ -1596,12 +1753,12 @@ const closePhotoModal = () => {
     </div>
 
     <!-- Footer (only in detail mode) -->
-    <div v-if="viewMode === 'detail'" class="p-4 border-t border-gray-200">
+    <div v-if="viewMode === 'detail'" class="p-4 border-t border-gray-200 pb-safe">
       <a
         href="https://s.id/KP8t1"
         target="_blank"
         rel="noopener noreferrer"
-        class="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+        class="flex items-center justify-center gap-2 w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-medium rounded-lg transition-colors min-h-[48px]"
       >
         Kirim Informasi kepada kami?
         <ExternalLink class="w-4 h-4" />
@@ -1615,4 +1772,56 @@ const closePhotoModal = () => {
       @close="closePhotoModal"
     />
   </aside>
+  </Transition>
 </template>
+
+<style scoped>
+/* Safe area utilities */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Overscroll behavior */
+.overscroll-contain {
+  overscroll-behavior: contain;
+}
+
+/* Backdrop fade transition */
+.backdrop-fade-enter-active,
+.backdrop-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.backdrop-fade-enter-from,
+.backdrop-fade-leave-to {
+  opacity: 0;
+}
+
+/* Panel slide transition */
+.panel-slide-enter-active {
+  transition: transform 0.25s ease-out, opacity 0.25s ease-out;
+}
+
+.panel-slide-leave-active {
+  transition: transform 0.2s ease-in, opacity 0.2s ease-in;
+}
+
+.panel-slide-enter-from {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+.panel-slide-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+/* Border width for spinner */
+.border-3 {
+  border-width: 3px;
+}
+</style>
