@@ -106,6 +106,7 @@ func (h *InvitationHandler) CreateOrganizationWithAdmin(c *gin.Context) {
 			"invited_admin":   inviteResult.User,
 			"invitation_link": inviteResult.InvitationLink,
 			"is_new_admin":    inviteResult.IsNewUser,
+			"email_sent":      inviteResult.EmailSent,
 		},
 	})
 }
@@ -134,6 +135,36 @@ func (h *InvitationHandler) InviteUser(c *gin.Context) {
 			"error":   "User not found in context",
 		})
 		return
+	}
+
+	// Permission checks for org_admin (super_admin bypasses all restrictions)
+	if user.Role != model.UserRoleSuperAdmin {
+		// org_admin must provide organization_id
+		if input.OrganizationID == nil || *input.OrganizationID == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "organization_id is required for org_admin",
+			})
+			return
+		}
+
+		// Check if org_admin belongs to the organization
+		if !auth.CanManageOrganization(c, uuid.MustParse(*input.OrganizationID)) {
+			c.JSON(http.StatusForbidden, gin.H{
+				"success": false,
+				"error":   "Access denied to this organization",
+			})
+			return
+		}
+
+		// org_admin cannot invite with admin role
+		if input.OrgRole == "admin" {
+			c.JSON(http.StatusForbidden, gin.H{
+				"success": false,
+				"error":   "org_admin cannot invite with admin role",
+			})
+			return
+		}
 	}
 
 	var orgID *uuid.UUID

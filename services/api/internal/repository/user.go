@@ -176,3 +176,15 @@ func (r *UserRepository) FindAll(ctx context.Context, filter UserFilter) ([]mode
 
 	return users, total, nil
 }
+
+func (r *UserRepository) FindByVerificationPhone(ctx context.Context, phone string) (*model.User, error) {
+	var user model.User
+	err := r.db.WithContext(ctx).
+		Preload("OrganizationMemberships").
+		Where("verification_phone = ? AND status = ? AND verified_at IS NOT NULL", phone, model.UserStatusActive).
+		First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}

@@ -3,6 +3,9 @@
 .env.local
 .env.*.local
 
+# Claude environment (contains server IPs and credentials)
+.claude/environment.md
+
 # OS
 .DS_Store
 Thumbs.db

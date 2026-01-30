@@ -1,0 +1,289 @@
+// ODK Admin Portal - Prisma Schema
+// PostgreSQL 16+
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum SystemRole {
+  administrator
+  admin_lembaga
+  member
+}
+
+enum SubLembagaRole {
+  project_manager
+  relawan
+}
+
+enum SyncJobStatus {
+  pending
+  processing
+  completed
+  failed
+}
+
+enum SyncJobType {
+  create_app_user
+  revoke_app_user
+  sync_projects
+  sync_forms
+  sync_submissions
+}
+
+// =============================================================================
+// CORE MODELS
+// =============================================================================
+
+model User {
+  id           String     @id @default(uuid()) @db.Uuid
+  authentikId  String     @unique @map("authentik_id")
+  email        String     @unique
+  name         String
+  phone        String?
+  systemRole   SystemRole @default(member) @map("system_role")
+  avatarUrl    String?    @map("avatar_url")
+  isActive     Boolean    @default(true) @map("is_active")
+  lastLoginAt  DateTime?  @map("last_login_at")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  lembagaId    String?    @map("lembaga_id") @db.Uuid
+  lembaga      Lembaga?   @relation("LembagaMembers", fields: [lembagaId], references: [id], onDelete: SetNull)
+
+  // Created records
+  createdLembaga      Lembaga[]            @relation("LembagaCreator")
+  createdSubLembaga   SubLembaga[]         @relation("SubLembagaCreator")
+  assignedMembers     SubLembagaMember[]   @relation("MemberAssigner")
+  revokedMembers      SubLembagaMember[]   @relation("MemberRevoker")
+
+  // Memberships
+  subLembagaMemberships SubLembagaMember[] @relation("UserMemberships")
+
+  // Audit
+  auditLogs AuditLog[]
+
+  @@map("users")
+  @@index([authentikId])
+  @@index([email])
+  @@index([lembagaId])
+  @@index([systemRole])
+  @@index([isActive])
+}
+
+model Lembaga {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  code        String   @unique
+  description String?
+  address     String?
+  logoUrl     String?  @map("logo_url")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  createdById String   @map("created_by") @db.Uuid
+  createdBy   User     @relation("LembagaCreator", fields: [createdById], references: [id])
+
+  // Members
+  members     User[]   @relation("LembagaMembers")
+  
+  // Sub-Lembaga
+  subLembaga  SubLembaga[]
+
+  // Dashboard stats
+  dashboardStats DashboardStats[]
+
+  @@map("lembaga")
+  @@index([code])
+  @@index([isActive])
+}
+
+model SubLembaga {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String
+  description     String?
+  odkProjectId    Int      @unique @map("odk_project_id")
+  odkProjectName  String   @map("odk_project_name")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  lembagaId   String   @map("lembaga_id") @db.Uuid
+  lembaga     Lembaga  @relation(fields: [lembagaId], references: [id], onDelete: Cascade)
+
+  createdById String   @map("created_by") @db.Uuid
+  createdBy   User     @relation("SubLembagaCreator", fields: [createdById], references: [id])
+
+  // Members
+  members     SubLembagaMember[]
+
+  @@map("sub_lembaga")
+  @@index([lembagaId])
+  @@index([odkProjectId])
+  @@index([isActive])
+}
+
+model SubLembagaMember {
+  id                String          @id @default(uuid()) @db.Uuid
+  role              SubLembagaRole  @default(relawan)
+  odkAppUserId      Int?            @map("odk_app_user_id")
+  odkAppUserToken   String?         @map("odk_app_user_token")
+  qrCodeData        String?         @map("qr_code_data")
+  isActive          Boolean         @default(true) @map("is_active")
+  assignedAt        DateTime        @default(now()) @map("assigned_at")
+  revokedAt         DateTime?       @map("revoked_at")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  // Relations
+  subLembagaId String     @map("sub_lembaga_id") @db.Uuid
+  subLembaga   SubLembaga @relation(fields: [subLembagaId], references: [id], onDelete: Cascade)
+
+  userId       String     @map("user_id") @db.Uuid
+  user         User       @relation("UserMemberships", fields: [userId], references: [id], onDelete: Cascade)
+
+  assignedById String     @map("assigned_by") @db.Uuid
+  assignedBy   User       @relation("MemberAssigner", fields: [assignedById], references: [id])
+
+  revokedById  String?    @map("revoked_by") @db.Uuid
+  revokedBy    User?      @relation("MemberRevoker", fields: [revokedById], references: [id])
+
+  @@unique([subLembagaId, userId])
+  @@map("sub_lembaga_members")
+  @@index([subLembagaId])
+  @@index([userId])
+  @@index([role])
+  @@index([isActive])
+  @@index([odkAppUserId])
+}
+
+// =============================================================================
+// ODK CACHE MODELS
+// =============================================================================
+
+model OdkProjectCache {
+  id              Int       @id @default(autoincrement())
+  odkProjectId    Int       @unique @map("odk_project_id")
+  name            String
+  description     String?
+  archived        Boolean   @default(false)
+  formsCount      Int       @default(0) @map("forms_count")
+  appUsersCount   Int       @default(0) @map("app_users_count")
+  lastSubmissionAt DateTime? @map("last_submission_at")
+  syncedAt        DateTime  @default(now()) @map("synced_at")
+
+  // Forms
+  forms           OdkFormCache[]
+
+  @@map("odk_projects_cache")
+  @@index([syncedAt])
+}
+
+model OdkFormCache {
+  id              Int      @id @default(autoincrement())
+  odkProjectId    Int      @map("odk_project_id")
+  odkFormId       String   @map("odk_form_id")
+  name            String
+  version         String?
+  state           String?
+  submissionsCount Int     @default(0) @map("submissions_count")
+  syncedAt        DateTime @default(now()) @map("synced_at")
+
+  // Relations
+  project         OdkProjectCache @relation(fields: [odkProjectId], references: [odkProjectId], onDelete: Cascade)
+
+  @@unique([odkProjectId, odkFormId])
+  @@map("odk_forms_cache")
+  @@index([odkProjectId])
+}
+
+// =============================================================================
+// SYNC & JOBS
+// =============================================================================
+
+model SyncJob {
+  id           String        @id @default(uuid()) @db.Uuid
+  jobType      SyncJobType   @map("job_type")
+  entityType   String?       @map("entity_type")
+  entityId     String?       @map("entity_id") @db.Uuid
+  payload      Json          @default("{}")
+  status       SyncJobStatus @default(pending)
+  errorMessage String?       @map("error_message")
+  retryCount   Int           @default(0) @map("retry_count")
+  maxRetries   Int           @default(3) @map("max_retries")
+  priority     Int           @default(0)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  startedAt    DateTime?     @map("started_at")
+  completedAt  DateTime?     @map("completed_at")
+
+  @@map("sync_jobs")
+  @@index([status])
+  @@index([jobType])
+  @@index([createdAt])
+  @@index([priority, status, createdAt])
+}
+
+// =============================================================================
+// AUDIT LOG
+// =============================================================================
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  action      String
+  entityType  String   @map("entity_type")
+  entityId    String?  @map("entity_id") @db.Uuid
+  oldValue    Json?    @map("old_value")
+  newValue    Json?    @map("new_value")
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  actorId     String?  @map("actor_id") @db.Uuid
+  actorEmail  String?  @map("actor_email")
+  actor       User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@map("audit_logs")
+  @@index([actorId])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([createdAt(sort: Desc)])
+}
+
+// =============================================================================
+// DASHBOARD STATS
+// =============================================================================
+
+model DashboardStats {
+  id                      Int       @id @default(autoincrement())
+  statDate                DateTime  @default(now()) @map("stat_date") @db.Date
+  totalMembers            Int       @default(0) @map("total_members")
+  activeMembers           Int       @default(0) @map("active_members")
+  totalSubLembaga         Int       @default(0) @map("total_sub_lembaga")
+  totalSubmissionsToday   Int       @default(0) @map("total_submissions_today")
+  totalSubmissionsWeek    Int       @default(0) @map("total_submissions_week")
+  totalSubmissionsMonth   Int       @default(0) @map("total_submissions_month")
+  calculatedAt            DateTime  @default(now()) @map("calculated_at")
+
+  // Relations (nullable for system-wide stats)
+  lembagaId               String?   @map("lembaga_id") @db.Uuid
+  lembaga                 Lembaga?  @relation(fields: [lembagaId], references: [id], onDelete: Cascade)
+
+  @@unique([statDate, lembagaId])
+  @@map("dashboard_stats")
+  @@index([statDate])
+  @@index([lembagaId])
+}

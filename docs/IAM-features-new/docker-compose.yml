@@ -1,0 +1,158 @@
+# ODK Admin Portal - Docker Compose Configuration
+# Development environment
+
+version: '3.8'
+
+services:
+  # ==========================================================================
+  # FRONTEND - Vue.js with Nginx
+  # ==========================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: odk-admin-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:3001/api
+    networks:
+      - odk-network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # BACKEND - Node.js Express API
+  # ==========================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: odk-admin-backend
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # App
+      - NODE_ENV=development
+      - PORT=3001
+      - APP_URL=http://localhost:3000
+      - API_URL=http://localhost:3001
+      
+      # Database
+      - DATABASE_URL=postgresql://odk_admin:odk_admin_password@postgres:5432/odk_admin_db
+      
+      # Redis
+      - REDIS_URL=redis://redis:6379
+      
+      # Authentik OIDC
+      - AUTHENTIK_URL=${AUTHENTIK_URL:-https://auth.example.com}
+      - AUTHENTIK_CLIENT_ID=${AUTHENTIK_CLIENT_ID}
+      - AUTHENTIK_CLIENT_SECRET=${AUTHENTIK_CLIENT_SECRET}
+      - AUTHENTIK_REDIRECT_URI=http://localhost:3001/api/auth/callback
+      
+      # ODK Central
+      - ODK_CENTRAL_URL=${ODK_CENTRAL_URL:-https://odk.example.com}
+      - ODK_CENTRAL_EMAIL=${ODK_CENTRAL_EMAIL}
+      - ODK_CENTRAL_PASSWORD=${ODK_CENTRAL_PASSWORD}
+      
+      # Session
+      - SESSION_SECRET=${SESSION_SECRET:-change-me-in-production}
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - odk-network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # WORKER - Background Job Processor
+  # ==========================================================================
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: odk-admin-worker
+    command: npm run worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://odk_admin:odk_admin_password@postgres:5432/odk_admin_db
+      - REDIS_URL=redis://redis:6379
+      - ODK_CENTRAL_URL=${ODK_CENTRAL_URL:-https://odk.example.com}
+      - ODK_CENTRAL_EMAIL=${ODK_CENTRAL_EMAIL}
+      - ODK_CENTRAL_PASSWORD=${ODK_CENTRAL_PASSWORD}
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - odk-network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # DATABASE - PostgreSQL
+  # ==========================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: odk-admin-postgres
+    environment:
+      - POSTGRES_USER=odk_admin
+      - POSTGRES_PASSWORD=odk_admin_password
+      - POSTGRES_DB=odk_admin_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - odk-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odk_admin -d odk_admin_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ==========================================================================
+  # CACHE & QUEUE - Redis
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: odk-admin-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - odk-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+# ==========================================================================
+# NETWORKS
+# ==========================================================================
+networks:
+  odk-network:
+    driver: bridge
+
+# ==========================================================================
+# VOLUMES
+# ==========================================================================
+volumes:
+  postgres_data:
+  redis_data:

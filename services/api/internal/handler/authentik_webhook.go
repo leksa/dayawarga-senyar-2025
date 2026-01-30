@@ -1,6 +1,9 @@
 package handler
 
 import (
+	"encoding/json"
+	"io"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -37,8 +40,18 @@ type AuthentikUserPayload struct {
 }
 
 func (h *AuthentikWebhookHandler) HandleWebhook(c *gin.Context) {
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Failed to read request body: " + err.Error(),
+		})
+		return
+	}
+	log.Printf("[Authentik Webhook] Received payload: %s", string(body))
+
 	var payload AuthentikWebhookPayload
-	if err := c.ShouldBindJSON(&payload); err != nil {
+	if err := json.Unmarshal(body, &payload); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"error":   "Invalid payload: " + err.Error(),

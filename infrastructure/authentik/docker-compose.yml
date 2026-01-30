@@ -71,6 +71,7 @@ services:
     volumes:
       - authentik_media:/media
       - authentik_templates:/templates
+      - ./branding/custom.css:/web/dist/custom.css:ro
     ports:
       - "${AUTHENTIK_PORT_HTTP:-9000}:9000"
       - "${AUTHENTIK_PORT_HTTPS:-9443}:9443"

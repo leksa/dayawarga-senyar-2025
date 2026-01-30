@@ -1,0 +1,1506 @@
+openapi: 3.0.3
+info:
+  title: ODK Admin Portal API
+  description: |
+    API untuk Admin Portal yang terintegrasi dengan ODK Central dan Authentik.
+    
+    ## Authentication
+    Semua endpoint (kecuali /auth/*) membutuhkan Bearer token dari Authentik OIDC.
+    
+    ## User Roles
+    - **administrator**: Full system access
+    - **admin_lembaga**: Manage satu lembaga dan sub-lembaga di dalamnya
+    - **project_manager**: Manage relawan dalam sub-lembaga tertentu
+    - **relawan**: View own QR codes dan submissions
+    
+  version: 1.0.0
+  contact:
+    name: API Support
+
+servers:
+  - url: http://localhost:3000/api
+    description: Development server
+  - url: https://admin.example.com/api
+    description: Production server
+
+tags:
+  - name: Auth
+    description: Authentication endpoints
+  - name: Users
+    description: User management
+  - name: Lembaga
+    description: Lembaga (organization) management
+  - name: Sub-Lembaga
+    description: Sub-lembaga management (ODK Project linking)
+  - name: Members
+    description: Member assignment to sub-lembaga
+  - name: ODK
+    description: ODK Central integration
+  - name: Dashboard
+    description: Dashboard statistics
+  - name: Profile
+    description: Current user profile
+
+# ============================================================================
+# SECURITY
+# ============================================================================
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Authentik OIDC access token
+
+  # ==========================================================================
+  # SCHEMAS
+  # ==========================================================================
+  schemas:
+    # Common
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "VALIDATION_ERROR"
+            message:
+              type: string
+              example: "Invalid input data"
+            details:
+              type: array
+              items:
+                type: object
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 100
+        totalPages:
+          type: integer
+          example: 5
+
+    # User
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        phone:
+          type: string
+        systemRole:
+          type: string
+          enum: [administrator, admin_lembaga, member]
+        lembagaId:
+          type: string
+          format: uuid
+          nullable: true
+        lembaga:
+          $ref: '#/components/schemas/LembagaBasic'
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    UserCreate:
+      type: object
+      required:
+        - email
+        - name
+        - systemRole
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+          minLength: 2
+          maxLength: 255
+        phone:
+          type: string
+        systemRole:
+          type: string
+          enum: [admin_lembaga, member]
+        lembagaId:
+          type: string
+          format: uuid
+          description: Required for admin_lembaga and member roles
+
+    UserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        isActive:
+          type: boolean
+
+    # Lembaga
+    LembagaBasic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        code:
+          type: string
+
+    Lembaga:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        code:
+          type: string
+        description:
+          type: string
+        address:
+          type: string
+        logoUrl:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        stats:
+          type: object
+          properties:
+            activeMembers:
+              type: integer
+            activeSubLembaga:
+              type: integer
+
+    LembagaCreate:
+      type: object
+      required:
+        - name
+        - code
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 255
+        code:
+          type: string
+          minLength: 2
+          maxLength: 50
+          pattern: '^[A-Z0-9_-]+$'
+        description:
+          type: string
+        address:
+          type: string
+
+    LembagaUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        address:
+          type: string
+        isActive:
+          type: boolean
+
+    # Sub-Lembaga
+    SubLembaga:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        lembagaId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        odkProjectId:
+          type: integer
+        odkProjectName:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        stats:
+          type: object
+          properties:
+            totalMembers:
+              type: integer
+            projectManagers:
+              type: integer
+            relawan:
+              type: integer
+            formsCount:
+              type: integer
+
+    SubLembagaCreate:
+      type: object
+      required:
+        - name
+        - odkProjectId
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 255
+        description:
+          type: string
+        odkProjectId:
+          type: integer
+          description: ODK Central project ID to link
+
+    SubLembagaUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        isActive:
+          type: boolean
+
+    # Member Assignment
+    MemberAssignment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        subLembagaId:
+          type: string
+          format: uuid
+        subLembagaName:
+          type: string
+        userId:
+          type: string
+          format: uuid
+        userName:
+          type: string
+        userEmail:
+          type: string
+        role:
+          type: string
+          enum: [project_manager, relawan]
+        odkAppUserId:
+          type: integer
+        qrCodeData:
+          type: string
+          description: Base64 encoded QR code or JSON for generating QR
+        isActive:
+          type: boolean
+        assignedAt:
+          type: string
+          format: date-time
+        assignedBy:
+          type: string
+          format: uuid
+
+    MemberAssignCreate:
+      type: object
+      required:
+        - userId
+        - role
+      properties:
+        userId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [project_manager, relawan]
+
+    MemberAssignUpdate:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [project_manager, relawan]
+
+    # ODK
+    OdkProject:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        archived:
+          type: boolean
+        formsCount:
+          type: integer
+        appUsersCount:
+          type: integer
+        lastSubmission:
+          type: string
+          format: date-time
+        isLinked:
+          type: boolean
+          description: Whether this project is already linked to a sub-lembaga
+
+    OdkForm:
+      type: object
+      properties:
+        xmlFormId:
+          type: string
+        name:
+          type: string
+        version:
+          type: string
+        state:
+          type: string
+          enum: [open, closing, closed]
+        submissionsCount:
+          type: integer
+
+    OdkSubmission:
+      type: object
+      properties:
+        instanceId:
+          type: string
+        submitterId:
+          type: integer
+        submitterName:
+          type: string
+        deviceId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        formId:
+          type: string
+        formName:
+          type: string
+
+    # Dashboard
+    DashboardStats:
+      type: object
+      properties:
+        overview:
+          type: object
+          properties:
+            totalLembaga:
+              type: integer
+            totalSubLembaga:
+              type: integer
+            totalMembers:
+              type: integer
+            activeRelawan:
+              type: integer
+        submissions:
+          type: object
+          properties:
+            today:
+              type: integer
+            thisWeek:
+              type: integer
+            thisMonth:
+              type: integer
+        recentSubmissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/OdkSubmission'
+
+    # Profile / My Projects
+    MyProject:
+      type: object
+      properties:
+        subLembagaId:
+          type: string
+          format: uuid
+        subLembagaName:
+          type: string
+        lembagaName:
+          type: string
+        role:
+          type: string
+          enum: [project_manager, relawan]
+        odkProjectId:
+          type: integer
+        odkAppUserId:
+          type: integer
+        qrCodeData:
+          type: string
+        forms:
+          type: array
+          items:
+            $ref: '#/components/schemas/OdkForm'
+
+  # ==========================================================================
+  # RESPONSES
+  # ==========================================================================
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+# ============================================================================
+# PATHS
+# ============================================================================
+paths:
+  # ==========================================================================
+  # AUTH
+  # ==========================================================================
+  /auth/login:
+    get:
+      tags: [Auth]
+      summary: Initiate OIDC login
+      description: Redirects to Authentik for authentication
+      security: []
+      responses:
+        '302':
+          description: Redirect to Authentik
+
+  /auth/callback:
+    get:
+      tags: [Auth]
+      summary: OIDC callback
+      description: Handles Authentik callback after successful login
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to frontend with session
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout
+      description: Invalidate session and logout from Authentik
+      responses:
+        '200':
+          description: Successfully logged out
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current user
+      description: Returns the authenticated user's information
+      responses:
+        '200':
+          description: Current user info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/User'
+
+  # ==========================================================================
+  # USERS
+  # ==========================================================================
+  /users:
+    get:
+      tags: [Users]
+      summary: List users
+      description: |
+        List all users. 
+        - Administrator: sees all users
+        - Admin Lembaga: sees only users in their lembaga
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: lembagaId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: systemRole
+          in: query
+          schema:
+            type: string
+            enum: [administrator, admin_lembaga, member]
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags: [Users]
+      summary: Create user
+      description: |
+        Create a new user. Will also create user in Authentik.
+        - Administrator: can create any user
+        - Admin Lembaga: can create members in their lembaga only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /users/{id}:
+    get:
+      tags: [Users]
+      summary: Get user by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/User'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Users]
+      summary: Update user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/User'
+
+    delete:
+      tags: [Users]
+      summary: Delete user
+      description: Soft delete - deactivates user and revokes all ODK app users
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ==========================================================================
+  # LEMBAGA
+  # ==========================================================================
+  /lembaga:
+    get:
+      tags: [Lembaga]
+      summary: List lembaga
+      description: |
+        - Administrator: sees all lembaga
+        - Admin Lembaga: sees only their lembaga
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of lembaga
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Lembaga'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      tags: [Lembaga]
+      summary: Create lembaga
+      description: Administrator only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LembagaCreate'
+      responses:
+        '201':
+          description: Lembaga created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Lembaga'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /lembaga/{id}:
+    get:
+      tags: [Lembaga]
+      summary: Get lembaga by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lembaga details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Lembaga'
+
+    patch:
+      tags: [Lembaga]
+      summary: Update lembaga
+      description: Administrator only
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LembagaUpdate'
+      responses:
+        '200':
+          description: Lembaga updated
+
+    delete:
+      tags: [Lembaga]
+      summary: Delete lembaga
+      description: Administrator only. Soft delete.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lembaga deleted
+
+  /lembaga/{id}/members:
+    get:
+      tags: [Lembaga]
+      summary: List lembaga members
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of members
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+
+  # ==========================================================================
+  # SUB-LEMBAGA
+  # ==========================================================================
+  /lembaga/{lembagaId}/sub-lembaga:
+    get:
+      tags: [Sub-Lembaga]
+      summary: List sub-lembaga in a lembaga
+      parameters:
+        - name: lembagaId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of sub-lembaga
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SubLembaga'
+
+    post:
+      tags: [Sub-Lembaga]
+      summary: Create sub-lembaga (link ODK project)
+      description: Administrator or Admin Lembaga
+      parameters:
+        - name: lembagaId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubLembagaCreate'
+      responses:
+        '201':
+          description: Sub-lembaga created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/SubLembaga'
+
+  /sub-lembaga/{id}:
+    get:
+      tags: [Sub-Lembaga]
+      summary: Get sub-lembaga by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Sub-lembaga details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/SubLembaga'
+
+    patch:
+      tags: [Sub-Lembaga]
+      summary: Update sub-lembaga
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubLembagaUpdate'
+      responses:
+        '200':
+          description: Sub-lembaga updated
+
+    delete:
+      tags: [Sub-Lembaga]
+      summary: Delete sub-lembaga
+      description: Unlinks ODK project and revokes all app users
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Sub-lembaga deleted
+
+  # ==========================================================================
+  # MEMBERS (Sub-Lembaga Assignment)
+  # ==========================================================================
+  /sub-lembaga/{subLembagaId}/members:
+    get:
+      tags: [Members]
+      summary: List members assigned to sub-lembaga
+      parameters:
+        - name: subLembagaId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [project_manager, relawan]
+      responses:
+        '200':
+          description: List of member assignments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MemberAssignment'
+
+    post:
+      tags: [Members]
+      summary: Assign member to sub-lembaga
+      description: |
+        Creates ODK App User and assigns to all forms in the project.
+        - Admin Lembaga: can assign any member from their lembaga
+        - Project Manager: can assign relawan only
+      parameters:
+        - name: subLembagaId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemberAssignCreate'
+      responses:
+        '201':
+          description: Member assigned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/MemberAssignment'
+
+  /sub-lembaga/{subLembagaId}/members/{memberId}:
+    get:
+      tags: [Members]
+      summary: Get member assignment details
+      parameters:
+        - name: subLembagaId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Member assignment details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/MemberAssignment'
+
+    patch:
+      tags: [Members]
+      summary: Update member assignment
+      description: Update role (e.g., promote relawan to PM)
+      parameters:
+        - name: subLembagaId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemberAssignUpdate'
+      responses:
+        '200':
+          description: Assignment updated
+
+    delete:
+      tags: [Members]
+      summary: Remove member from sub-lembaga
+      description: Revokes ODK App User access
+      parameters:
+        - name: subLembagaId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Member removed and ODK access revoked
+
+  /sub-lembaga/{subLembagaId}/members/{memberId}/qr-code:
+    get:
+      tags: [Members]
+      summary: Get QR code for member
+      description: Returns QR code data for ODK Collect configuration
+      parameters:
+        - name: subLembagaId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [json, png, svg]
+            default: json
+      responses:
+        '200':
+          description: QR code data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      qrData:
+                        type: string
+                        description: Base64 encoded QR or raw JSON
+                      odkAppUserId:
+                        type: integer
+                      projectName:
+                        type: string
+            image/png:
+              schema:
+                type: string
+                format: binary
+
+    post:
+      tags: [Members]
+      summary: Regenerate QR code
+      description: Revokes old app user and creates new one with fresh token
+      parameters:
+        - name: subLembagaId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: New QR code generated
+
+  # ==========================================================================
+  # ODK
+  # ==========================================================================
+  /odk/projects:
+    get:
+      tags: [ODK]
+      summary: List available ODK projects
+      description: |
+        Returns ODK projects that can be linked to sub-lembaga.
+        Includes flag indicating if already linked.
+      parameters:
+        - name: includeLinked
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: List of ODK projects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OdkProject'
+
+  /odk/projects/{projectId}/forms:
+    get:
+      tags: [ODK]
+      summary: List forms in ODK project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of forms
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OdkForm'
+
+  /odk/sync:
+    post:
+      tags: [ODK]
+      summary: Trigger ODK sync
+      description: |
+        Manually trigger sync of ODK projects and forms.
+        Administrator only.
+      responses:
+        '202':
+          description: Sync job queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      jobId:
+                        type: string
+                        format: uuid
+
+  /odk/submissions:
+    get:
+      tags: [ODK]
+      summary: Get submissions
+      description: |
+        Fetch submissions from ODK.
+        - Administrator: all submissions
+        - Admin Lembaga: submissions from their lembaga's projects
+        - Project Manager: submissions from their sub-lembaga
+        - Relawan: own submissions only
+      parameters:
+        - name: subLembagaId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: formId
+          in: query
+          schema:
+            type: string
+        - name: submitterId
+          in: query
+          schema:
+            type: integer
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: List of submissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OdkSubmission'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  # ==========================================================================
+  # DASHBOARD
+  # ==========================================================================
+  /dashboard/stats:
+    get:
+      tags: [Dashboard]
+      summary: Get dashboard statistics
+      description: |
+        Returns statistics based on user role:
+        - Administrator: system-wide stats
+        - Admin Lembaga: lembaga stats
+        - Project Manager: sub-lembaga stats
+        - Relawan: personal stats
+      parameters:
+        - name: lembagaId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: subLembagaId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/DashboardStats'
+
+  # ==========================================================================
+  # PROFILE (My)
+  # ==========================================================================
+  /me/projects:
+    get:
+      tags: [Profile]
+      summary: Get my project assignments
+      description: Returns all sub-lembaga the current user is assigned to
+      responses:
+        '200':
+          description: My project assignments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MyProject'
+
+  /me/projects/{subLembagaId}/qr-code:
+    get:
+      tags: [Profile]
+      summary: Get my QR code for a project
+      parameters:
+        - name: subLembagaId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [json, png, svg]
+            default: json
+      responses:
+        '200':
+          description: QR code for my assignment
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      qrData:
+                        type: string
+                      projectName:
+                        type: string
+                      odkAppUserId:
+                        type: integer
+
+  /me/submissions:
+    get:
+      tags: [Profile]
+      summary: Get my submissions
+      description: Returns submissions made by the current user
+      parameters:
+        - name: subLembagaId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: My submissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OdkSubmission'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
